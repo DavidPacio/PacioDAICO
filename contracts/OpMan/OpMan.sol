@@ -105,12 +105,11 @@ contract OpMan is Owned {
   // Constructor NOT payable
   // ===========
   // 1. Add initial contracts, signers, and manOps via the OpMan constructor
-  // vContractsYA[] must be in OP_MAN_X, HUB_X etc order
-//constructor() public {
+  // vContractsYA[] must be in HUB_X, SALE_X etc order
   constructor(address[] vContractsYA, address[] vSignersYA) public {
     emit ConstructorV(msg.sender);
     // 1.1 Add initial contracts
-    pAddContract(OP_MAN_X, address(this), true);
+    pAddContract(OP_MAN_X, address(this), true); // Self
     for (uint256 j=0; j<vContractsYA.length; j++)
       pAddContract(j+1, vContractsYA[j], (j+1) != LIST_X); // List is the only contract which isn't pausable
     // 1.2 Add initial signers
@@ -131,15 +130,10 @@ contract OpMan is Owned {
   // Initialisation/Setup Functions
   // ==============================
 
-  // Initialise()
-  // ------------
-  // function Initialise() external returns (bool) {
-  // }
-
   // View Methods
   // ============
   function NumContracts() external view returns (uint256) {
-    return uint32(pContractsYR.length);
+    return pContractsYR.length;
   }
   function ContractX(uint256 cX) external view returns (address contractA, bool pausableB, bool pausedB, uint32 addedT, uint32 updatedT, uint32 numManOps, uint32[] manOpsY) {
     require(cX < pContractsYR.length);
@@ -157,7 +151,7 @@ contract OpMan is Owned {
     return MIN_NUM_SIGNERS;
   }
   function NumSigners() external view returns (uint256) {
-    return uint32(pSignersYA.length);
+    return pSignersYA.length;
   }
   function Signers() external view returns (address[]) {
     return pSignersYA;
