@@ -1,0 +1,133 @@
+Solidity Style Guide.txt Started 2017.02.17
+------------------------ Renamed from Solidity Hungarian.txt 2017.02.20
+
+Notes:
+• See also the Solidity Style Guide: http://solidity.readthedocs.io/en/latest/style-guide.html
+• This is subject to change!
+• I am not suggesting this for anybody else.
+• It is just for me and my pedantic coding style.
+
+Naming Conventions
+==================
+Variables
+~~~~~~~~~
+Visibility/Usage    Name Starts with one or 2 of the following followed by a Capital letter, unless visibility/usage is clear without this
+----------------
+external              Only applies to functions. External functions are part of the contract interface, which means they can be called from other contracts and via transactions.
+private             p plus s, m, r from the "Where/How" list below                                 - visible only in contract of declaration
+public              u " or just l/c as per Solidity norm            - default for functions
+internal            i                                               - default for state variables  - visible in contract of declaration and derived contracts
+constant            c plus name in all caps
+local (stack)       k Only used for "small local variables". Other "local variables" are storage type. What is the decision based on??
+Where/how:
+reference           r
+passed by Value     v or nothing as the default
+storage (state)     s                                                    /- second letter if one of the above is first letter
+memory              m  [can only be used with array or struct variables] |
+
+Type      Name ends with capital letter
+----
+uint      U or nothing as the default
+uintxx    I
+uint256   X array index from 0 up
+address   A
+bool      B Also sometimes used for functions returning a bool
+contract  C
+string    S Also used for functions returning a string
+struct    R plus struct declaration names start with R Capital letter
+enum      N plus enum   declaration names start with N Capital letter
+            also used for ints used with constants as a pseudo enum when an enum is not convenient for cross contract use
+
+Second Last Letter or last if default type uint with no "U"
+K  mapping key
+Y  array    (not A to be unique, leaving A for address)
+M  mapping
+
+Other conventions
+A variable name ending in 'X' is a uint array index.
+
+Functions (Methods)
+~~~~~~~~~~~~~~~~~~~
+Word case i.e. with an initial capital letter
+
+Event names end with V
+e.g.
+event PausedV();
+
+Visibility
+==========
+Explicitly mark visibility in functions and state variables
+from https://Github.com/ConsenSys/smart-contract-best-practices#explicitly-mark-visibility-in-functions-and-state-variables
+
+Explicitly label the visibility of functions and state variables.
+Labelling the visibility explicitly will make it easier to catch incorrect assumptions about who can call the function or access the variable.
+
+Functions can be specified as being external, public, internal or private. The default is public.
+
+For state variables, external is not possible. The default is internal.
+
+If Test Gas Costs
+=================
+Testing against address(0) is cheaper than vs a local variable with address(0) assigned to it.
+
+if (vAliceA == address(0) || vBobA == address(0) || vCarolA == address(0)) throw;```
+if cheaper than
+if (vAliceA == address(0)) throw;
+if (vBobA == address(0)) throw;
+if (vCarolA == address(0)) throw;```
+
+in a constructor anyway. To be tested in a function.
+
+Details from course post on 2017.02.22:
+
+Re your [Xavier's] comment on my use of a local variable for a series of tests:
+
+```function Splitter(address vAliceA, address vBobA, address vCarolA) {
+  address kNullA = address(0);
+  if (vAliceA == kNullA) throw;
+  if (vBobA == kNullA) throw;
+  if (vCarolA == kNullA) throw;
+  ...
+} ```
+
+of "This needs confirmation, but I suspect using a kNullA variable actually costs more gas:
+   •  kNullA is in the stack
+    • call DUP to get it at the top of the stack
+    • do EQ
+
+Whereas if you wrote if (vBobA == address(0)), it is compiled to:
+    • PUSH1 0x00 to the top of the stack
+    • do EQ"
+
+I have tested it and using the local variable does indeed use more gas:
+The transaction cost is 357 gas cheaper for 1 test, 353 cheaper for 2, 349 cheaper for 3 ...
+Whereas the execution cost is just 13 gas cheaper regardless of the number of tests.
+
+Conclusion: use the inline form e.g.:
+
+```function Splitter(address vAliceA, address vBobA, address vCarolA) {
+  if (vAliceA == address(0)) throw;
+  if (vBobA == address(0)) throw;
+  if (vCarolA == address(0)) throw;
+  ...
+} ```
+
+@danielitti  also posed a question about this part of my code, asking if one if test with ||s would be cheaper than 3.
+I expected that the gas cost would be the same as the work to be done is the same, but there is a difference, in Browser Solidity anyway;
+
+```if (vAliceA == address(0) || vBobA == address(0) || vCarolA == address(0)) throw;```
+has a Transaction cost 384 gas cheaper, but an Execution cost 34 greater than
+```if (vAliceA == address(0)) throw;
+if (vBobA == address(0)) throw;
+if (vCarolA == address(0)) throw;```
+
+Odd! But anyway, the conclusion is: use the long single if test form in a constructor, as the transaction cost, which includes the execution cost, is what matters.
+
+In a function it could be different if the execution cost is higher there too. To be checked when I first have a need for multiple tests in a function.
+
+BUT https://medium.com/zeppelin-blog/onward-with-ethereum-smart-contract-security-97a827e47702#.r0imlbn67
+advises:
+"... another desirable programming pattern [] is separating preconditions and making each fail separately.""
+---
+
+https://ethereum.stackexchange.com/questions/19380/external-vs-public-best-practices

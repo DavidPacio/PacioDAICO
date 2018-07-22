@@ -79,7 +79,6 @@ contract Owned is Constants {
   // ResumeMO()
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
-  // iOpManOwnerA is the address of the OpMan contact for all contracts including OpMan for which it is self
   function ResumeMO() external IsOpManOwner {
     iPausedB = false;
     emit ResumedV();
