@@ -1,6 +1,6 @@
-// lib\OwnedOpMan.sol
+// lib\OwnedToken.sol
 //
-// Version of Owned for OpMan which is owned by self and an Admin account
+// Version of Owned for Token which is owned by OpMan, Hub, Sale, Mvp
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -8,15 +8,17 @@ pragma solidity ^0.4.24;
 import "./Constants.sol";
 
 contract Owned is Constants {
-  uint256 internal constant NUM_OWNERS = 2;
+  uint256 internal constant NUM_OWNERS = 4;
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner, in this OpMan case is self
-                                          // 1 Admin owner
+                                          // 1 Hub  owner
+                                          // 2 Sale owner
+                                          // 3 Mvp  owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
   constructor() internal {
-    iOwnersYA = [address(this), msg.sender];
+    iOwnersYA = [msg.sender, msg.sender, msg.sender, msg.sender];
   }
 
   // View Methods
@@ -34,8 +36,16 @@ contract Owned is Constants {
     require(msg.sender == iOwnersYA[0], "Not required OpMan caller");
     _;
   }
-  modifier IsAdminOwner {
-    require(msg.sender == iOwnersYA[1], "Not required Admin caller");
+  modifier IsHubOwner {
+    require(msg.sender == iOwnersYA[1], "Not required Hub caller");
+    _;
+  }
+  modifier IsSaleOwner {
+    require(msg.sender == iOwnersYA[2], "Not required Sale caller");
+    _;
+  }
+  modifier IsMvpOwner {
+    require(msg.sender == iOwnersYA[3], "Not required Mvp caller");
     _;
   }
   modifier IsActive {
@@ -55,10 +65,10 @@ contract Owned is Constants {
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminOwner IsConfirmedSigner which is a managed op
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) public IsOpManOwner {
-  //require((vOwnerX == 0 || vOwnerX == 1) // /- done by OpMan.ChangeContractOwnerMO()
-  //     && vNewOwnerA != address(0));     // |
     require(vNewOwnerA != iOwnersYA[0]
-         && vNewOwnerA != iOwnersYA[1]);
+         && vNewOwnerA != iOwnersYA[1]
+         && vNewOwnerA != iOwnersYA[2]
+         && vNewOwnerA != iOwnersYA[3]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
@@ -78,4 +88,4 @@ contract Owned is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End Owned contract - OwnedOpMan.sol version
+} // End Owned contract - OwnedToken.sol version

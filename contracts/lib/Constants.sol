@@ -24,7 +24,7 @@ contract Constants {
   // Managed Operation Indices
   // -------------------------
   uint256 internal constant RESUME_X                 =  0; // ResumeMO()
-  uint256 internal constant CHANGE_OWNER_BASE_X      =  0; // ChangeOwnerMO() 0 base -> 1 and up because actual ManOpX will always be +1 at least, range 1 to 4 allowing for a max of 4 owners as required for Token
+  uint256 internal constant CHANGE_OWNER_BASE_X      =  1; // ChangeOwnerMO() 0 base -> 1 and up because actual ManOpX will always be +1 at least, range 1 to 4 allowing for a max of 4 owners as required for Token
   // Individual contract indices start from 5 after allowing for up to 4 owners
   uint256 internal constant OP_MAN_ADD_CONTRACT_X    =  5; // AddContractMO()
   uint256 internal constant OP_MAN_ADD_SIGNER_X      =  6; // AddSignerMO()

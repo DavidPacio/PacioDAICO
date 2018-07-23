@@ -97,10 +97,10 @@ contract OpMan is Owned {
   event SignManOpV(address indexed Signer, uint256 ManOpK);
   event ManOpApprovedV(uint256 ManOpK);
   event PauseContractV(uint256 ContractX);
-  event ResumeContractV(uint256 vContractX);
-  event PauseManOpV(uint256 vManOpK);
-  event ResumeManOpV(uint256 vManOpK);
-  event ChangeContractOwnerV(uint256 vContractX, address vNewOwnerA, uint256 vOwnerId);
+  event ResumeContractV(uint256 ContractX);
+  event PauseManOpV(uint256 ManOpK);
+  event ResumeManOpV(uint256 ManOpK);
+  event ChangeContractOwnerV(uint256 ContractX, address NewOwnerA, uint256 OwnerX);
 
   // Constructor NOT payable
   // ===========
@@ -118,14 +118,15 @@ contract OpMan is Owned {
     // 1.3 Add initial (OpMan) manOps
     // pAddManOp(uint256 vContractX, uint32 vSigsRequired, uint32 vSecsToSign) private
     pAddManOp(OP_MAN_X, RESUME_X,                 3, HOUR); //  0 ResumeMO()
-    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+1,    3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
-    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+2,    3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
+    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X,      3, HOUR); //  1 ChangeOwnerMO() 0 OpMan owner, in this OpMan case is self
+    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+1,    3, HOUR); //  2 ChangeOwnerMO() 1 Admin owner
+    pAddManOp(OP_MAN_X, OP_MAN_ADD_CONTRACT_X,    3, HOUR); //  5 AddContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_ADD_SIGNER_X,      3, HOUR); //  6 AddSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_ADD_MAN_OP_X,      3, HOUR); //  7 AddManOp()
     pAddManOp(OP_MAN_X, OP_MAN_CHANGE_SIGNER_X,   3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_CONTRACT_X, 3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_MAN_OP_X,   3, HOUR); // 10 UpdateManOpMO()
-}
+  }
 
   // Initialisation/Setup Functions
   // ==============================
@@ -273,7 +274,6 @@ contract OpMan is Owned {
     emit ManOpApprovedV(vManOpK);
     return true;
   }
-
 
   // State changing external methods
   // ===============================
@@ -505,18 +505,18 @@ contract OpMan is Owned {
     return true;
   }
 
+
   // OpMan.ChangeContractOwnerMO()
   // -----------------------------
   // B. Admin signer to change a contract owner as a managed op
-  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerId, address vNewOwnerA) external IsAdminOwner IsConfirmedSigner returns (bool) {
-      require(vOwnerId >= 1
-         && vOwnerId <= NUM_OWNERS  // NUM_OWNERS is defined in Owned*.sol
-         && vNewOwnerA != address(0));
+  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminOwner IsConfirmedSigner returns (bool) {
+      require(vOwnerX < NUM_OWNERS  // NUM_OWNERS is defined in Owned*.sol
+           && vNewOwnerA != address(0));
     require(vContractX < pContractsYR.length, 'Contract not known');
-    require(pIsManOpApproved(vContractX * 100 + vOwnerId));
+    require(pIsManOpApproved(vContractX * 100 + CHANGE_OWNER_BASE_X + vOwnerX)); // key = cX * 100 + manOpX
     R_Contract storage srContractR = pContractsYR[vContractX];
-    I_Owned(srContractR.contractA).ChangeOwnerMO(vOwnerId, vNewOwnerA);
-    emit ChangeContractOwnerV(vContractX, vNewOwnerA, vOwnerId);
+    I_Owned(srContractR.contractA).ChangeOwnerMO(vOwnerX, vNewOwnerA);
+    emit ChangeContractOwnerV(vContractX, vNewOwnerA, vOwnerX);
     return true;
   }
 
