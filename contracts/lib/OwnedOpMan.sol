@@ -1,4 +1,4 @@
-// lib\OwnedOpManAdmin.sol
+// lib\OwnedOpMan.sol
 //
 // Version of Owned for OpMan which is owned by self and an Admin account
 // Is pausable

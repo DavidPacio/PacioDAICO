@@ -40,7 +40,7 @@ B. Admin signer to change a contract owner as a managed op
 pragma solidity ^0.4.24;
 
 import "../lib/I_Owned.sol";
-import "../lib/OwnedOpManAdmin.sol";
+import "../lib/OwnedOpMan.sol";
 
 contract OpMan is Owned {
   // OpMan specific constants
