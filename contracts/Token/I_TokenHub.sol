@@ -8,7 +8,7 @@ pragma solidity ^0.4.24;
 
 interface I_TokenHub {
   function SetPause(bool B) external;
-  function Initialise(address vListA) external;
+  function Initialise() external;
   function StartSale() external;
   function EndSale() external;
   function NewSaleContract(address vNewSaleContractA) external;

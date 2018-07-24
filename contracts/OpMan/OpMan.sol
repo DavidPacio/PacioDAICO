@@ -72,6 +72,7 @@ contract OpMan is Owned {
     uint32 secsToSign;   // secs in which signing is to be completed
     uint32 startT;       // time that an approval process started
     uint32 sigs;         // number of signatures
+    uint32 approvals;    // number of times the manOp has been approved or used
     bool   pausedB;      // true if manOP is paused
     mapping(address => uint32) signedAtAddrMT; // sign time of the sigs by signer to prevent double signing
   }
@@ -119,7 +120,7 @@ contract OpMan is Owned {
   // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
   function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external {
-    require(vContractsYA.length == 0); // To enforce being called only once
+    require(uInitialisingB); // To enforce being called only once
     // Set Admin owner
     this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner
     // Add initial contracts
@@ -143,6 +144,7 @@ contract OpMan is Owned {
     pAddManOp(OP_MAN_X, OP_MAN_CHANGE_SIGNER_X,   3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_CONTRACT_X, 3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_MAN_OP_X,   3, HOUR); // 10 UpdateManOpMO()
+    uInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
 
@@ -179,8 +181,8 @@ contract OpMan is Owned {
   function NumManagedOperations() external view returns (uint256) {
     return pManOpKsYU.length;
   }
-  function ManagedOperationK(uint256 manOpK) external view returns (uint32 contractX, uint32 sigsRequired, uint32 secsToSign, uint32 startT, uint32 sigs, bool pausedB, address[] signersA, uint32[] signedAtT) {
-    R_ManOp storage srManOpR = pManOpsOpkMR[manOpK];
+  function ManagedOperationK(uint256 vManOpK) external view returns (uint32 contractX, uint32 sigsRequired, uint32 secsToSign, uint32 startT, uint256 sigsAndApprovals, bool pausedB, address[] signersA, uint32[] signedAtT) {
+    R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not defined');
     address[] memory signersYA = new address[](srManOpR.sigs);
     uint32[] memory signedAtYT = new uint32[](srManOpR.sigs);
@@ -190,8 +192,8 @@ contract OpMan is Owned {
         signersYA[k]    = pSignersYA[j];
         signedAtYT[k++] = srManOpR.signedAtAddrMT[pSignersYA[j]];
       }
-    }
-    return (srManOpR.contractX, srManOpR.sigsRequired, srManOpR.secsToSign, srManOpR.startT, srManOpR.sigs, srManOpR.pausedB, signersYA, signedAtYT);
+    }                                                                                        // sigs & approvals packed into sigsAndApprovals to avoid stack too deep error
+    return (srManOpR.contractX, srManOpR.sigsRequired, srManOpR.secsToSign, srManOpR.startT, srManOpR.sigs * 1000 + srManOpR.approvals, srManOpR.pausedB, signersYA, signedAtYT);
   }
   function SignerX(uint256 iX) external view returns (uint32 addedT, uint32 confirmedT, uint32 numSigs, uint32 lastSigT) {
     require(iX < pSignersYA.length);
@@ -271,6 +273,7 @@ contract OpMan is Owned {
       vSecsToSign,   // uint32 secsToSign;
       0,             // uint32 startT;
       0,             // uint32 sigs;
+      0,             // uint32 approvals;   // number of times the manOp has been approved or used
       false);        // bool   pausedB;     // true if manOP is paused
                      // mapping(address => uint32) signedAtAddrMT; // sign time of the sigs by signer to prevent double signing
     pManOpKsYU.push(manOpK);
@@ -281,7 +284,7 @@ contract OpMan is Owned {
 
   // OpMan.pIsManOpApproved()
   // ------------------------
-  // Called from IsContractManOpApproved() and OpMan *MO() functions to check if approval for the manOp has been given by the required number of signers
+  // Called from IsManOpApproved() and OpMan *MO() functions to check if approval for the manOp has been given by the required number of signers
   function pIsManOpApproved(uint256 vManOpK) private returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigs >= srManOpR.sigsRequired                 // signed the requisite number of times
@@ -330,6 +333,7 @@ contract OpMan is Owned {
   // ------------------
   // 2.4 Called from contract Initialise() function to add a manOp for the contract
   function InitAddManOp(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external returns (bool) {
+    require(uInitialisingB); // To enforce being called only during initialisation
     uint256 cX = pContractsAddrMX[msg.sender];
     require(cX > 0, 'Not called from known contract'); // Not concerned about the cX == 0 (OP_MAN_X) case for OpMan itself as no OpMan functions call this function.
     require(cX == vContractX, 'cX missmatch');
@@ -461,13 +465,13 @@ contract OpMan is Owned {
     return true;
   }
 
-  // OpMan.IsContractManOpApproved()
-  // -------------------------------
+  // OpMan.IsManOpApproved()
+  // -----------------------
   // Called from a contract function using operation management to check if approval for the manOp has been given by the required number of signers
   // Process: 8. Approve or reject a request by a contract function to perform a managed op
-  function IsContractManOpApproved(uint256 vManOpX) external returns (bool) {
+  function IsManOpApproved(uint256 vManOpX) external returns (bool) {
     uint256 cX = pContractsAddrMX[msg.sender];
-    require(cX > 0, 'Not called from known contract'); // Not concerned about the cX == 0 (OP_MAN_X) case for OpMan itself as no OpMan functions call this function.
+    require(cX > 0 || msg.sender == address(this), 'Not called from known contract'); // The '|| msg.sender == address(this)' test is because cX == 0 (OP_MAN_X) for OpMan itself.
     return pIsManOpApproved(cX * 100 + vManOpX);  // key = cX * 100 + manOpX
   }
 
@@ -502,11 +506,12 @@ contract OpMan is Owned {
   // A.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
   function ResumeContractMO(uint256 vContractX) external IsConfirmedSigner returns (bool) {
     require(vContractX < pContractsYR.length, 'Contract not known');
-    require(pIsManOpApproved(vContractX * 100)); // No need for + RESUME_X as RESUME_X is 0
     R_Contract storage srContractR = pContractsYR[vContractX];
     srContractR.pausedB = false;
     if (srContractR.pausableB)
-      I_Owned(srContractR.contractA).ResumeMO();
+      I_Owned(srContractR.contractA).ResumeMO();   // Owned.ResumeMO() does an IsManOpApproved(RESUME_X) callback
+    else
+      require(pIsManOpApproved(vContractX * 100)); // No need for + RESUME_X as RESUME_X is 0
     emit ResumeContractV(vContractX);
     return true;
   }
@@ -529,12 +534,11 @@ contract OpMan is Owned {
   // -----------------------------
   // B. Admin signer to change a contract owner as a managed op
   function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminOwner IsConfirmedSigner returns (bool) {
-      require(vOwnerX < NUM_OWNERS  // NUM_OWNERS is defined in Owned*.sol
-           && vNewOwnerA != address(0));
+    require(vOwnerX < NUM_OWNERS  // NUM_OWNERS is defined in Owned*.sol
+         && vNewOwnerA != address(0));
     require(vContractX < pContractsYR.length, 'Contract not known');
-    require(pIsManOpApproved(vContractX * 100 + CHANGE_OWNER_BASE_X + vOwnerX)); // key = cX * 100 + manOpX
-    R_Contract storage srContractR = pContractsYR[vContractX];
-    I_Owned(srContractR.contractA).ChangeOwnerMO(vOwnerX, vNewOwnerA);
+  //require(pIsManOpApproved(vContractX * 100 + CHANGE_OWNER_BASE_X + vOwnerX)); No. Is done by Owned.ChangeOwnerMO()
+    I_Owned(pContractsYR[vContractX].contractA).ChangeOwnerMO(vOwnerX, vNewOwnerA);
     emit ChangeContractOwnerV(vContractX, vNewOwnerA, vOwnerX);
     return true;
   }

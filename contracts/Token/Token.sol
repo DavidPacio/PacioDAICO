@@ -9,8 +9,7 @@ Called from 4 owners:
 3 Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
 
 Calls
-- OpMan
-- List.sol as the contract for the list of participants
+List.sol as the contract for the list of participants
 
 djh??
 
@@ -45,7 +44,7 @@ Token.NewTokenContract(address vNewTokenContractA) external IsHubOwner
 Token.EndSale() external IsHubOwner IsActive
 
 Functions for calling via same name function in Mvp
-======================================================
+===================================================
 Token.Burn() external IsMvpOwner
 Token.Destroy(uint256 vPicos) external IsMvpOwner
 
@@ -99,7 +98,7 @@ contract Token is EIP20Token, Math {
   // Token Owner 0 must have been set to OpMan via a deployment call of Token.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
   // List  Owner 3 must have been set to Token via a deployment call of  List.ChangeOwnerMO(3, Token address)
   function Initialise() external IsHubOwner {
-    require(totalSupply == 0); // to enforce being called only once
+    require(uInitialisingB); // To enforce being called only once
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[0]).ContractXA(LIST_X)); // The List contract
     // Mint and create the owners account in List
@@ -114,6 +113,7 @@ contract Token is EIP20Token, Math {
     pPicosAvailable    = 75*(10**19); // 750 million
     // From the EIP20 Standard: A token contract which creates new tokens SHOULD trigger a Transfer event with the _from address set to 0x0 when tokens are created.
     emit Transfer(0x0, iOwnersYA[2], 10**21); // log event 0x0 from == minting. iOwnersYA[2] is the Sale contract
+    uInitialisingB = false;
   }
   // Token.StartSale()
   // ---------------

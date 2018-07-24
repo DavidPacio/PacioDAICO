@@ -159,7 +159,9 @@ contract List is Owned, Math {
   // List.Initialise()
   // -----------------
   function Initialise() external IsHubOwner {
+    require(uInitialisingB); // To enforce being called only once
     pSaleA = iOwnersYA[2];
+    uInitialisingB = false;
   }
   // List.StartSale()
   // -----------------
