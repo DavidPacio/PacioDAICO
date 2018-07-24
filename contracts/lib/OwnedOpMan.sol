@@ -54,7 +54,7 @@ contract Owned is Constants {
   // ChangeOwnerMO()
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminOwner IsConfirmedSigner which is a managed op
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) public IsOpManOwner {
+  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external IsOpManOwner {
   //require((vOwnerX == 0 || vOwnerX == 1) // /- done by OpMan.ChangeContractOwnerMO()
   //     && vNewOwnerA != address(0));     // |
     require(vNewOwnerA != iOwnersYA[0]

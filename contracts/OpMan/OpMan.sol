@@ -8,10 +8,7 @@ All contracts, including OpMan, should use managed ops for:
 - any administrator type operations
 
 OpMan Processes
-1. Add initial contracts, signers, and manOps via the OpMan constructor
-   1.1 Add initial contracts
-   1.2 Add initial signers
-   1.3 Add initial (OpMan) manOps
+1. Set Admin owner, and add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
 2. Add additional contracts, signers, and manOps as managed ops
    2.1 Admin to add additional contract as a managed op
    2.2 Admin to add additional signer as a managed op
@@ -34,6 +31,11 @@ A. Resume contract and ops as managed ops
    A.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
    A.2 Signer to resume a manOp as a managed op
 B. Admin signer to change a contract owner as a managed op
+
+Owners
+------
+0. OpMan (self)                          - Set by OwnedToken.sol constructor
+1. Admin, a PCL hardware wallet account  - Set by Initialise() here
 
 */
 
@@ -84,7 +86,7 @@ contract OpMan is Owned {
 
   // Events
   // ======
-  event ConstructorV(address Deployer);
+  event InitialiseV(address Deployer);
   event AddContractV(uint256 ContractX, address ContractA, bool Pausable);
   event AddSignerV(address Signer);
   event AddManOpV(uint256 ContractX, uint256 ManOpX, uint32 SigsRequired, uint32 SecsToSign);
@@ -102,20 +104,35 @@ contract OpMan is Owned {
   event ResumeManOpV(uint256 ManOpK);
   event ChangeContractOwnerV(uint256 ContractX, address NewOwnerA, uint256 OwnerX);
 
-  // Constructor NOT payable
+  // No Constructor (Only the Owned one)
   // ===========
-  // 1. Add initial contracts, signers, and manOps via the OpMan constructor
-  // vContractsYA[] must be in HUB_X, SALE_X etc order
-  constructor(address[] vContractsYA, address[] vSignersYA) public {
-    emit ConstructorV(msg.sender);
-    // 1.1 Add initial contracts
+
+  // Initialisation/Setup Functions
+  // ==============================
+
+  // Initialise()
+  // ------------
+  // 1. Set Admin owner, and add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
+  // Can only be called once
+  // Arguments:
+  // - vAdminA       PCL hardware wallet address
+  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
+  function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external {
+    require(vContractsYA.length == 0); // To enforce being called only once
+    // Set Admin owner
+    this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner
+    // Add initial contracts
     pAddContract(OP_MAN_X, address(this), true); // Self
-    for (uint256 j=0; j<vContractsYA.length; j++)
-      pAddContract(j+1, vContractsYA[j], (j+1) != LIST_X); // List is the only contract which isn't pausable
-    // 1.2 Add initial signers
+    uint256 cX = 1;
+    for (uint256 j=0; j<vContractsYA.length; j++) {
+      pAddContract(cX, vContractsYA[j], cX != LIST_X); // List is the only contract which isn't pausable
+      cX++;
+    }
+    // Add initial signers
     for (j=0; j<vSignersYA.length; j++)
       pAddSigner(vSignersYA[j]);
-    // 1.3 Add initial (OpMan) manOps
+    // Add initial (OpMan) manOps
     // pAddManOp(uint256 vContractX, uint32 vSigsRequired, uint32 vSecsToSign) private
     pAddManOp(OP_MAN_X, RESUME_X,                 3, HOUR); //  0 ResumeMO()
     pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X,      3, HOUR); //  1 ChangeOwnerMO() 0 OpMan owner, in this OpMan case is self
@@ -126,15 +143,17 @@ contract OpMan is Owned {
     pAddManOp(OP_MAN_X, OP_MAN_CHANGE_SIGNER_X,   3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_CONTRACT_X, 3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_MAN_OP_X,   3, HOUR); // 10 UpdateManOpMO()
+    emit InitialiseV(msg.sender);
   }
-
-  // Initialisation/Setup Functions
-  // ==============================
 
   // View Methods
   // ============
   function NumContracts() external view returns (uint256) {
     return pContractsYR.length;
+  }
+  function ContractXA(uint256 cX) external view returns (address) {
+    require(cX < pContractsYR.length);
+    return pContractsYR[cX].contractA;
   }
   function ContractX(uint256 cX) external view returns (address contractA, bool pausableB, bool pausedB, uint32 addedT, uint32 updatedT, uint32 numManOps, uint32[] manOpsY) {
     require(cX < pContractsYR.length);

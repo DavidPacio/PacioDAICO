@@ -3,10 +3,10 @@
 The Pacio Token named PIOE for the Pacio DAICO
 
 Called from 4 owners:
-1. OpMan.sol
-2. Hub.sol
-3. Sale.sol
-4. Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
+0 OpMan.sol
+1 Hub.sol
+2 Sale.sol
+3 Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
 
 Calls
 - OpMan
@@ -55,6 +55,7 @@ No sending ether to this contract
 
 Events
 ======
+Token.StartSaleV();
 Token.EndSaleV();
 
 */
@@ -62,6 +63,7 @@ Token.EndSaleV();
 pragma solidity ^0.4.24;
 
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
 import "../List/I_ListToken.sol";
 import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
@@ -87,21 +89,19 @@ contract Token is EIP20Token, Math {
   // ------------------
   // To be called by Hub.Initialise()
   // Can only be called once.
-  // 1. OpMan.sol
-  // 2. Hub.sol
-  // 3. Sale.sol
-  // 4. Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
-  // Token Owner 2 [1] must have been set to Hub  via a deployment account call of Token.ChangeOwner1(Hub address)
-  // Token Owner 3 [2] must have been set to Sale via a deployment account call of Token.ChangeOwner2(Sale address)
-  // Token Owner 4 [3] must have been set to Mvp  via a deployment account call of Token.ChangeOwner3(Mvp address)
-  // List  Owner2 must have been set to Token  via a deployment account call of List.ChangeOwner2(Token address)
-  function Initialise(address vListA) external IsHubOwner {
-    require(totalSupply == 0); // can only be called once
-    name   = "PIOE Token";
-    symbol = "PIOE";
-    decimals = 12;
+  // 0. OpMan.sol
+  // 1. Hub.sol
+  // 2. Sale.sol
+  // 3. Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
+  // Token Owner 1 must have been set to Hub   via a deployment call of Token.ChangeOwnerMO(1, Hub address)
+  // Token Owner 2 must have been set to Sale  via a deployment call of Token.ChangeOwnerMO(2, Sale address)
+  // Token Owner 3 must have been set to Mvp   via a deployment call of Token.ChangeOwnerMO(3, Mvp address)
+  // Token Owner 0 must have been set to OpMan via a deployment call of Token.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
+  // List  Owner 3 must have been set to Token via a deployment call of  List.ChangeOwnerMO(3, Token address)
+  function Initialise() external IsHubOwner {
+    require(totalSupply == 0); // to enforce being called only once
     iPausedB = false; // make active
-    iListC = I_ListToken(vListA);  // The List contract
+    iListC   = I_ListToken(I_OpMan(iOwnersYA[0]).ContractXA(LIST_X)); // The List contract
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
     // Create the Sale sale contract list entry
@@ -167,13 +167,13 @@ contract Token is EIP20Token, Math {
   // Token.Issue()
   // -------------
   // To be called:
-  // . Repeatedly via Sale.Issue() for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
-  //   List entry is created by Sale.Issue() which checks toA
+  // . Repeatedly via Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
+  //   List entry is created by Hub.Presale.Issue() which checks toA
   // . from Sale.Buy() which checks toA
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleOwner IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)
       pContributors++;
-    iListC.Issue(toA, vPicos, vWei); // Transfers from Sale (iOwnerA here, iOwner1A in List) to toA
+    iListC.Issue(toA, vPicos, vWei); // Transfers from Sale as the minted tokens owner
     pPicosIssued    = safeAdd(pPicosIssued,    vPicos);
     pPicosAvailable = safeSub(pPicosAvailable, vPicos); // Should never go neg due to reserve, even if final Buy() goes over the hardcap
     pWeiRaised      = safeAdd(pWeiRaised, vWei);
@@ -183,7 +183,8 @@ contract Token is EIP20Token, Math {
 
   // Functions for manual calling via same name function in Hub()
   // ============================================================
-
+/*
+Wip djh?? To be completed
   // Token.NewSaleContract()
   // -----------------------
   // Called manually via the old Sale.NewSaleContract() to change the owner of the Token contract to a new Sale.
@@ -210,7 +211,7 @@ contract Token is EIP20Token, Math {
   function NewTokenContract(address vNewTokenContractA) external IsHubOwner {
     //djh?? iListC.ChangeOwner(2, vNewTokenContractA);
   }
-
+*/
 
   // Functions for calling via same name function in Mvp
   // ===================================================
@@ -233,7 +234,7 @@ contract Token is EIP20Token, Math {
   // Token.Destroy()
   // ---------------
   // For use when transferring unissued PIOEs to PIOs
-  // Is called by Mvp.Destroy() -> here to destroy unissued Sale (iOwner1A) picos
+  // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsMvpOwner {
     require(!pSaleOpenB);

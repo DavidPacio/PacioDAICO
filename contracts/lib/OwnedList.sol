@@ -1,7 +1,7 @@
-// lib\OwnedToken.sol
+// lib\OwnedList.sol
 //
-// Version of Owned for Token which is owned by OpMan, Hub, Sale, Mvp
-// Is pausable
+// Version of Owned for List which is owned by OpMan, Hub, Sale, Token
+// Is NOT pausable
 
 pragma solidity ^0.4.24;
 
@@ -9,11 +9,10 @@ import "./Constants.sol";
 
 contract Owned is Constants {
   uint256 internal constant NUM_OWNERS = 4;
-  bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner, in this OpMan case is self
-                                          // 1 Hub  owner
-                                          // 2 Sale owner
-                                          // 3 Mvp  owner
+                                          // 1 Hub   owner
+                                          // 2 Sale  owner
+                                          // 3 Token owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -25,9 +24,6 @@ contract Owned is Constants {
   // ------------
   function Owners() external view returns (address[NUM_OWNERS]) {
     return iOwnersYA;
-  }
-  function Paused() external view returns (bool) {
-    return iPausedB;
   }
 
   // Modifier functions
@@ -44,20 +40,14 @@ contract Owned is Constants {
     require(msg.sender == iOwnersYA[2], "Not required Sale caller");
     _;
   }
-  modifier IsMvpOwner {
-    require(msg.sender == iOwnersYA[3], "Not required Mvp caller");
-    _;
-  }
-  modifier IsActive {
-    require(!iPausedB, "Contract is Paused");
+  modifier IsTokenOwner {
+    require(msg.sender == iOwnersYA[3], "Not required Token caller");
     _;
   }
 
   // Events
   // ------
   event ChangeOwnerV(address indexed PreviousOwner, address NewOwner, uint256 OwnerId);
-  event PausedV();
-  event ResumedV();
 
   // State changing external methods
   // -----------------------------
@@ -74,19 +64,4 @@ contract Owned is Constants {
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
 
-  // Pause()
-  // -------
-  // Called by OpMan.Pause(vContractX) IsConfirmedSigner. Not a managed op.
-  function Pause() external IsOpManOwner IsActive {
-    iPausedB = true;
-    emit PausedV();
-  }
-
-  // ResumeMO()
-  // ----------
-  // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
-  function ResumeMO() external IsOpManOwner {
-    iPausedB = false;
-    emit ResumedV();
-  }
 } // End Owned contract - OwnedToken.sol version
