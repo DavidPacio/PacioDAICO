@@ -39,10 +39,11 @@ contract Constants {
   uint32 internal constant HOUR        =  3600;
 
   // List Contract bits
-  // ------------------
-  uint32 internal constant PRESALE     = 1; // Bit setting for a Presale List entry - Pacio Seed Presale or Pacio internal Placement
-  uint32 internal constant TRANSFER_OK = 2; // Bit setting for transfers allowed for this member even if pTransfersOkB is false
-  uint32 internal constant HAS_PROXY   = 4; // Bit setting for this entry having a Proxy appointed
+  // ------------------                        /- bit
+  uint32 internal constant PRESALE     = 1; // 0 Bit setting for a Presale List entry - Pacio Seed Presale or Pacio internal Placement
+  uint32 internal constant TRANSFER_OK = 2; // 1 Bit setting for transfers allowed for this member even if pTransfersOkB is false
+  uint32 internal constant HAS_PROXY   = 4; // 2 Bit setting for this entry having a Proxy appointed
+  uint32 internal constant BURNT       = 8; // 3 Bit setting for this entry having had its PIOEs burnt
 
   // List Contract Browsing actions
   // ------------------------------
@@ -59,7 +60,8 @@ contract Constants {
   uint8 internal constant ENTRY_PRESALE    = 3; // Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
   uint8 internal constant ENTRY_REFUNDED   = 4; // Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
   uint8 internal constant ENTRY_DOWNGRADED = 5; // Has been downgraded from White or Member
-  uint8 internal constant ENTRY_WHITE      = 6; // Whitelisted with no picosBalance
-  uint8 internal constant ENTRY_MEMBER     = 7; // Whitelisted with a picosBalance
+  uint8 internal constant ENTRY_BURNT      = 6; // Has been burnt
+  uint8 internal constant ENTRY_WHITE      = 7; // Whitelisted with no picosBalance
+  uint8 internal constant ENTRY_MEMBER     = 8; // Whitelisted with a picosBalance
 
 } // End Constants Contract

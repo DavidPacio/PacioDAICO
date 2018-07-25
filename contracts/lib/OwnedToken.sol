@@ -10,7 +10,7 @@ import "../OpMan/I_OpMan.sol";
 
 contract Owned is Constants {
   uint256 internal constant NUM_OWNERS = 4;
-  bool    public   uInitialisingB = true; // Starts in the initialising state
+  bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner, in this OpMan case is self
                                           // 1 Hub  owner
@@ -30,6 +30,9 @@ contract Owned is Constants {
   }
   function Paused() external view returns (bool) {
     return iPausedB;
+  }
+  function Initialising() external view returns (bool) {
+    return iInitialisingB;
   }
 
   // Modifier functions
@@ -66,9 +69,9 @@ contract Owned is Constants {
   // ChangeOwnerMO()
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminOwner IsConfirmedSigner which is a managed op
-  // Can be called during deployment when uInitialisingB is set and msg.sender is the same as that for the constructor call to set the owners, if OpMan is set last.
+  // Can be called during deployment when iInitialisingB is set and msg.sender is the same as that for the constructor call to set the owners, if OpMan is set last.
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external IsOpManOwner {
-    require((uInitialisingB || I_OpMan(iOwnersYA[0]).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
+    require((iInitialisingB || I_OpMan(iOwnersYA[0]).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
          && vNewOwnerA != iOwnersYA[0]
          && vNewOwnerA != iOwnersYA[1]
          && vNewOwnerA != iOwnersYA[2]

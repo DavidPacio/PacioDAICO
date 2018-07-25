@@ -11,9 +11,9 @@ interface I_TokenHub {
   function Initialise() external;
   function StartSale() external;
   function EndSale() external;
-  function NewSaleContract(address vNewSaleContractA) external;
-  function NewListContract(address vNewListContractA) external;
-  function NewTokenContract(address vNewTokenContractA) external;
+  // function NewSaleContract(address vNewSaleContractA) external;
+  // function NewListContract(address vNewListContractA) external;
+  // function NewTokenContract(address vNewTokenContractA) external;
 }
 // End I_TokenHub interface
 

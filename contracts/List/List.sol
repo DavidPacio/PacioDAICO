@@ -2,65 +2,14 @@
 
 List of people/addresses to do with Pacio
 
-Owned by  /- previous
-1 Hub    |
-2 Token  |
-
-New post OpMan work:
+Owned by
 0 OpMan
 1 Hub
-2 Sale
-3 Token
-
+2 Token
 
 djh??
 - other owners e.g. voting contract?
-- add softCap bool
-- prevent transfers if softcap not reached
 - add vote count data
-- add grey wei
-- add burnt date
-
-View Methods
-============
-Contract
-List.ListEntriesNumber() external view returns (uint256)
-List.GreyListNumber() external view returns (uint256)
-List.WhiteListNumber() external view returns (uint256)
-List.PacioMemberNumber() external view returns (uint256)
-List.PresaleNumber() external view returns (uint256)
-List.ProxiesNumber() external view returns (uint256)
-List.RefundedNumber() external view returns (uint256)
-List.DowngradedNumber() external view returns (uint256)
-List.IsTransferAllowedByDefault() external view returns (bool)
-Account
-List.ListEntryExists(address accountA) external view returns (bool)
-List.PicosBalance(address accountA) external view returns (uint256 balance)
-List.PicosBought(address accountA) external view returns (uint256 balance)
-List.BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN)
-List.EntryType(address accountA) public view returns (uint8 typeN)
-List.Browse(address currentA, uint8 vActionN) external view IsHubOwner returns (address retA, uint8 typeN) / Only owner restricted view functions
-List.NextEntry(address accountA) external view IsHubOwner returns (address)                                | - those which return other list entry addresses
-List.PrevEntry(address accountA) external view IsHubOwner returns (address)                                |
-List.Proxy(address accountA) external view IsHubOwner returns (address)                                    |
-List.Lookup(address accountA) external view returns ( {All of R_List except for the addresses} )
-
-State changing methods
-======================
-
-List.Fallback function
-======================
-No sending ether to this contract!
-
-Events
-=====
- NewEntryV(address indexed Entry, uint32 Bits, uint32 DbId);
-WhitelistV(address indexed Entry, uint32 WhitelistT);
-DowngradeV(address indexed Entry, uint32 DowngradeT);
- SetBonusV(address indexed Entry, uint32 bonusCentiPc);
- SetProxyV(address indexed Entry, address Proxy);
-SetTransferOkV(address indexed Entry, bool On);
-IssueV(address indexed To, uint256 Picos, uint256 Wei);
 
 Member types -  see Constants.sol
 None,       // 0 An undefined entry with no add date
@@ -95,7 +44,7 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedList.sol";
 import "../lib/Math.sol";
 import "../lib/Constants.sol";
-import "../Hub/I_Hub.sol";
+import "../OpMan/I_OpMan.sol";
 
 contract List is Owned, Math {
   string  public  name = "Pacio DAICO Participants List";
@@ -109,9 +58,10 @@ contract List is Owned, Math {
   uint256 private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
   uint256 private pNumProxies;    // Number of entries with a Proxy set
   uint256 private pNumRefunded;   // Number refunded
+  uint256 private pNumBurnt;      // Number burnt
   uint256 private pNumDowngraded; // Number downgraded (from white list)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
-
+  bool    private pSoftCapB;      // Set to true when softcap is reached in Sale
 
   // Struct to hold member data, with a doubly linked list of List to permit traversing List
   // Each member requires 6 storage slots.
@@ -152,22 +102,52 @@ contract List is Owned, Math {
   // 2. Sale.sol
   // 3. Token.sol
   // List Owner 1 must have been set to Hub   via a deployment call of List.ChangeOwnerMO(1, Hub address)
-  // List Owner 2 must have been set to Sale  via a deployment call of List.ChangeOwnerMO(2, Sale address)
-  // List Owner 3 must have been set to Token via a deployment call of List.ChangeOwnerMO(3, Token address)
+  // List Owner 2 must have been set to Token via a deployment call of List.ChangeOwnerMO(2, Token address)
   // List Owner 0 must have been set to OpMan via a deployment call of List.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
 
   // List.Initialise()
   // -----------------
   function Initialise() external IsHubOwner {
-    require(uInitialisingB); // To enforce being called only once
-    pSaleA = iOwnersYA[2];
-    uInitialisingB = false;
+    require(iInitialisingB); // To enforce being called only once
+    pSaleA = I_OpMan(iOwnersYA[0]).ContractXA(SALE_X);
+    iInitialisingB = false;
   }
   // List.StartSale()
   // -----------------
   // Called only from Hub.StartSale()
   function StartSale() external IsHubOwner {
     pTransfersOkB = false; // Stop transfers by default
+  }
+
+  // List.SoftCapReached()
+  // ---------------------
+  // Is called from Hub.SoftCapReached() when soft cap is reached
+  function SoftCapReached() external IsHubOwner {
+    pSoftCapB = true;
+  }
+
+  // List.SetTransfersOkByDefault()
+  // ------------------------------
+  // Callable only from Hub to set/unset pTransfersOkB
+  function SetTransfersOkByDefault(bool B) external IsHubOwner returns (bool) {
+    if (B)
+      require(pSoftCapB, 'Requires Softcap');
+    pTransfersOkB = B;
+    emit SetTransfersOkByDefaultV(B);
+    return true;
+  }
+
+  // List.SetTransferOk()
+  // --------------------
+  // Callable only from Hub to set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
+  function SetTransferOk(address vEntryA, bool B) external IsHubOwner returns (bool) {
+    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
+    if (B) // Set
+      pListMR[vEntryA].bits |= TRANSFER_OK;
+    else   // Unset
+      pListMR[vEntryA].bits &= ~TRANSFER_OK;
+    emit SetTransferOkV(vEntryA, B);
+    return true;
   }
 
   // View Methods
@@ -193,11 +173,18 @@ contract List is Owned, Math {
   function RefundedNumber() external view returns (uint256) {
     return pNumRefunded;
   }
+  function BurntNumber() external view returns (uint256) {
+    return pNumBurnt;
+  }
   function DowngradedNumber() external view returns (uint256) {
     return pNumDowngraded;
   }
   function IsTransferAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
+  }
+  function IsTransferAllowed(address frA) private view returns (bool) {
+    return (pTransfersOkB                           // Transfers can be made
+         || (pListMR[frA].bits & TRANSFER_OK) > 0); // or they are allowed for this member
   }
   function ListEntryExists(address accountA) external view returns (bool) {
     return pListMR[accountA].addedT > 0;
@@ -215,32 +202,23 @@ contract List is Owned, Math {
   // ----------------
   // Returns the entry type of the accountA list entry as one of the ENTRY_ constants
   // Member types
-  // - None        // 0 An undefined entry with no add date
-  // - Contract    // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-  // - Grey        // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-  // - Presale     // 3 Seed presale or private placement entry. Has PRESALE bit set. whiteT is not set
-  // - Refunded    // 4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously. Indicated by refundT set
-  // - Downgraded  // 5 Has been downgraded from White or Member. Indicated by downT set
-  // - White       // 6 Whitelisted with no picosBalance
-  // - Member      // 7 Whitelisted with a picosBalance
+  // - ENTRY_NONE       0 An undefined entry with no add date
+  // - ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+  // - ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+  // - ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
+  // - ENTRY_REFUNDED   4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
+  // - ENTRY_DOWNGRADED 5 Has been downgraded from White or Member
+  // - ENTRY_BURNT      6 Has been burnt
+  // - ENTRY_WHITE      7 Whitelisted with no picosBalance
+  // - ENTRY_MEMBER     8 Whitelisted with a picosBalance
   function EntryType(address accountA) public view returns (uint8 typeN) {
     R_List storage rsEntryR = pListMR[accountA];
-    // if (rsEntryR.addedT == 0)
-    //   typeN = ENTRY_NONE;
-    // else if (rsEntryR.refundT > 0)
-    //   typeN = ENTRY_REFUNDED;
-    // else if (rsEntryR.downT > 0)
-    //   typeN = ENTRY_DOWNGRADED;
-    // else if (rsEntryR.whiteT > 0)
-    //   typeN = rsEntryR.picosBalance > 0 ? ENTRY_MEMBER : ENTRY_WHITE;
-    // else
-    //   typeN = rsEntryR.bits & PRESALE > 0 ? ENTRY_PRESALE : (rsEntryR.dbId == 1 ? ENTRY_CONTRACT : ENTRY_GREY);
-    // return typeN;
     return rsEntryR.addedT == 0 ? ENTRY_NONE :
-      (rsEntryR.refundT > 0 ? ENTRY_REFUNDED :
-       (rsEntryR.downT > 0 ? ENTRY_DOWNGRADED :
-        (rsEntryR.whiteT > 0 ? (rsEntryR.picosBalance > 0 ? ENTRY_MEMBER : ENTRY_WHITE) :
-         (rsEntryR.bits & PRESALE > 0 ? ENTRY_PRESALE : (rsEntryR.dbId == 1 ? ENTRY_CONTRACT : ENTRY_GREY)))));
+      (rsEntryR.bits & BURNT > 0 ? ENTRY_BURNT :
+        (rsEntryR.refundT > 0 ? ENTRY_REFUNDED :
+         (rsEntryR.downT > 0 ? ENTRY_DOWNGRADED :
+          (rsEntryR.whiteT > 0 ? (rsEntryR.picosBalance > 0 ? ENTRY_MEMBER : ENTRY_WHITE) :
+           (rsEntryR.bits & PRESALE > 0 ? ENTRY_PRESALE : (rsEntryR.dbId == 1 ? ENTRY_CONTRACT : ENTRY_GREY))))));
   }
   // List.Browse()
   // -------------
@@ -323,10 +301,6 @@ contract List is Owned, Math {
     _;
   }
 
-  // function IsTransferAllowed(address frA) private view returns (bool) {
-  //   return (pTransfersOkB                           // Transfers can be made
-  //        || (pListMR[frA].bits & TRANSFER_OK) > 0); // or they are allowed for this member
-  // }
 
   // State changing methods
   // ======================
@@ -350,8 +324,8 @@ contract List is Owned, Math {
     require(vEntryA != address(0)     // Defined
          && vEntryA != iOwnersYA[0]   // Not OpMan
          && vEntryA != iOwnersYA[1]   // Not Hub
-      // && vEntryA != pSaleA   // Not Sale - No as we do create a Sale entry
-         && vEntryA != iOwnersYA[3]   // Not Token
+         && vEntryA != iOwnersYA[2]   // Not Token
+      // && vEntryA != pSaleA         // Not Sale - No as we do create a Sale contract entry
          && vEntryA != address(this), // Not this list contract
             'Invalid account address');
     require(pListMR[vEntryA].addedT == 0, "Account already exists"); // Not already in existence
@@ -474,30 +448,6 @@ contract List is Owned, Math {
     return true;
   }
 
-  // List.SetTransfersOkByDefault()
-  // ------------------------------
-  // Callable only from Hub to set/unset pTransfersOkB
-  // djh?? Promulgate SoftCapB
-  function SetTransfersOkByDefault(bool B) external IsHubOwner returns (bool) {
-    // require(isSoftCapB, 'Requires Softcap');
-    pTransfersOkB = B;
-    emit SetTransfersOkByDefaultV(B);
-    return true;
-  }
-
-  // List.SetTransferOk()
-  // --------------------
-  // Callable only from Sale to set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsHubOwner returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (B) // Set
-      pListMR[vEntryA].bits |= TRANSFER_OK;
-    else   // Unset
-      pListMR[vEntryA].bits &= ~TRANSFER_OK;
-    emit SetTransferOkV(vEntryA, B);
-    return true;
-  }
-
   // List.Issue()
   // ------------
   // Is called from Token.Issue() which is called from Sale.PresaleIssue() or Sale.Buy()
@@ -546,11 +496,14 @@ contract List is Owned, Math {
   // For use when transferring issued PIOEs to PIOs
   // Is called by Mvp.Burn() -> Token.Burn() -> here thus use of tx.origin rather than msg.sender
   // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
-  // The event call is made by Mvp.Burn()
-  // djh?? Ensure that this can't be called from Sale
+  // The event call is made by Mvp.Burn() where a Burn Id is updated and logged
+  // Deployment Gas usage: 3142286. When done using pListMR[tx.origin] throughtout rather than the rsEntryR pointer, the deployment gas usage was more at 3143422. Presumably the gas usage would be less at run time too.
   function Burn() external IsTokenOwner {
-    require(pListMR[tx.origin].addedT > 0, "Account not known"); // Entry is expected to exist
-    pListMR[tx.origin].picosBalance = 0;
+    R_List storage rsEntryR = pListMR[tx.origin];
+    require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
+    rsEntryR.bits |= BURNT;
+    rsEntryR.picosBalance = 0;
+    pNumBurnt++;
   }
 
   // List.Destroy()

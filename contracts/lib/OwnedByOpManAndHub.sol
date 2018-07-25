@@ -1,6 +1,6 @@
-// lib\OwnedOpMan.sol
-//
-// Version of Owned for OpMan which is owned by self and an Admin account
+// \lib\OwnedByOpManAndHub.sol
+
+// Version of Owned owned by OpMan and Hub for use with the Sale, VoteTap, VoteEnd, and Mvp contracts
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -12,13 +12,13 @@ contract Owned is Constants {
   uint256 internal constant NUM_OWNERS = 2;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner, in this OpMan case is self
-                                          // 1 Admin owner
+  address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner
+                                          // 1 Hub  owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
   constructor() internal {
-    iOwnersYA = [address(this), msg.sender];
+    iOwnersYA = [msg.sender, msg.sender];
   }
 
   // View Methods
@@ -39,8 +39,8 @@ contract Owned is Constants {
     require(msg.sender == iOwnersYA[0], "Not required OpMan caller");
     _;
   }
-  modifier IsAdminOwner {
-    require(msg.sender == iOwnersYA[1], "Not required Admin caller");
+  modifier IsHubOwner {
+    require(msg.sender == iOwnersYA[1], "Not required Hub caller");
     _;
   }
   modifier IsActive {
@@ -59,9 +59,9 @@ contract Owned is Constants {
   // ChangeOwnerMO()
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminOwner IsConfirmedSigner which is a managed op
-  // Can be called during deployment when iInitialisingB is set
+  // Can be called during deployment when iInitialisingB is set and msg.sender is the same as that for the constructor call to set the owners, if OpMan is set last.
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external IsOpManOwner {
-    require((iInitialisingB || I_OpMan(this).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
+    require((iInitialisingB || I_OpMan(iOwnersYA[0]).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
          && vNewOwnerA != iOwnersYA[0]
          && vNewOwnerA != iOwnersYA[1]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
@@ -80,8 +80,8 @@ contract Owned is Constants {
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
   function ResumeMO() external IsOpManOwner {
-    require(I_OpMan(this).IsManOpApproved(RESUME_X));
+    require(I_OpMan(iOwnersYA[0]).IsManOpApproved(RESUME_X));
     iPausedB = false;
     emit ResumedV();
   }
-} // End Owned contract - OwnedOpMan.sol version
+} // End Owned contract - OwnedByOpManAndHub.sol version

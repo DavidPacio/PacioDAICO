@@ -9,9 +9,11 @@ Called from 4 owners:
 3 Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
 
 Calls
-List.sol as the contract for the list of participants
+OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
+List   as the contract for the list of participants
 
-djh??
+To Do djh??
+- Add functions for changing contracts
 
 
 No Constructor
@@ -30,7 +32,7 @@ Token.BurnId() external view returns (int32)
 
 Initialisation/Settings Methods
 ===============================
-Token.Initialise(address vListA) external IsHubOwner {
+Token.Initialise() external IsHubOwner
 
 State changing external methods
 ===============================
@@ -98,7 +100,7 @@ contract Token is EIP20Token, Math {
   // Token Owner 0 must have been set to OpMan via a deployment call of Token.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
   // List  Owner 3 must have been set to Token via a deployment call of  List.ChangeOwnerMO(3, Token address)
   function Initialise() external IsHubOwner {
-    require(uInitialisingB); // To enforce being called only once
+    require(iInitialisingB); // To enforce being called only once
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[0]).ContractXA(LIST_X)); // The List contract
     // Mint and create the owners account in List
@@ -113,18 +115,18 @@ contract Token is EIP20Token, Math {
     pPicosAvailable    = 75*(10**19); // 750 million
     // From the EIP20 Standard: A token contract which creates new tokens SHOULD trigger a Transfer event with the _from address set to 0x0 when tokens are created.
     emit Transfer(0x0, iOwnersYA[2], 10**21); // log event 0x0 from == minting. iOwnersYA[2] is the Sale contract
-    uInitialisingB = false;
+    iInitialisingB = false;
   }
   // Token.StartSale()
   // ---------------
-  // Is called from Hub
+  // Is called from Hub.StartSale()
   function StartSale() external IsHubOwner IsActive {
     pSaleOpenB = true;
     emit StartSaleV();
   }
   // Token.EndSale()
   // ---------------
-  // Is called from Sale via Hub after hard cap is reached, time has expired, or the sale is ended manually
+  // Is called from HUb.EndSale() after after hard cap is reached in Sale, time has expired in Sale, or the sale is ended manually
   function EndSale() external IsHubOwner IsActive {
     pSaleOpenB = false;
     emit EndSaleV();
@@ -167,7 +169,7 @@ contract Token is EIP20Token, Math {
   // Token.Issue()
   // -------------
   // To be called:
-  // . Repeatedly via Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
+  // . By Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   //   List entry is created by Hub.Presale.Issue() which checks toA
   // . from Sale.Buy() which checks toA
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleOwner IsActive returns (bool) {
@@ -181,37 +183,8 @@ contract Token is EIP20Token, Math {
     return true;
   }
 
-  // Functions for manual calling via same name function in Hub()
-  // ============================================================
-/*
-Wip djh?? To be completed
-  // Token.NewSaleContract()
-  // -----------------------
-  // Called manually via the old Sale.NewSaleContract() to change the owner of the Token contract to a new Sale.
-  // Transfers any minted tokens from old Sale to new Sale
-  function NewSaleContract(address vNewSaleContractA) external { // IsOwner2 check c/o the ChangeOwner2() call
-    // Create a new sale contract entry with the current PicosBalance
-    iListC.CreateSaleContractEntry(0);
-    iListC.TransferSaleContractBalance(vNewSaleContractA);
-    emit Transfer(iOwnersYA[2], vNewSaleContractA, iListC.PicosBalance(iOwnersYA[2])); // iOwnersYA[2] is still the old Sale
-    //djh?? this.ChangeOwner(2, vNewSaleContractA); // Change Token contract's Owner2 to the new Sale contract
-  }
-
-  // Token.NewListContract()
-  // -----------------------
-  // To be called manually via Hub.NewListContract() if the List contract is changed. vNewListContractA is checked and logged by Sale.NewListContract()
-  // Only to be done if a new list contract has been constructed and data transferred
-  function NewListContract(address vNewListContractA) external IsHubOwner {
-    iListC = I_ListToken(vNewListContractA); // The List contract
-  }
-
-  // Token.NewTokenContract()
-  // ------------------------
-  // To be called manually via Hub.NewTokenContract() to change Owner2 of the List contract to the new Token contract
-  function NewTokenContract(address vNewTokenContractA) external IsHubOwner {
-    //djh?? iListC.ChangeOwner(2, vNewTokenContractA);
-  }
-*/
+  // Functions for calling via same name function in Hub()
+  // =====================================================
 
   // Functions for calling via same name function in Mvp
   // ===================================================
@@ -228,7 +201,7 @@ Wip djh?? To be completed
     iListC.Burn(); // reverts if a tx.origin list entry doesn't exist
     pPicosIssued = subMaxZero(pPicosIssued, picos);
     totalSupply  = subMaxZero(totalSupply,  picos);
-    // Does not affect pPicosAvailable or the Sale (iOwnerA) balance as these are issued tokens that are being burnt
+    // Does not affect pPicosAvailable or the Sale contract balance as these are issued tokens that are being burnt
   }
 
   // Token.Destroy()

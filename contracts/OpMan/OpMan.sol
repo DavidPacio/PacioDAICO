@@ -120,7 +120,7 @@ contract OpMan is Owned {
   // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
   function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external {
-    require(uInitialisingB); // To enforce being called only once
+    require(iInitialisingB); // To enforce being called only once
     // Set Admin owner
     this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner
     // Add initial contracts
@@ -144,7 +144,7 @@ contract OpMan is Owned {
     pAddManOp(OP_MAN_X, OP_MAN_CHANGE_SIGNER_X,   3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_CONTRACT_X, 3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_UPDATE_MAN_OP_X,   3, HOUR); // 10 UpdateManOpMO()
-    uInitialisingB = false;
+    iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
 
@@ -333,7 +333,7 @@ contract OpMan is Owned {
   // ------------------
   // 2.4 Called from contract Initialise() function to add a manOp for the contract
   function InitAddManOp(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external returns (bool) {
-    require(uInitialisingB); // To enforce being called only during initialisation
+    require(iInitialisingB); // To enforce being called only during initialisation
     uint256 cX = pContractsAddrMX[msg.sender];
     require(cX > 0, 'Not called from known contract'); // Not concerned about the cX == 0 (OP_MAN_X) case for OpMan itself as no OpMan functions call this function.
     require(cX == vContractX, 'cX missmatch');
