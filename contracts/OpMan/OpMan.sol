@@ -7,7 +7,13 @@ All contracts, including OpMan, should use managed ops for:
 - ownership changes
 - any administrator type operations
 
+Owners
+------
+0. OpMan (self)                          - Set by OwnedToken.sol constructor
+1. Admin, a PCL hardware wallet account  - Set by Initialise() here
+
 OpMan Processes
+---------------
 1. Set Admin owner, and add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
 2. Add additional contracts, signers, and manOps as managed ops
    2.1 Admin to add additional contract as a managed op
@@ -31,11 +37,6 @@ A. Resume contract and ops as managed ops
    A.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
    A.2 Signer to resume a manOp as a managed op
 B. Admin signer to change a contract owner as a managed op
-
-Owners
-------
-0. OpMan (self)                          - Set by OwnedToken.sol constructor
-1. Admin, a PCL hardware wallet account  - Set by Initialise() here
 
 */
 
@@ -106,7 +107,7 @@ contract OpMan is Owned {
   event ChangeContractOwnerV(uint256 ContractX, address NewOwnerA, uint256 OwnerX);
 
   // No Constructor (Only the Owned one)
-  // ===========
+  // ==============
 
   // Initialisation/Setup Functions
   // ==============================
@@ -122,7 +123,7 @@ contract OpMan is Owned {
   function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external {
     require(iInitialisingB); // To enforce being called only once
     // Set Admin owner
-    this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner
+    this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner so cannot be done from the deploy script, unless OpMan could be passed as the from account?
     // Add initial contracts
     pAddContract(OP_MAN_X, address(this), true); // Self
     uint256 cX = 1;

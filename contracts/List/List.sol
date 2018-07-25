@@ -103,7 +103,7 @@ contract List is Owned, Math {
   // 3. Token.sol
   // List Owner 1 must have been set to Hub   via a deployment call of List.ChangeOwnerMO(1, Hub address)
   // List Owner 2 must have been set to Token via a deployment call of List.ChangeOwnerMO(2, Token address)
-  // List Owner 0 must have been set to OpMan via a deployment call of List.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
+  // List Owner 0 must have been set to OpMan via a deployment call of List.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2 have been set
 
   // List.Initialise()
   // -----------------

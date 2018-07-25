@@ -1,6 +1,6 @@
-// lib\OwnedList.sol
+// lib\OwnedHub.sol
 //
-// Version of Owned for List which is owned by OpMan, Hub, and Token
+// Version of Owned for Hub which is owned by OpMan, Admin, Sale
 // Is NOT pausable
 
 pragma solidity ^0.4.24;
@@ -12,8 +12,8 @@ contract Owned is Constants {
   uint256 internal constant NUM_OWNERS = 3;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   address[NUM_OWNERS] internal iOwnersYA; // 0 OpMan owner, in this OpMan case is self
-                                          // 1 Hub   owner
-                                          // 2 Token owner
+                                          // 1 Admin owner
+                                          // 2 Sale  owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -36,12 +36,12 @@ contract Owned is Constants {
     require(msg.sender == iOwnersYA[0], "Not required OpMan caller");
     _;
   }
-  modifier IsHubOwner {
-    require(msg.sender == iOwnersYA[1], "Not required Hub caller");
+  modifier IsAdminOwner {
+    require(msg.sender == iOwnersYA[1], "Not required Admin caller");
     _;
   }
-  modifier IsTokenOwner {
-    require(msg.sender == iOwnersYA[2], "Not required Token caller");
+  modifier IsSaleOwner {
+    require(msg.sender == iOwnersYA[2], "Not required Sale caller");
     _;
   }
 
@@ -64,4 +64,4 @@ contract Owned is Constants {
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
 
-} // End Owned contract - OwnedList.sol version
+} // End Owned contract - OwnedHub.sol version

@@ -98,7 +98,7 @@ contract Token is EIP20Token, Math {
   // Token Owner 2 must have been set to Sale  via a deployment call of Token.ChangeOwnerMO(2, Sale address)
   // Token Owner 3 must have been set to Mvp   via a deployment call of Token.ChangeOwnerMO(3, Mvp address)
   // Token Owner 0 must have been set to OpMan via a deployment call of Token.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
-  // List  Owner 3 must have been set to Token via a deployment call of  List.ChangeOwnerMO(3, Token address)
+  // List  Owner 2 must have been set to Token via a deployment call of  List.ChangeOwnerMO(2, Token address)
   function Initialise() external IsHubOwner {
     require(iInitialisingB); // To enforce being called only once
     iPausedB = false; // make active
