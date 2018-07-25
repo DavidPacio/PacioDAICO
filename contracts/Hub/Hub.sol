@@ -12,6 +12,7 @@ OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
+• review all the IsOwner calls
 • pragma experimental "v0.5.0";
 • fn for money to grey list entry
 • fns for new Escrow, Grey, VoteTap, VoteEnd
@@ -25,10 +26,10 @@ Need to be able to change all contracts in the event of any problems arising.
 Initialisation/Setup Functions to be called Manually
 ==============================
 ...
-Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsOwner
-Hub.PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsOwner
-Hub.StartSale(string vNameS, uint256 vStartTime, uint256 vPicosCap) external IsOwner
-Hub.SetUsdHardCapB(bool B) external IsOwner
+Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsAdminOwner
+Hub.PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsAdminOwner
+Hub.StartSale(string vNameS, uint256 vStartTime, uint256 vPicosCap) external IsAdminOwner
+Hub.SetUsdHardCapB(bool B) external IsAdminOwner
 
 View Methods
 ============
@@ -53,40 +54,40 @@ Hub.TheLaunchContract() external view returns (address)
 
 State changing external methods
 ===============================
-Hub.EndSale() public IsOwner
+Hub.EndSale() public IsAdminOwner
 
 Functions to be called Manually
 ===============================
 If a New List contract is deployed
 **********************************
-Hub.NewListContract(address vNewListContractA) external IsOwner
+Hub.NewListContract(address vNewListContractA) external IsAdminOwner
 
 If a New Hub contract is deployed
 **********************************
-Hub.NewSaleContract(address vNewSaleContractA) external IsOwner
+Hub.NewSaleContract(address vNewSaleContractA) external IsAdminOwner
 
 If a New Token contract is deployed
 ***********************************
-Hub.NewTokenContract(address vNewTokenContractA) external IsOwner
+Hub.NewTokenContract(address vNewTokenContractA) external IsAdminOwner
 
 Pause/Resume
 ============
-Hub.SetPause(bool B)      external IsOwner   This (Hub) contract
-Hub.SetTokenPause(bool B) external IsOwner   Token
+Hub.SetPause(bool B)      external IsAdminOwner   This (Hub) contract
+Hub.SetTokenPause(bool B) external IsAdminOwner   Token
 
 Functions for Calling List IsOwner1 Functions
 =============================================
-Hub.Browse(address currentA, uint8 vActionN) external view IsOwner returns (address retA, uint8 typeN)
-Hub.NextEntry(address accountA) external view IsOwner returns (address)
-Hub.PrevEntry(address accountA) external view IsOwner returns (address)
-Hub.Proxy(address accountA) external view IsOwner returns (address)
-Hub.CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsOwner IsActive returns (bool)
-Hub.Whitelist(address vEntryA, uint32 vWhiteT) external IsOwner IsActive returns (bool)
-Hub.Downgrade(address vEntryA, uint32 vDownT)  external IsOwner IsActive returns (bool)
-Hub.SetBonus(address vEntryA, uint32 vBonusPc) external IsOwner IsActive returns (bool)
-Hub.SetProxy(address vEntryA, address vProxyA) external IsOwner IsActive returns (bool)
-Hub.SetTransfersOkByDefault(bool B) external IsOwner IsActive returns (bool)
-Hub.SetTransferOk(address vEntryA, bool vOnB)  external IsOwner IsActive returns (bool)
+Hub.Browse(address currentA, uint8 vActionN) external view IsAdminOwner returns (address retA, uint8 typeN)
+Hub.NextEntry(address accountA) external view IsAdminOwner returns (address)
+Hub.PrevEntry(address accountA) external view IsAdminOwner returns (address)
+Hub.Proxy(address accountA) external view IsAdminOwner returns (address)
+Hub.CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsAdminOwner IsActive returns (bool)
+Hub.Whitelist(address vEntryA, uint32 vWhiteT) external IsAdminOwner IsActive returns (bool)
+Hub.Downgrade(address vEntryA, uint32 vDownT)  external IsAdminOwner IsActive returns (bool)
+Hub.SetBonus(address vEntryA, uint32 vBonusPc) external IsAdminOwner IsActive returns (bool)
+Hub.SetProxy(address vEntryA, address vProxyA) external IsAdminOwner IsActive returns (bool)
+Hub.SetTransfersOkByDefault(bool B) external IsAdminOwner IsActive returns (bool)
+Hub.SetTransferOk(address vEntryA, bool vOnB)  external IsAdminOwner IsActive returns (bool)
 
 Hub Fallback function
 =====================
@@ -112,9 +113,9 @@ pragma experimental "v0.5.0";
 
 import "../lib/OwnedHub.sol";
 import "../lib/Math.sol";
-import "../List/I_Sale.sol";
-import "../List/I_ListHub.sol";
+import "../Sale/I_Sale.sol";
 import "../Token/I_TokenHub.sol";
+import "../List/I_ListHub.sol";
 import "../Escrow/I_EscrowHub.sol";
 import "../Escrow/I_GreyHub.sol";
 //import "../Vote/I_VoteTap.sol";
@@ -179,7 +180,7 @@ contract Hub is Owned, Math {
   // // ----------------
   // // To be called manually to continue initialisation. Ran out of stack doing it in one fn.
   // function Initialise(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-  //                     uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsOwner {
+  //                     uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsAdminOwner {
   //   pSaleC.Initialise(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
   //    pTokenC.Initialise(pListC);
   //     pListC.Initialise();
@@ -189,7 +190,7 @@ contract Hub is Owned, Math {
   // // Hub.InitEscrow()
   // // ----------------
   // // To be called manually to continue initialisation. Ran out of stack doing it in one fn.
-  // function InitEscrow(uint32 vTapRateEtherPm, uint32 vSoftCapTapPc) external IsOwner {
+  // function InitEscrow(uint32 vTapRateEtherPm, uint32 vSoftCapTapPc) external IsAdminOwner {
   //   pEscrowC.Initialise(vTapRateEtherPm, vSoftCapTapPc);
   //   pGreyC.Initialise();
   //   // No Initialise() for VoteTap, VoteEnd, Mvp
@@ -199,7 +200,7 @@ contract Hub is Owned, Math {
   // Hub.SetUsdEtherPrice()
   // ----------------------
   // Fn to be called on significant Ether price movement to set the price
-  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsOwner {
+  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsAdminOwner {
     pSaleC.SetUsdEtherPrice(vUsdEtherPrice); // 500
   }
   // Hub.PresaleIssue()
@@ -207,7 +208,7 @@ contract Hub is Owned, Math {
   // To be called repeatedly for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
-  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsOwner {
+  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsAdminOwner {
     require(pListC.CreatePresaleEntry(toA, vDbId, vAddedT, vNumContribs));
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
@@ -216,7 +217,7 @@ contract Hub is Owned, Math {
   // To be called manually to start the sale going
   // Can also be called to adjust settings.
   // Initialise(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
-  function StartSale(uint32 vStartT, uint32 vEndT) external IsOwner {
+  function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminOwner {
     pSaleC.StartSale(vStartT, vEndT);
     pTokenC.StartSale();
     pListC.StartSale();
@@ -226,7 +227,7 @@ contract Hub is Owned, Math {
   }
   // Hub.SetUsdHardCapB()
   // --------------------
-  function SetUsdHardCapB(bool B) external IsOwner {
+  function SetUsdHardCapB(bool B) external IsAdminOwner {
     pSaleC.SetUsdHardCapB(B);
   }
 
@@ -270,11 +271,11 @@ contract Hub is Owned, Math {
   // --------------------
   // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
   // Can be called here if necessary.
-  function SoftCapReached() external IsOwner1or2 {
-    pSaleC.SoftCapReached();
-    pTokenC.SoftCapReached();
+  function SoftCapReached() external IsOwner1or2 { // Admin or Sale
+      pSaleC.SoftCapReached();
+     pTokenC.SoftCapReached();
     pEscrowC.SoftCapReached();
-    pListC.SoftCapReached();
+      pListC.SoftCapReached();
     // No SoftCapReached() for Grey, VoteTap, VoteEnd, Mvp
     emit SoftCapReachedV();
   }
@@ -300,7 +301,7 @@ contract Hub is Owned, Math {
   // To be called manually to change the List contract here and in the Token contract.
   // The new List contract would need to have been initialised
   // pTokenC must have been set before this via Initialise() call.
-  function NewListContract(address vNewListContractA) external IsOwner {
+  function NewListContract(address vNewListContractA) external IsAdminOwner {
     require(vNewListContractA != address(0)
          && vNewListContractA != address(this)
          && vNewListContractA != address(pTokenC));
@@ -315,8 +316,8 @@ contract Hub is Owned, Math {
   // ---------------------
   // To be called manually via the old Sale to change to the new Sale.
   // Expects the old Sale contract to have been paused
-  // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsOwner functions from working
-  function NewSaleContract(address vNewSaleContractA) external IsOwner {
+  // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsSaleOwner functions from working
+  function NewSaleContract(address vNewSaleContractA) external IsAdminOwner {
     require(iPausedB);
     pTokenC.NewSaleContract(vNewSaleContractA); // which creates a new Sale list entry and transfers the old Sale picos to the new entry
     pListC.ChangeOwner1(vNewSaleContractA);
@@ -327,7 +328,7 @@ contract Hub is Owned, Math {
   // Hub.NewTokenContract()
   // ----------------------
   // To be called manually. Token needs to be initialised after this.
-  function NewTokenContract(address vNewTokenContractA) external IsOwner {
+  function NewTokenContract(address vNewTokenContractA) external IsAdminOwner {
     pTokenC.NewTokenContract(vNewTokenContractA); // Changes Owner2 of the List contract to the new Token contract
     pTokenC = I_TokenHub(vNewTokenContractA);
   }
@@ -339,7 +340,7 @@ contract Hub is Owned, Math {
   // Hub.SetTokenPause()
   // ------------------------------
   // To be called manually to pause/resume Token
-  function SetTokenPause(bool B) external IsOwner {
+  function SetTokenPause(bool B) external IsAdminOwner {
     pTokenC.SetPause(B);
   }
 
@@ -356,29 +357,29 @@ contract Hub is Owned, Math {
   // - typeN  type of the entry { None, Contract, Grey, White, Presale, Member, Refunded, White, Downgraded }
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
   //       The calling app will need to do the looping if necessary, thus the return of typeN.
-  function Browse(address currentA, uint8 vActionN) external view IsOwner returns (address retA, uint8 typeN) {
+  function Browse(address currentA, uint8 vActionN) external view IsAdminOwner returns (address retA, uint8 typeN) {
     return pListC.Browse(currentA, vActionN);
   }
   // Hub.NextEntry()
   // ---------------
-  function NextEntry(address accountA) external view IsOwner returns (address) {
+  function NextEntry(address accountA) external view IsAdminOwner returns (address) {
     return pListC.NextEntry(accountA);
   }
   // Hub.PrevEntry()
   // ---------------
-  function PrevEntry(address accountA) external view IsOwner returns (address) {
+  function PrevEntry(address accountA) external view IsAdminOwner returns (address) {
     return pListC.PrevEntry(accountA);
   }
   // Hub.Proxy()
   // -----------
-  function Proxy(address accountA) external view IsOwner returns (address) {
+  function Proxy(address accountA) external view IsAdminOwner returns (address) {
     return pListC.Proxy(accountA);
   }
 
   // Hub.CreateEntry()
   // -----------------
   // Create a new list entry, and add it into the doubly linked list
-  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsOwner IsActive returns (bool) {
+  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsAdminOwner IsActive returns (bool) {
     return pListC.CreateEntry(vEntryA, vBits, vDbId);
   }
 
@@ -386,40 +387,40 @@ contract Hub is Owned, Math {
   // Hub.Whitelist()
   // ---------------
   // Whitelist an entry
-  function Whitelist(address vEntryA, uint32 vWhiteT) external IsOwner IsActive returns (bool) {
+  function Whitelist(address vEntryA, uint32 vWhiteT) external IsAdminOwner IsActive returns (bool) {
     return pListC.Whitelist(vEntryA, vWhiteT);
   }
   // Hub.Downgrade()
   // ---------------
   // Downgrades an entry from whitelisted
-  function Downgrade(address vEntryA, uint32 vDownT) external IsOwner IsActive returns (bool) {
+  function Downgrade(address vEntryA, uint32 vDownT) external IsAdminOwner IsActive returns (bool) {
     return pListC.Downgrade(vEntryA, vDownT);
   }
   // Hub.SetBonus()
   // --------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-  function SetBonus(address vEntryA, uint32 vBonusPc) external IsOwner IsActive returns (bool) {
+  function SetBonus(address vEntryA, uint32 vBonusPc) external IsAdminOwner IsActive returns (bool) {
     return pListC.SetBonus(vEntryA, vBonusPc);
   }
   // Hub.SetProxy()
   // --------------
   // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address vEntryA, address vProxyA) external IsOwner IsActive returns (bool) {
+  function SetProxy(address vEntryA, address vProxyA) external IsAdminOwner IsActive returns (bool) {
     return pListC.SetProxy(vEntryA, vProxyA);
   }
 
   // Hub.SetTransfersOkByDefault()
   // -----------------------------
   // To set/unset List.pTransfersOkB
-  function SetTransfersOkByDefault(bool B) external IsOwner returns (bool) {
+  function SetTransfersOkByDefault(bool B) external IsAdminOwner returns (bool) {
     return pListC.SetTransfersOkByDefault(B);
   }
 
   // Hub.SetTransferOk()
   // -------------------
   // To set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsOwner IsActive returns (bool) {
+  function SetTransferOk(address vEntryA, bool B) external IsAdminOwner IsActive returns (bool) {
     return pListC.SetTransferOk(vEntryA, B);
   }
 
