@@ -9,7 +9,7 @@ All contracts, including OpMan, should use managed ops for:
 
 Owners
 ------
-0. OpMan (self)                          - Set by OwnedToken.sol constructor
+0. OpMan (self)                          - Set by OwnedOpMan.sol constructor
 1. Admin, a PCL hardware wallet account  - Set by Initialise() here
 
 OpMan Processes
@@ -112,18 +112,30 @@ contract OpMan is Owned {
   // Initialisation/Setup Functions
   // ==============================
 
+  // Owners
+  // ------
+  // 0. Deployer                              - Set to msg.sender by OwnedOpMan.sol constructor
+  // 1. OpMan (self)                          - Set to this       by OwnedOpMan.sol constructor
+  // 2. Admin, a PCL hardware wallet account  - Set by Initialise() here
+
   // Initialise()
   // ------------
-  // 1. Set Admin owner, and add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
-  // Can only be called once
+  // To be called by deploy script to:
+  // 1. Set Admin owner, and add initial contracts, signers, and manOps
+  // Admin owner is set this way because that can't be be done from the deploy script as ChangeOwnerMO() requires IsOpManCaller.
+  // (Other contracts can have all their owners set via the deploy script because their constructor set OpMan owner to msg.sender (deployment account) initially,
+  //  so 'ChangeOwnerMO() IsOpManCaller' calls can be made by the deploy script, provided that OpMan owner is set last.)
+  // After this call all of OpMan's owners are set.
+  // Can only be called once.
+  //
   // Arguments:
-  // - vAdminA       PCL hardware wallet address
+  // - vAdminA       PCL hardware wallet address for Admin owner
   // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
-  function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external {
+  function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     // Set Admin owner
-    this.ChangeOwnerMO(1, vAdminA); // requires IsOpManOwner so cannot be done from the deploy script, unless OpMan could be passed as the from account?
+    this.ChangeOwnerMO(2, vAdminA); // requires IsOpManCaller so cannot be done from the deploy script
     // Add initial contracts
     pAddContract(OP_MAN_X, address(this), true); // Self
     uint256 cX = 1;
@@ -137,8 +149,10 @@ contract OpMan is Owned {
     // Add initial (OpMan) manOps
     // pAddManOp(uint256 vContractX, uint32 vSigsRequired, uint32 vSecsToSign) private
     pAddManOp(OP_MAN_X, RESUME_X,                 3, HOUR); //  0 ResumeMO()
-    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X,      3, HOUR); //  1 ChangeOwnerMO() 0 OpMan owner, in this OpMan case is self
-    pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+1,    3, HOUR); //  2 ChangeOwnerMO() 1 Admin owner
+  //pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+1,    3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
+  //pAddManOp(OP_MAN_X, CHANGE_OWNER_BASE_X+2,    3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
+    pAddManOp(OP_MAN_X, 1,                        3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
+    pAddManOp(OP_MAN_X, 2,                        3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
     pAddManOp(OP_MAN_X, OP_MAN_ADD_CONTRACT_X,    3, HOUR); //  5 AddContractMO()
     pAddManOp(OP_MAN_X, OP_MAN_ADD_SIGNER_X,      3, HOUR); //  6 AddSignerMO()
     pAddManOp(OP_MAN_X, OP_MAN_ADD_MAN_OP_X,      3, HOUR); //  7 AddManOp()
@@ -305,7 +319,7 @@ contract OpMan is Owned {
   // ---------------------
   // 2.1 Admin to add additional contract as a managed op
   // Called manually by Admin to add an additional contract not included in the initial deployment. Must be approved.
-  function AddContractMO(uint32 vContractX, address vContractA, bool vPausableB) external IsAdminOwner {
+  function AddContractMO(uint32 vContractX, address vContractA, bool vPausableB) external IsAdminCaller {
     require(pIsManOpApproved(OP_MAN_ADD_CONTRACT_X)); // Same as OP_MAN_X * 100 + OP_MAN_ADD_CONTRACT_X since OP_MAN_X is 0
     pAddContract(vContractX, vContractA, vPausableB);
   }
@@ -314,7 +328,7 @@ contract OpMan is Owned {
   // -------------------
   // 2.2 Admin to add additional signer as a managed op
   // Called manually by Admin to add an additional signer not included in the initial deployment. Must be approved.
-  function AddSignerMO(address vSignerA) external IsAdminOwner returns (bool) {
+  function AddSignerMO(address vSignerA) external IsAdminCaller returns (bool) {
     require(pIsManOpApproved(OP_MAN_ADD_SIGNER_X)); // Same as OP_MAN_X * 100 + OP_MAN_ADD_SIGNER_X
     pAddSigner(vSignerA); // included IsNotDuplicateSigner() call
     return true;
@@ -324,7 +338,7 @@ contract OpMan is Owned {
   // ------------------
   // 2.3 Admin to add additional manOp as a managed op
   // Called manually by Admin to add an additional manOp not included in the initial deployment. Must be approved.
-  function AddManOpMO(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminOwner returns (bool) {
+  function AddManOpMO(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller returns (bool) {
     require(pIsManOpApproved(OP_MAN_ADD_MAN_OP_X)); // Same as OP_MAN_X * 100 + OP_MAN_ADD_MAN_OP_X
     pAddManOp(vContractX, vManOpX, vSigsRequired, vSecsToSign);
     return true;
@@ -345,7 +359,7 @@ contract OpMan is Owned {
   // OpMan.ChangeSignerMO()
   // ----------------------
   // 3. Admin to change one signer to another as a managed op
-  function ChangeSignerMO(address vOldSignerA, address vNewSignerA) external IsAdminOwner returns (bool) {
+  function ChangeSignerMO(address vOldSignerA, address vNewSignerA) external IsAdminCaller returns (bool) {
     require(pIsManOpApproved(OP_MAN_CHANGE_SIGNER_X)); // Same as OP_MAN_X * 100 + OP_MAN_CHANGE_SIGNER_X
     uint256 iX = pSignersYA.length;
     for (uint256 j=0; j<pSignersYA.length; j++) {
@@ -379,7 +393,7 @@ contract OpMan is Owned {
   // OpMan.UnConfirmSigner()
   // -----------------------
   // 4.2 Admin to unconfirm (pause) a signer
-  function UnConfirmSigner(address vSignerA) external IsAdminOwner returns (bool) {
+  function UnConfirmSigner(address vSignerA) external IsAdminCaller returns (bool) {
     R_Signer storage srSigR = pSignersAddrMR[vSignerA];
     require(srSigR.confirmedT > 0, 'Signer not confirmed');
     srSigR.confirmedT = 0;
@@ -390,7 +404,7 @@ contract OpMan is Owned {
   // ------------------------
   // 5.1 Admin to update a contract as a managed op
   // New contract address must be unique
-  function UpdateContractMO(uint256 vContractX, address vNewContractA, bool vPausableB) external IsAdminOwner IsNotDuplicateContract(vNewContractA) returns (bool) {
+  function UpdateContractMO(uint256 vContractX, address vNewContractA, bool vPausableB) external IsAdminCaller IsNotDuplicateContract(vNewContractA) returns (bool) {
     require(pIsManOpApproved(OP_MAN_UPDATE_CONTRACT_X)); // Same as OP_MAN_X * 100 + OP_MAN_UPDATE_CONTRACT_X
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
@@ -413,7 +427,7 @@ contract OpMan is Owned {
   // 5.2 Admin to update a manOp as a managed op
   // Can update sigsRequired and secsToSign not contractX
   // Accessed by its Key
-  function UpdateManOpMO(uint256 vManOpK, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminOwner returns (bool) {
+  function UpdateManOpMO(uint256 vManOpK, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller returns (bool) {
     require(pIsManOpApproved(OP_MAN_UPDATE_MAN_OP_X)); // Same as OP_MAN_X * 100 + OP_MAN_UPDATE_MAN_OP_X
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known');
@@ -534,8 +548,8 @@ contract OpMan is Owned {
   // OpMan.ChangeContractOwnerMO()
   // -----------------------------
   // B. Admin signer to change a contract owner as a managed op
-  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminOwner IsConfirmedSigner returns (bool) {
-    require(vOwnerX < NUM_OWNERS  // NUM_OWNERS is defined in Owned*.sol
+  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminCaller IsConfirmedSigner returns (bool) {
+    require(vOwnerX > 0 && vOwnerX < NUM_OWNERS // NUM_OWNERS is defined in Owned*.sol. > 0 to prevent change of owner 0 which is always the deployer
          && vNewOwnerA != address(0));
     require(vContractX < pContractsYR.length, 'Contract not known');
   //require(pIsManOpApproved(vContractX * 100 + CHANGE_OWNER_BASE_X + vOwnerX)); No. Is done by Owned.ChangeOwnerMO()

@@ -21,11 +21,31 @@ contract Constants {
   uint256 internal constant VOTE_END_X   = 8;
   uint256 internal constant MVP_LAUNCH_X = 9;
 
+  // Owner Indices
+  // Contract  Owned By
+  // OpMan     Deployer, Self,  Admin
+  // Hub       Deployer, OpMan, Admin, Sale
+  // Sale      Deployer, OpMan, Hub
+  // Token     Deployer, OpMan, Hub, Sale, Mvp
+  // List      Deployer, OpMan, Hub, Token
+  // Escrow    Deployer, OpMan, Hub, Sale
+  // Grey      Deployer, OpMan, Hub, Sale
+  // VoteTap   Deployer, OpMan, Hub
+  // VoteEnd   Deployer, OpMan, Hub
+  // Mvp       Deployer, OpMan, Hub
+  uint256 internal constant DEPLOYER_X     = 0;
+  uint256 internal constant OP_MAN_OWNER_X = 1;
+  uint256 internal constant HUB_OWNER_X    = 2;
+  uint256 internal constant ADMIN_OWNER_X  = 2;
+  uint256 internal constant SALE_OWNER_X   = 3;
+  uint256 internal constant TOKEN_OWNER_X  = 3;
+  uint256 internal constant MVP_OWNER_X    = 4;
+
   // Managed Operation Indices
   // -------------------------
   uint256 internal constant RESUME_X                 =  0; // ResumeMO()
-  uint256 internal constant CHANGE_OWNER_BASE_X      =  1; // ChangeOwnerMO() 0 base -> 1 and up because actual ManOpX will always be +1 at least, range 1 to 4 allowing for a max of 4 owners as required for Token
-  // Individual contract indices start from 5 after allowing for up to 4 owners
+  uint256 internal constant CHANGE_OWNER_BASE_X      =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
+  // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
   uint256 internal constant OP_MAN_ADD_CONTRACT_X    =  5; // AddContractMO()
   uint256 internal constant OP_MAN_ADD_SIGNER_X      =  6; // AddSignerMO()
   uint256 internal constant OP_MAN_ADD_MAN_OP_X      =  7; // AddManOpMO

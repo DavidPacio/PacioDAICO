@@ -2,11 +2,12 @@
 
 The Pacio Token named PIOE for the Pacio DAICO
 
-Called from 4 owners:
-0 OpMan.sol
-1 Hub.sol
-2 Sale.sol
-3 Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
+Owners:
+0 Deployer
+1 OpMan
+2 Hub
+3 Sale
+4 Mvp for burning/destroying with the transfer of PIOEs to PIOs
 
 Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
@@ -32,7 +33,7 @@ Token.BurnId() external view returns (int32)
 
 Initialisation/Settings Methods
 ===============================
-Token.Initialise() external IsHubOwner
+Token.Initialise() external IsHubCaller
 
 State changing external methods
 ===============================
@@ -41,14 +42,14 @@ Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsOwner2 returns
 Functions for calling via same name function in Hub
 ===================================================
 Token.NewSaleContract(address vNewSaleContractA) external // IsOwner2 c/o the ChangeOwner() call
-Token.NewListContract(address vNewListContractA) external IsHubOwner
-Token.NewTokenContract(address vNewTokenContractA) external IsHubOwner
-Token.EndSale() external IsHubOwner IsActive
+Token.NewListContract(address vNewListContractA) external IsHubCaller
+Token.NewTokenContract(address vNewTokenContractA) external IsHubCaller
+Token.EndSale() external IsHubCaller IsActive
 
 Functions for calling via same name function in Mvp
 ===================================================
-Token.Burn() external IsMvpOwner
-Token.Destroy(uint256 vPicos) external IsMvpOwner
+Token.Burn() external IsMvpCaller
+Token.Destroy(uint256 vPicos) external IsMvpCaller
 
 Fallback function
 =================
@@ -88,21 +89,19 @@ contract Token is EIP20Token, Math {
   // ===============================
   // Token.Initialise()
   // ------------------
-  // To be called by Hub.Initialise()
+  // To be called by the deploy script
   // Can only be called once.
-  // 0. OpMan.sol
-  // 1. Hub.sol
-  // 2. Sale.sol
-  // 3. Mvp.sol for burning/destroying with the transfer of PIOEs to PIOs
-  // Token Owner 1 must have been set to Hub   via a deployment call of Token.ChangeOwnerMO(1, Hub address)
-  // Token Owner 2 must have been set to Sale  via a deployment call of Token.ChangeOwnerMO(2, Sale address)
-  // Token Owner 3 must have been set to Mvp   via a deployment call of Token.ChangeOwnerMO(3, Mvp address)
-  // Token Owner 0 must have been set to OpMan via a deployment call of Token.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2, 3 have been set
-  // List  Owner 2 must have been set to Token via a deployment call of  List.ChangeOwnerMO(2, Token address)
-  function Initialise() external IsHubOwner {
+  // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
+  // Owners must first be set by deploy script calls:
+  //   Token.ChangeOwnerMO(2, Hub address)
+  //   Token.ChangeOwnerMO(3, Sale address)
+  //   Token.ChangeOwnerMO(4, Mvp address)
+  //   Token.ChangeOwnerMO(1, OpMan address) <=== Must come after 2, 3, 4 have been set
+  //    List.ChangeOwnerMO(3, Token address)
+  function Initialise() external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     iPausedB = false; // make active
-    iListC   = I_ListToken(I_OpMan(iOwnersYA[0]).ContractXA(LIST_X)); // The List contract
+    iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X)); // The List contract
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
     // Create the Sale sale contract list entry
@@ -114,20 +113,20 @@ contract Token is EIP20Token, Math {
     pPclPicosAllocated = 25*(10**19); // 250 million = 25 x 10 million
     pPicosAvailable    = 75*(10**19); // 750 million
     // From the EIP20 Standard: A token contract which creates new tokens SHOULD trigger a Transfer event with the _from address set to 0x0 when tokens are created.
-    emit Transfer(0x0, iOwnersYA[2], 10**21); // log event 0x0 from == minting. iOwnersYA[2] is the Sale contract
+    emit Transfer(0x0, iOwnersYA[SALE_OWNER_X], 10**21); // log event 0x0 from == minting. iOwnersYA[SALE_OWNER_X] is the Sale contract
     iInitialisingB = false;
   }
   // Token.StartSale()
   // ---------------
   // Is called from Hub.StartSale()
-  function StartSale() external IsHubOwner IsActive {
+  function StartSale() external IsHubCaller IsActive {
     pSaleOpenB = true;
     emit StartSaleV();
   }
   // Token.EndSale()
   // ---------------
   // Is called from HUb.EndSale() after after hard cap is reached in Sale, time has expired in Sale, or the sale is ended manually
-  function EndSale() external IsHubOwner IsActive {
+  function EndSale() external IsHubCaller IsActive {
     pSaleOpenB = false;
     emit EndSaleV();
   }
@@ -172,7 +171,7 @@ contract Token is EIP20Token, Math {
   // . By Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   //   List entry is created by Hub.Presale.Issue() which checks toA
   // . from Sale.Buy() which checks toA
-  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleOwner IsActive returns (bool) {
+  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleCaller IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)
       pContributors++;
     iListC.Issue(toA, vPicos, vWei); // Transfers from Sale as the minted tokens owner
@@ -194,7 +193,7 @@ contract Token is EIP20Token, Math {
   // Is called by Mvp.Burn() -> here thus use of tx.origin rather than msg.sender
   // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
   // The event call is made by Mvp.Burn()
-  function Burn() external IsMvpOwner {
+  function Burn() external IsMvpCaller {
     require(!pSaleOpenB, "Sale not closed");
     uint256 picos = iListC.PicosBalance(tx.origin);
   //require(picos > 0, "No PIOEs to burn"); Not needed here as already done by Mvp.Burn()
@@ -209,7 +208,7 @@ contract Token is EIP20Token, Math {
   // For use when transferring unissued PIOEs to PIOs
   // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
-  function Destroy(uint256 vPicos) external IsMvpOwner {
+  function Destroy(uint256 vPicos) external IsMvpCaller {
     require(!pSaleOpenB);
     iListC.Destroy(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);

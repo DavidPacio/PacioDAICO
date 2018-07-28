@@ -9,6 +9,6 @@ pragma solidity ^0.4.24;
 interface I_EscrowSale {
   function WeiInEscrow() external view returns (uint256);
   function Deposit(address vSenderA) external payable;
-  function SoftCapReached() external;
+  function EndSale() external;
 }
 // End I_EscrowSale interface

@@ -15,6 +15,8 @@ interface I_Sale {
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external;
   function StartSale(uint32 vStartT, uint32 vEndT) external;
   function SetUsdHardCapB(bool B) external;
+  function SoftCapReached() external;
+  function EndSale() external;
 }
 // End I_Sale interface
 

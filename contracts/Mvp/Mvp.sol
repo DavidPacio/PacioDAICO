@@ -49,10 +49,10 @@ contract Mvp is Owned {
   // ====================================================
   // Mvp.Initialise()
   // ----------------
-  // Called from Hub.Initialise() to Initialise the Mvp contract
-  function Initialise() external IsHubOwner {
+  // Called from the deploy script to Initialise the Mvp contract
+  function Initialise() external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
-    I_OpMan opManC = I_OpMan(iOwnersYA[0]);
+    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pTokenC = I_TokenMvp(opManC.ContractXA(TOKEN_X));
     pListC  =  I_ListMvp(opManC.ContractXA(LIST_X));
   //iPausedB       =         // leave inactive
@@ -89,7 +89,7 @@ contract Mvp is Owned {
   // -------------
   // For use when transferring unissued PIOEs to PIOs
   // Is to be called from Hub.Destroy()
-  function Destroy(uint256 vPicos) external IsHubOwner {
+  function Destroy(uint256 vPicos) external IsHubCaller {
     pTokenC.Destroy(vPicos);
     emit DestroyV(vPicos);
   }

@@ -24,5 +24,6 @@ interface I_ListHub {
   function SetProxy(address vEntryA, address vProxyA) external returns (bool);
   function SetTransfersOkByDefault(bool B) external returns (bool);
   function SetTransferOk(address vEntryA, bool B) external returns (bool);
+  function SoftCapReached() external;
 }
 // End I_ListHub interface
