@@ -33,6 +33,9 @@ State changing external methods
 
 Pause/Resume
 ============
+OpMan.Pause(HUB_X) IsConfirmedSigner
+OpMan.ResumeContractMO(HUB_X) IsConfirmedSigner which is a managed op
+
 Hub Fallback function
 =====================
 Sending Ether is not allowed
@@ -276,8 +279,8 @@ djh??
     pTokenC.SetPause(B);
   }
 
-  // Functions for Calling List IsOwner1 Functions
-  // =============================================
+  // Functions for Calling List IsHubCaller Functions
+  // ================================================
   // Hub.Browse()
   // ------------
   // Returns address and type of the list entry being browsed to

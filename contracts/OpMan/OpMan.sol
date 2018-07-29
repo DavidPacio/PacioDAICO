@@ -38,6 +38,11 @@ A. Resume contract and ops as managed ops
    A.2 Signer to resume a manOp as a managed op
 B. Admin signer to change a contract owner as a managed op
 
+Pause/Resume
+============
+OpMan.Pause(OP_MAN_X) IsConfirmedSigner
+OpMan.ResumeContractMO(OP_MAN_X) IsConfirmedSigner which is a managed op
+
 */
 
 pragma solidity ^0.4.24;

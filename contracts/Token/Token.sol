@@ -37,19 +37,20 @@ Token.Initialise() external IsHubCaller
 
 State changing external methods
 ===============================
-Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsOwner2 returns (bool)
+Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleCaller IsActive returns (bool)
 
 Functions for calling via same name function in Hub
 ===================================================
-Token.NewSaleContract(address vNewSaleContractA) external // IsOwner2 c/o the ChangeOwner() call
-Token.NewListContract(address vNewListContractA) external IsHubCaller
-Token.NewTokenContract(address vNewTokenContractA) external IsHubCaller
-Token.EndSale() external IsHubCaller IsActive
 
 Functions for calling via same name function in Mvp
 ===================================================
 Token.Burn() external IsMvpCaller
 Token.Destroy(uint256 vPicos) external IsMvpCaller
+
+Pause/Resume
+============
+OpMan.Pause(TOKEN_X) IsConfirmedSigner
+OpMan.ResumeContractMO(TOKEN_X) IsConfirmedSigner which is a managed op
 
 Fallback function
 =================

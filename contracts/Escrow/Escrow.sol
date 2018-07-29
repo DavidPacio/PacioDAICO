@@ -14,6 +14,11 @@ View Methods
 State changing methods
 ======================
 
+Pause/Resume
+============
+OpMan.Pause(ESCROW_X) IsConfirmedSigner
+OpMan.ResumeContractMO(ESCROW_X) IsConfirmedSigner which is a managed op
+
 List.Fallback function
 ======================
 No sending ether to this contract!

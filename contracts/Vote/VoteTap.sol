@@ -12,6 +12,11 @@ View Methods
 State changing methods
 ======================
 
+Pause/Resume
+============
+OpMan.Pause(VOTE_TAP_X) IsConfirmedSigner
+OpMan.ResumeContractMO(VOTE_TAP_X) IsConfirmedSigner which is a managed op
+
 List.Fallback function
 ======================
 No sending ether to this contract!
