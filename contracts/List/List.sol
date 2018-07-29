@@ -98,17 +98,16 @@ contract List is Owned, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // 0. OpMan.sol
-  // 1. Hub.sol
-  // 2. Sale.sol
-  // 3. Token.sol
-  // List Owner 1 must be set to Hub   via a deployment call of List.ChangeOwnerMO(1, Hub address)
-  // List Owner 2 must be set to Token via a deployment call of List.ChangeOwnerMO(2, Token address)
-  // List Owner 0 must be set to OpMan via a deployment call of List.ChangeOwnerMO(0, OpMan address) <=== Must come after 1, 2 have been set
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
+  // Owners must first be set by deploy script calls:
+  //   List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+  //   List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, TOKEN_OWNER_X have been set
 
   // List.Initialise()
   // -----------------
-  function Initialise() external IsHubCaller {
+  // To be called by the deploy script to set the contract address variables.
+  function Initialise() external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_X);
     iInitialisingB = false;

@@ -2,13 +2,11 @@
 
 The MVP launch contract for the Pacio DAICO
 
+Owned by Deployer, OpMan, Hub
+
 djh??
 To be completed
 
-
-Owners:
-0 OpMan
-1 Hub
 
 Calls
 OpMan
@@ -45,11 +43,17 @@ contract Mvp is Owned {
   I_ListMvp  private pListC;  // the List contract
   I_TokenMvp private pTokenC; // the Token contract
 
-  // Initialisation/Setup Functions to be called from Hub
-  // ====================================================
+  // Initialisation/Setup Functions
+  // ==============================
+  // ==============================
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub
+  // Owners must first be set by deploy script calls:
+  //   Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+
   // Mvp.Initialise()
   // ----------------
-  // Called from the deploy script to Initialise the Mvp contract
+  // Called from the deploy script to initialise the Mvp contract
   function Initialise() external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
@@ -98,7 +102,7 @@ contract Mvp is Owned {
   // =====================
   // Not payable so trying to send ether will throw
   function() external {
-    revert(); // reject any attempt to access the Hub contract other than via the defined methods with their testing for valid access
+    revert(); // reject any attempt to access the Mvp contract other than via the defined methods with their testing for valid access
   }
 
 } // End Mvp contract

@@ -89,15 +89,15 @@ contract Token is EIP20Token, Math {
   // ===============================
   // Token.Initialise()
   // ------------------
-  // To be called by the deploy script
+  // To be called by the deploy script to set the contract variable, and do the PIOE minting.
   // Can only be called once.
   // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
   // Owners must first be set by deploy script calls:
-  //   Token.ChangeOwnerMO(2, Hub address)
-  //   Token.ChangeOwnerMO(3, Sale address)
-  //   Token.ChangeOwnerMO(4, Mvp address)
-  //   Token.ChangeOwnerMO(1, OpMan address) <=== Must come after 2, 3, 4 have been set
-  //    List.ChangeOwnerMO(3, Token address)
+  //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
+  //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X, MVP_OWNER_X have been set
+  //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
   function Initialise() external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     iPausedB = false; // make active

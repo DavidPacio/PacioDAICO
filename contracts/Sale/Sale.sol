@@ -46,7 +46,7 @@ Sale.IsSoftCapReached() external view returns (bool)
 Sale.IsHardCapReached() external view returns (bool)
 Sale.IsSaleOpen() external view returns (bool)
 
-Initialisation/Setup Functions to be called from Hub
+Initialisation/Setup Functions
 ==============================
 
 State changing external methods
@@ -155,8 +155,8 @@ contract Sale is Owned, Math {
   // ============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub
   // Owners must first be set by deploy script calls:
-  //   Sale.ChangeOwnerMO(2, Hub address)
-  //   Sale.ChangeOwnerMO(1, OpMan address) <=== Must come after 2 has been set
+  //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X has been set
 
   // Sale.Initialise()
   // -----------------

@@ -135,7 +135,7 @@ contract OpMan is Owned {
   function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external IsDeployerCaller {
     require(iInitialisingB); // To enforce being called only once
     // Set Admin owner
-    this.ChangeOwnerMO(2, vAdminA); // requires IsOpManCaller so cannot be done from the deploy script
+    this.ChangeOwnerMO(ADMIN_OWNER_X, vAdminA); // requires IsOpManCaller so cannot be done from the deploy script
     // Add initial contracts
     pAddContract(OP_MAN_X, address(this), true); // Self
     uint256 cX = 1;

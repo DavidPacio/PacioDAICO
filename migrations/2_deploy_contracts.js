@@ -42,41 +42,64 @@ OpMan.Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) 
 
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
 ---
-Hub.ChangeOwnerMO(2, PCL hw wallet address as Admin)
-Hub.ChangeOwnerMO(3, Sale address)
-Hub.ChangeOwnerMO(1, OpMan address) <=== Must come after 2, 3 have been set
+Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after ADMIN_OWNER_X, SALE_OWNER_X have been set
 Hub.Initialise() IsDeployerCaller to set the contract address variables.
 
-Sale
+Sale owned by 0 Deployer, 1 OpMan, 2 Hub
 ----
-Sale.ChangeOwnerMO(2, Hub address)
-Sale.ChangeOwnerMO(1, OpMan address) <=== Must come after 2 has been set
+Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X has been set
 Sale.Initialise()  to set the contract address variables.
 
-~~~~~~~~~~~~~~~~
+List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
+----
+List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, TOKEN_OWNER_X have been set
+List.Initialise()  to set the contract address variables.
 
-Token.ChangeOwnerMO(2, Hub address)
-Token.ChangeOwnerMO(3, Sale address)
-Token.ChangeOwnerMO(4, Mvp address)
-Token.ChangeOwnerMO(1, OpMan address) <=== Must come after 2, 3, 4 have been set
+Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
+-----
+Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
+Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X, MVP_OWNER_X have been set
+Token.Initialise() To set the contract variable, and do the PIOE minting.
 
-List.ChangeOwnerMO(2, Hub address)
-List.ChangeOwnerMO(3, Token address)
-List.ChangeOwnerMO(1 OpMan address) <=== Must come after 2, 3 have been set
+Escrow owned by Deployer, OpMan, Hub, Sale
+------
+Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
+Escrow.Initialise() to initialise the Escrow contract
 
-Escrow.ChangeOwner1('Hub address')   Escrow.Owner1 = Hub
-Escrow.ChangeOwner2('Sale address')  Escrow.Owner2 = Sale
+Grey owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+----
+Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
+Grey.Initialise() to initialise the Grey contract
 
-  Grey.ChangeOwner1('Hub address')     Grey.Owner1 = Hub
-  Grey.ChangeOwner2('Sale address')    Grey.Owner2 = Sale
+VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
+-------
+VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+VoteTap.Initialise() to initialise the VoteTap contract
 
-VoteTap.ChangeOwner('Hub address')  VoteTap.Owner  = Hub
-VoteEnd.ChangeOwner('Hub address')  VoteTap.Owner  = Hub
+VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub
+-------
+VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+VoteEnd.Initialise() to initialise the VoteEnd contract
 
-Mvp.ChangeOwner('Hub address')          Mvp.Owner  = Hub
+Mvp owned by 0 Deployer, 1 OpMan, 2 Hub
+---
+Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+Mvp.Initialise() to initialise the Mvp contract
 
-
-Sale.Initialise()
 
 Hub.InitContracts(...)
 Hub.InitEscrow(...)
