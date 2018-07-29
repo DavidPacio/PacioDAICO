@@ -7,7 +7,6 @@ Interface for the Grey contract external functions which are called from the Hub
 pragma solidity ^0.4.24;
 
 interface I_GreyHub {
-  function Initialise() external;
   function WeiInEscrow() external view returns (uint256);
 }
 // End I_GreyHub interface

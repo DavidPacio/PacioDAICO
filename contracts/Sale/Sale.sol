@@ -140,8 +140,9 @@ contract Sale is OwnedByOpManAndHub, Math {
   // Events
   // ======
   event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address GreyContract);
-  event InitCapsV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap);
-  event SetTranchesV(uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
+  event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
+                            uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
+  event SetUsdHardCapBV(bool HardCapMethodB);
   event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StartSaleV(uint32 StartTime, uint32 EndTime);
@@ -174,8 +175,11 @@ contract Sale is OwnedByOpManAndHub, Math {
     iInitialisingB = false;
   }
 
-  function Initialise2(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                      uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsDeployerCaller {
+  // Sale.SetCapsAndTranches()
+  // -------------------------
+  // Called from Hub.SetCapsAndTranches() by the deploy script or manually by Admin to set Sale caps and tranches.
+  function SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                              uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsHubCaller {
     // Caps stuff
     pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
     pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
@@ -192,11 +196,19 @@ contract Sale is OwnedByOpManAndHub, Math {
     pPriceCCentsT1 = vPriceCCentsT1; // PIOE price for tranche 1 in centi-cents i.e.  750 for 7.50
     pPriceCCentsT2 = vPriceCCentsT2; // PIOE price for tranche 2 in centi-cents i.e.  875 for 8.75
     pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
-    emit InitCapsV(pPicosCapT1, pPicosCapT2, pPicosCapT3, pUsdSoftCap, pUsdHardCap);
-    emit SetTranchesV(pMinWeiT1, pMinWeiT2, pMinWeiT3, pPriceCCentsT1, pPriceCCentsT2, pPriceCCentsT3);                   // |
+    emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
     iPausedB       = false; // make active
   }
 
+  // Sale.SetUsdHardCapB()
+  // ---------------------
+  // Called from Hub.SetUsdHardCapB() to set/unset pUsdHardCapB:
+  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
+  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
+  function SetUsdHardCapB(bool B) external IsHubCaller {
+    pUsdHardCapB = B;
+    emit SetUsdHardCapBV(B);
+  }
 
   // Sale.SetUsdEtherPrice()
   // -----------------------
@@ -231,11 +243,6 @@ contract Sale is OwnedByOpManAndHub, Math {
     iPausedB = false;
     pSaleOpenB = true; // Set to false when the sale is closed by any method
     emit StartSaleV(vStartT, vEndT);
-  }
-  // Sale.SetUsdHardCapB()
-  // ---------------------
-  function SetUsdHardCapB(bool B) external IsHubCaller {
-    pUsdHardCapB = B;
   }
 
   // View Methods

@@ -13,13 +13,9 @@ OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
-• review all the IsOwner calls
-• pragma experimental "v0.5.0";
 • fn for money to grey list entry
 • fns for new Escrow, Grey, VoteTap, VoteEnd
 • review all manual fns for God issues a la Binod
-• Pause/Resume Token
-• fn to call Escrow.SetPclAccount()
 • Check manual ending of a sale
 
 Initialisation/Setup Functions
@@ -73,9 +69,6 @@ contract Hub is OwnedHub, Math {
   // Events
   // ======
   event InitialiseV(address SaleContract, address TokenContract, address ListContract, address EscrowContract, address GreyContract);
-  event InitCapsV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap);
-  event InitTranchesV(uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
-  event InitEscrowV(uint32 TapRateEtherPm, uint32 SoftCapTapPc);
   event NewListContractV(address ListContract);
   event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
@@ -109,32 +102,29 @@ contract Hub is OwnedHub, Math {
     iInitialisingB = false;
   }
 
-  // // Hub.Initialise()
-  // // ----------------
-  // // To be called manually to continue initialisation. Ran out of stack doing it in one fn.
-  // function Initialise(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-  //                     uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsAdminCaller {
-  //   pSaleC.Initialise(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
-  //    pTokenC.Initialise(pListC);
-  //     pListC.Initialise();
-  //   emit InitCapsV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap);
-  //   emit InitTranchesV(vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
-  // }
-  // // Hub.InitEscrow()
-  // // ----------------
-  // // To be called manually to continue initialisation. Ran out of stack doing it in one fn.
-  // function InitEscrow(uint32 vTapRateEtherPm, uint32 vSoftCapTapPc) external IsAdminCaller {
-  //   pEscrowC.Initialise(vTapRateEtherPm, vSoftCapTapPc);
-  //   pGreyC.Initialise();
-  //   // No Initialise() for VoteTap, VoteEnd, Mvp
-  //   emit InitEscrowV(vTapRateEtherPm, vSoftCapTapPc);
-  // }
+  // Hub.SetCapsAndTranches()
+  // ------------------------
+  // To be called by the deploy script or manually by Admin to set Sale caps and tranches.
+  // Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+  function SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                              uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsAdminCaller {
+    pSaleC.SetCapsAndTranches(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
+    // event call is in Sale
+  }
 
   // Hub.SetUsdEtherPrice()
   // ----------------------
-  // Fn to be called on significant Ether price movement to set the price
+  // To be called by the deploy script or manually by Admin on significant Ether price movement to set the price
+  // Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
   function SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsAdminCaller {
-    pSaleC.SetUsdEtherPrice(vUsdEtherPrice); // 500
+    pSaleC.SetUsdEtherPrice(vUsdEtherPrice);
+  }
+  // Hub.SetPclAccount()
+  // -------------------
+  // Called by Admin to set/update the Escrow PCL withdrawal account
+  // Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+  function SetPclAccount(address vPclAccountA) external IsAdminCaller {
+    pEscrowC.SetPclAccount(vPclAccountA);
   }
   // Hub.PresaleIssue()
   // ------------------
@@ -147,7 +137,7 @@ contract Hub is OwnedHub, Math {
   }
   // Hub.StartSale()
   // ---------------
-  // To be called manually to start the sale going
+  // To be called manually by Admin to start the sale going
   // Can also be called to adjust settings.
   // Initialise(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
@@ -160,6 +150,9 @@ contract Hub is OwnedHub, Math {
   }
   // Hub.SetUsdHardCapB()
   // --------------------
+  // Called by Admin to set/unset Sale.pUsdHardCapB:
+  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
+  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
   function SetUsdHardCapB(bool B) external IsAdminCaller {
     pSaleC.SetUsdHardCapB(B);
   }
@@ -268,16 +261,6 @@ djh??
     pTokenC = I_TokenHub(vNewTokenContractA);
   }
 */
-  // Pause/Resume
-  // ============
-  // This contract (Hub) can be paused/resumed via SetPause() inherited from Owned
-
-  // Hub.SetTokenPause()
-  // ------------------------------
-  // To be called manually to pause/resume Token
-  function SetTokenPause(bool B) external IsAdminCaller {
-    pTokenC.SetPause(B);
-  }
 
   // Functions for Calling List IsHubCaller Functions
   // ================================================

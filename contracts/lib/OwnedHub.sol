@@ -20,7 +20,7 @@ contract OwnedHub is Constants {
   // Constructor NOT payable
   // -----------
   constructor() internal {
-    iOwnersYA = [msg.sender, msg.sender];  // only need up to 1 OpMan to be set here
+    iOwnersYA = [msg.sender, msg.sender, msg.sender];  // only need up to 2 Admin to be set here
   }
 
   // View Methods

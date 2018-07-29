@@ -42,23 +42,30 @@ OpMan.Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) 
 
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
 ---
-Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+Hub.Initialise() IsDeployerCaller to set the contract address variables.
+Hub.SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                       uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) IsAdminCaller
+    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) IsAdminCaller
+    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+Hub.SetPclAccount(address vPclAccountA) external IsAdminCaller
+    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after ADMIN_OWNER_X, SALE_OWNER_X have been set
-Hub.Initialise() IsDeployerCaller to set the contract address variables.
 
 Sale owned by 0 Deployer, 1 OpMan, 2 Hub
 ----
+Sale.Initialise()  to set the contract address variables.
 Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X has been set
-Sale.Initialise()  to set the contract address variables.
 
 List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
 ----
+List.Initialise()  to set the contract address variables.
 List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
 List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, TOKEN_OWNER_X have been set
-List.Initialise()  to set the contract address variables.
 
 Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
 -----
@@ -70,41 +77,40 @@ Token.Initialise() To set the contract variable, and do the PIOE minting.
 
 Escrow owned by Deployer, OpMan, Hub, Sale
 ------
+Escrow.Initialise() to initialise the Escrow contract
 Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
-Escrow.Initialise() to initialise the Escrow contract
 
 Grey owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
 ----
+Grey.Initialise() to initialise the Grey contract
 Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
-Grey.Initialise() to initialise the Grey contract
 
 VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
+VoteTap.Initialise() to initialise the VoteTap contract
 VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
-VoteTap.Initialise() to initialise the VoteTap contract
 
 VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
+VoteEnd.Initialise() to initialise the VoteEnd contract
 VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
-VoteEnd.Initialise() to initialise the VoteEnd contract
 
 Mvp owned by 0 Deployer, 1 OpMan, 2 Hub
 ---
+Mvp.Initialise() to initialise the Mvp contract
 Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
-Mvp.Initialise() to initialise the Mvp contract
 
-
-Hub.InitContracts(...)
-Hub.InitEscrow(...)
-Hub.SetUsdEtherPrice()
-Hub.Issue() to be called repeatedly for all Seed Presale and Private Placement contributors
+Then Manually by Admin
+----------------------
+Hub.PresaleIssue() for all aggregated Seed Presale and Private Placement contributors
+...
 Hub.StartSale()
 
 */
@@ -115,3 +121,30 @@ module.exports = function(deployer) {
 //deployer.deploy(OpMan, ['0x324D03c986917483cE053Cd647e697e8917399bC', '0x324D03c986917483cE053Cd647e697e8917399b2'], ['0x324D03c986917483cE053Cd647e697e8917399bC', '0x324D03c986917483cE053Cd647e697e8917399b3'], {gas:7300000});
   deployer.deploy(OpMan);
 };
+
+/*
+// Spec: In Truffle, create a migration script that calls the CreateProject function after FundingHub has been deployed.
+
+var FundingHub = artifacts.require("./FundingHub.sol");
+
+module.exports = function(deployer) {
+  deployer.deploy(FundingHub)
+  .then(function() {
+    return FundingHub.deployed()
+  }).then(instance => {
+    console.log('Creating first project');
+    let nowT = new Date(), // now UTC
+    deadlineSecs = nowT.getTime()/1000.0 + 3600; // 1 hour from now
+    // console.log('nowT', nowT);
+    // console.log('deadline secs', deadlineSecs);
+    // from needs to be FundingHub owner which will be web3.eth.accounts[0]
+    // Make project owner web3.eth.accounts[1]
+    // function CreateProject(bytes32 vNameS, address vOwnerA, uint vTargetWei, uint vDeadlineT) FHisActiveAndSenderIsOk IsOwner returns (uint Id) {
+    // console.log('CreateProject("First Project via Migrate",'+ web3.eth.accounts[1]+', '+web3.toWei(11, "ether")+', '+deadlineSecs+', '+'{from: '+web3.eth.accounts[0]+', +gas: '+1000000+'})');
+    return instance.CreateProject("First Project via Migrate", web3.eth.accounts[1], web3.toWei(11, "ether"), deadlineSecs, {from: web3.eth.accounts[0], gas: 1100000});
+  })
+  .then(txObj => {
+    console.log("First project added. Gas used", txObj.receipt.gasUsed); // 1068241
+  }).catch(e => console.log('Error creating initial project in migration script', e));
+};
+*/

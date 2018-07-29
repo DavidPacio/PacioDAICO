@@ -9,7 +9,6 @@ pragma solidity ^0.4.24;
 
 contract Constants {
   // Contract  Indices
-  // -----------------
   uint256 internal constant OP_MAN_X     = 0;
   uint256 internal constant HUB_X        = 1;
   uint256 internal constant SALE_X       = 2;
@@ -42,7 +41,6 @@ contract Constants {
   uint256 internal constant MVP_OWNER_X    = 4;
 
   // Managed Operation Indices
-  // -------------------------
   uint256 internal constant RESUME_X                 =  0; // ResumeMO()
   uint256 internal constant CHANGE_OWNER_BASE_X      =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
   // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
@@ -54,19 +52,16 @@ contract Constants {
   uint256 internal constant OP_MAN_UPDATE_MAN_OP_X   = 10; // UpdateManOpMO()
 
   // Time
-  // ----
   uint32 internal constant DAY         = 86400;
   uint32 internal constant HOUR        =  3600;
 
-  // List Contract bits
-  // ------------------                        /- bit
+  // List Contract bits                        /- bit
   uint32 internal constant PRESALE     = 1; // 0 Bit setting for a Presale List entry - Pacio Seed Presale or Pacio internal Placement
   uint32 internal constant TRANSFER_OK = 2; // 1 Bit setting for transfers allowed for this member even if pTransfersOkB is false
   uint32 internal constant HAS_PROXY   = 4; // 2 Bit setting for this entry having a Proxy appointed
   uint32 internal constant BURNT       = 8; // 3 Bit setting for this entry having had its PIOEs burnt
 
   // List Contract Browsing actions
-  // ------------------------------
   uint8 internal constant BROWSE_FIRST = 1;
   uint8 internal constant BROWSE_LAST  = 2;
   uint8 internal constant BROWSE_NEXT  = 3;
