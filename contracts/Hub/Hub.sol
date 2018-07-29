@@ -69,9 +69,6 @@ contract Hub is OwnedHub, Math {
   // Events
   // ======
   event InitialiseV(address SaleContract, address TokenContract, address ListContract, address EscrowContract, address GreyContract);
-  event NewListContractV(address ListContract);
-  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
-  event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StartSaleV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();

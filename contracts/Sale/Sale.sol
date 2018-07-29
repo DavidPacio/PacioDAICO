@@ -65,15 +65,6 @@ Sending Ether is allowed - calls Buy()
 
 Events
 ======
-InitCapsV(address TokenContract, address ListContract, address EscrowContract, address GreyContract, uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap);
-SetTranchesV(uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
-SetUsdEtherPriceV(uint256 UsdEtherPrice);
-PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
-StartSaleV(uint256 StartTime);
-SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint256 PicosPerEther, uint32 bonusCentiPc);
-SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
-HardCapReachedV(uint256 pPicosSold, uint256 WeiRaised);
-TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
 
 */
 
