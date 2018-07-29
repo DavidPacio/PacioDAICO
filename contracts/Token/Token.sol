@@ -94,13 +94,12 @@ contract Token is EIP20Token, Math {
   // Can only be called once.
   // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
   // Owners must first be set by deploy script calls:
+  //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
-  //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X, MVP_OWNER_X have been set
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X)); // The List contract
     // Mint and create the owners account in List

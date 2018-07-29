@@ -41,14 +41,13 @@ contract VoteEnd is OwnedByOpManAndHub, Math {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub
   // Owners must first be set by deploy script calls:
+  //   VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
 
   // VoteEnd.Initialise()
   // -------------------
   // Called from the deploy script to initialise the VoteEnd contract
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
     iPausedB       =         // make VoteEnd active
     iInitialisingB = false;
   }

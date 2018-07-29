@@ -50,15 +50,14 @@ contract Grey is OwnedEscrow, Math {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
   // Owners must first be set by deploy script calls:
+  //   Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
 
   // Grey.Initialise()
   // -----------------
   // Called from the deploy script to initialise the Grey contract
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
   //require(EGreyStateN == NGreyState.None); // can only be called before the sale starts
     EGreyStateN = NGreyState.Open;
     iPausedB       =        // make Grey Escrow active
@@ -84,7 +83,7 @@ contract Grey is OwnedEscrow, Math {
 
   // Grey.Deposit()
   // --------------
-  // Fn to be called from Sale.Buy() for a grey list case to transfer the contribution for escrow keeping here
+  // Called from Sale.Buy() for a grey list case to transfer the contribution for escrow keeping here
   function Deposit(address vSenderA) external payable IsSaleCaller {
     // djh?? to be completed
   }

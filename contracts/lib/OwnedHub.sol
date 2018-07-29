@@ -20,7 +20,7 @@ contract OwnedHub is Constants {
   // Constructor NOT payable
   // -----------
   constructor() internal {
-    iOwnersYA = [msg.sender, msg.sender, msg.sender];  // only need up to 2 Admin to be set here
+    iOwnersYA[DEPLOYER_X] = msg.sender;  // only need Deployer to be set here
   }
 
   // View Methods
@@ -31,30 +31,31 @@ contract OwnedHub is Constants {
   function Paused() external view returns (bool) {
     return iPausedB;
   }
-  function Initialising() external view returns (bool) {
-    return iInitialisingB;
+  function iIsInitialisingB() internal view returns (bool) {
+    return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
-
+  function iIsOpManCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
+  }
+  function iIsAdminCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
+  }
   // Modifier functions
   // ------------------
-  modifier IsDeployerCaller {
-    require(msg.sender == iOwnersYA[DEPLOYER_X], "Not required Deployer caller");
+  modifier IsInitialising {
+    require(iIsInitialisingB(), "Not initialising");
     _;
   }
   modifier IsOpManCaller {
-    require(msg.sender == iOwnersYA[OP_MAN_OWNER_X], "Not required OpMan caller");
+    require(iIsOpManCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsAdminCaller {
-    require(msg.sender == iOwnersYA[ADMIN_OWNER_X], "Not required Admin caller");
+    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsSaleCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
-    _;
-  }
-  modifier IsSaleOrAdminCaller {
-    require(msg.sender == iOwnersYA[SALE_OWNER_X] || msg.sender == iOwnersYA[ADMIN_OWNER_X], "Not required Sale or Admin caller");
     _;
   }
   modifier IsActive {
@@ -73,10 +74,9 @@ contract OwnedHub is Constants {
   // ChangeOwnerMO()
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
-  // Can be called during deployment when iInitialisingB is set and msg.sender is the same as that for the constructor call to set the owners, if OpMan is set last.
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external IsOpManCaller {
-  //require((iInitialisingB || I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
-    require((iInitialisingB || I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX))
+  // Can be called directly during deployment when initialising
+  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
+    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)))
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]

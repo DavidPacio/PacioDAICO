@@ -53,14 +53,13 @@ contract Mvp is OwnedByOpManAndHub {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub
   // Owners must first be set by deploy script calls:
+  //   Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
 
   // Mvp.Initialise()
   // ----------------
   // Called from the deploy script to initialise the Mvp contract
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pTokenC = I_TokenMvp(opManC.ContractXA(TOKEN_X));
     pListC  =  I_ListMvp(opManC.ContractXA(LIST_X));

@@ -10,11 +10,11 @@ All contracts, including OpMan, should use managed ops for:
 Owners
 ------
 0. OpMan (self)                          - Set by OwnedOpMan.sol constructor
-1. Admin, a PCL hardware wallet account  - Set by Initialise() here
+1. Admin, a PCL hardware wallet account  - Set by deploy script
 
 OpMan Processes
 ---------------
-1. Set Admin owner, and add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
+1. Add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
 2. Add additional contracts, signers, and manOps as managed ops
    2.1 Admin to add additional contract as a managed op
    2.2 Admin to add additional signer as a managed op
@@ -121,12 +121,12 @@ contract OpMan is OwnedOpMan {
   // ------
   // 0. Deployer                              - Set to msg.sender by OwnedOpMan.sol constructor
   // 1. OpMan (self)                          - Set to this       by OwnedOpMan.sol constructor
-  // 2. Admin, a PCL hardware wallet account  - Set by Initialise() here
+  // 2. Admin, a PCL hardware wallet account  - Set by deploy script
 
   // Initialise()
   // ------------
   // To be called by deploy script to:
-  // 1. Set Admin owner, and add initial contracts, signers, and manOps
+  // 1. Add initial contracts, signers, and manOps
   // Admin owner is set this way because that can't be be done from the deploy script as ChangeOwnerMO() requires IsOpManCaller.
   // (Other contracts can have all their owners set via the deploy script because their constructor set OpMan owner to msg.sender (deployment account) initially,
   //  so 'ChangeOwnerMO() IsOpManCaller' calls can be made by the deploy script, provided that OpMan owner is set last.)
@@ -134,13 +134,9 @@ contract OpMan is OwnedOpMan {
   // Can only be called once.
   //
   // Arguments:
-  // - vAdminA       PCL hardware wallet address for Admin owner
   // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
-  function Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
-    // Set Admin owner
-    this.ChangeOwnerMO(ADMIN_OWNER_X, vAdminA); // requires IsOpManCaller so cannot be done from the deploy script
+  function Initialise(address[] vContractsYA, address[] vSignersYA) external IsInitialising {
     // Add initial contracts
     pAddContract(OP_MAN_X, address(this), true); // Self
     uint256 cX = 1;

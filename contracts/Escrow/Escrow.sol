@@ -70,15 +70,14 @@ contract Escrow is OwnedEscrow, Math {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
   // Owners must first be set by deploy script calls:
+  //   Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
 
   // Escrow.Initialise()
   // -------------------
   // Called from the deploy script to initialise the Escrow contract
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
   //require(EscrowStateN == NEscrowState.None); // can only be called before the sale starts
     pTapRateEtherPm = INITIAL_TAP_RATE_ETH_PM; // 100
     emit InitialiseV(INITIAL_TAP_RATE_ETH_PM, SOFT_CAP_TAP_PC);

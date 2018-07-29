@@ -28,84 +28,78 @@ Then:
 
 OpMan owned by 0 Deployer, 1 OpMan (self), 2 Admin
 -----
-OpMan.Initialise(address vAdminA, address[] vContractsYA, address[] vSignersYA) IsDeployerCaller
-  to set Admin owner, and add initial contracts, signers, and add the OpMan manOps
+OpMan.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
+  to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.
   Arguments:
-  - vAdminA       PCL hardware wallet address for Admin owner
   - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
 
-  Admin owner needs to be set this way because it can't be be set from the deploy script as ChangeOwnerMO() requires IsOpManCaller.
-  Other contracts can have all their owners set via the deploy script because their constructor set OpMan owner to msg.sender (deployment account) initially,
-  so 'ChangeOwnerMO() IsOpManCaller' calls can be made by the deploy script, provided that OpMan owner is set last.
-
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
 ---
-Hub.Initialise() IsDeployerCaller to set the contract address variables.
-Hub.SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                       uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) IsAdminCaller
-    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
-Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) IsAdminCaller
-    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
-Hub.SetPclAccount(address vPclAccountA) external IsAdminCaller
-    Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
-.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after ADMIN_OWNER_X, SALE_OWNER_X have been set
+Hub.Initialise() to set the contract address variables.
+Hub.SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                       uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3)
+Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) - Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
+Hub.SetPclAccount(address vPclAccountA) external
+Hub.EndInitialise() to end initialising
 
 Sale owned by 0 Deployer, 1 OpMan, 2 Hub
 ----
-Sale.Initialise()  to set the contract address variables.
+Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X has been set
+Sale.Initialise()  to set the contract address variables.
 
 List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
 ----
-List.Initialise()  to set the contract address variables.
+List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, TOKEN_OWNER_X have been set
+List.Initialise()  to set the contract address variables.
 
 Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
 -----
+Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
-Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X, MVP_OWNER_X have been set
 Token.Initialise() To set the contract variable, and do the PIOE minting.
 
 Escrow owned by Deployer, OpMan, Hub, Sale
 ------
-Escrow.Initialise() to initialise the Escrow contract
+Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
+Escrow.Initialise() to initialise the Escrow contract
 
 Grey owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
 ----
-Grey.Initialise() to initialise the Grey contract
+Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X, SALE_OWNER_X have been set
+Grey.Initialise() to initialise the Grey contract
 
 VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
-VoteTap.Initialise() to initialise the VoteTap contract
+VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+VoteTap.Initialise() to initialise the VoteTap contract
 
 VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
-VoteEnd.Initialise() to initialise the VoteEnd contract
+VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+VoteEnd.Initialise() to initialise the VoteEnd contract
 
 Mvp owned by 0 Deployer, 1 OpMan, 2 Hub
 ---
-Mvp.Initialise() to initialise the Mvp contract
+Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
+Mvp.Initialise() to initialise the Mvp contract
 
 Then Manually by Admin
 ----------------------

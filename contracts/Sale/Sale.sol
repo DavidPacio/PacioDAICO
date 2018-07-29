@@ -148,14 +148,13 @@ contract Sale is OwnedByOpManAndHub, Math {
   // ============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub
   // Owners must first be set by deploy script calls:
+  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address) <=== Must come after HUB_OWNER_X has been set
 
   // Sale.Initialise()
   // -----------------
   // To be called by the deploy script to set the contract address variables.
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_X));
     pListC   = I_ListSale(opManC.ContractXA(LIST_X));

@@ -30,18 +30,21 @@ contract OwnedOpMan is Constants {
   function Paused() external view returns (bool) {
     return iPausedB;
   }
-  function Initialising() external view returns (bool) {
-    return iInitialisingB;
+  function iIsInitialisingB() internal view returns (bool) {
+    return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
+  }
+  function iIsOpManCallerB() private view returns (bool) {
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
 
   // Modifier functions
   // ------------------
-  modifier IsDeployerCaller {
-    require(msg.sender == iOwnersYA[DEPLOYER_X], "Not required Deployer caller");
+  modifier IsInitialising {
+    require(iIsInitialisingB(), "Not initialising");
     _;
   }
    modifier IsOpManCaller {
-    require(msg.sender == iOwnersYA[OP_MAN_OWNER_X], "Not required OpMan caller");
+    require(iIsOpManCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsAdminCaller {
@@ -64,10 +67,9 @@ contract OwnedOpMan is Constants {
   // ChangeOwnerMO()
   // ---------------
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
-  // Can be called during deployment when iInitialisingB is set
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external IsOpManCaller {
-  //require((iInitialisingB || I_OpMan(this).IsManOpApproved(CHANGE_OWNER_BASE_X + vOwnerX))
-    require((iInitialisingB || I_OpMan(this).IsManOpApproved(vOwnerX))
+  // Can be called directly during deployment when initialising
+  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
+    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)))
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]);

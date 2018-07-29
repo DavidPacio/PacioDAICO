@@ -41,14 +41,13 @@ contract VoteTap is OwnedByOpManAndHub, Math {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub
   // Owners must first be set by deploy script calls:
+  //   VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address) <=== Must come after HUB_OWNER_X have been set
 
   // VoteTap.Initialise()
   // -------------------
   // Called from the deploy script to initialise the VoteTap contract
-  function Initialise() external IsDeployerCaller {
-    require(iInitialisingB); // To enforce being called only once
+  function Initialise() external IsInitialising {
     iPausedB       =         // make VoteTap active
     iInitialisingB = false;
   }
