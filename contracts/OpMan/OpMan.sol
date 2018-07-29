@@ -45,7 +45,7 @@ pragma solidity ^0.4.24;
 import "../lib/I_Owned.sol";
 import "../lib/OwnedOpMan.sol";
 
-contract OpMan is Owned {
+contract OpMan is OwnedOpMan {
   // OpMan specific constants
   uint32 private constant MIN_NUM_SIGNERS = 3;
 

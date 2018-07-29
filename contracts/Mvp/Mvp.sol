@@ -37,7 +37,7 @@ import "../Token/I_TokenMvp.sol";
 import "../List/I_ListMvp.sol";
 
 
-contract Mvp is Owned {
+contract Mvp is OwnedByOpManAndHub {
   string  public name = "Pacio MVP Launch"; // contract name
   uint32  private pBurnId; // Id for Burns, starting from 1, incremented for each burn,
   I_ListMvp  private pListC;  // the List contract

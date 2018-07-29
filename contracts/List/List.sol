@@ -47,7 +47,7 @@ import "../lib/Math.sol";
 import "../lib/Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
-contract List is Owned, Math {
+contract List is OwnedList, Math {
   string  public  name = "Pacio DAICO Participants List";
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
   address private pFirstEntryA;   // Address of first entry

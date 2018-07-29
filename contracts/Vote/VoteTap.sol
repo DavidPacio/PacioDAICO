@@ -26,7 +26,7 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedByOpManAndHub.sol";
 import "../lib/Math.sol";
 
-contract VoteTap is Owned, Math {
+contract VoteTap is OwnedByOpManAndHub, Math {
   // Data
 
   // Events

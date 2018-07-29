@@ -8,7 +8,7 @@ pragma solidity ^0.4.24;
 import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
-contract Owned is Constants {
+contract OwnedEscrow is Constants {
   uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
@@ -97,4 +97,4 @@ contract Owned is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End Owned contract - OwnedEscrow.sol version
+} // End OwnedEscrow contract

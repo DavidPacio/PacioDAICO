@@ -92,7 +92,7 @@ import "../Escrow/I_GreySale.sol";
 // 2. 32 million PIOEs for >=   5 ETH && < 50 ETH at 8.75 Cts
 // 3. 350 million      for >= 0.1 ETH && < 5 ETH  at 10 Cents
 
-contract Sale is Owned, Math {
+contract Sale is OwnedByOpManAndHub, Math {
   string  public  name = "Pacio DAICO Sale";
   uint256 private pStartT;        // i Sale start time
   uint256 private pEndT;          // i Sale end time

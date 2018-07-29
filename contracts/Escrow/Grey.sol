@@ -26,7 +26,7 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedEscrow.sol";
 import "../lib/Math.sol";
 
-contract Grey is Owned, Math {
+contract Grey is OwnedEscrow, Math {
   string  public name = "Pacio DAICO Grey List Escrow";
   enum NGreyState {
     None,            // 0 Not started yet

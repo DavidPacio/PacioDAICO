@@ -56,7 +56,7 @@ import "../Escrow/I_GreyHub.sol";
 //import "../Vote/I_VoteEnd.sol";
 //import "../Mvp/I_Mvp.sol";
 
-contract Hub is Owned, Math {
+contract Hub is OwnedHub, Math {
   string  public name = "Pacio DAICO Hub"; // contract name
   I_Sale      private pSaleC;    // the Sale contract
   I_TokenHub  private pTokenC;   // the Token contract

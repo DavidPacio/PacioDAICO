@@ -28,7 +28,7 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedEscrow.sol";
 import "../lib/Math.sol";
 
-contract Escrow is Owned, Math {
+contract Escrow is OwnedEscrow, Math {
   // Data
   uint256 private constant INITIAL_TAP_RATE_ETH_PM = 100; // Initial Tap rate in Ether pm
   uint256 private constant SOFT_CAP_TAP_PC         = 50;  // % of escrow balance to be dispersed on soft cap being reached

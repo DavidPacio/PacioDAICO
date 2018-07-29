@@ -30,7 +30,7 @@ pragma solidity ^0.4.24;
 import "../List/I_ListToken.sol";
 import "../lib/OwnedToken.sol";
 
-contract EIP20Token is Owned {
+contract EIP20Token is OwnedToken {
   // Data
   bool    public constant isEIP20Token = true; // Interface declaration
   string  public name     = "PIOE Token";
