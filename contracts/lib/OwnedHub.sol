@@ -9,13 +9,14 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedHub is Constants {
-  uint256 internal constant NUM_OWNERS = 4;
+  uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner, in this OpMan case is self
                                           // 2 Admin owner
                                           // 3 Sale  owner
+                                          // 4 Web   owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -40,6 +41,9 @@ contract OwnedHub is Constants {
   function iIsAdminCallerB() internal view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
+  function iIsWebOrAdminCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[WEB_OWNER_X] || iIsAdminCallerB();
+  }
   // Modifier functions
   // ------------------
   modifier IsInitialising {
@@ -56,6 +60,10 @@ contract OwnedHub is Constants {
   }
   modifier IsSaleCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
+    _;
+  }
+  modifier IsWebOrAdminCaller {
+    require(iIsWebOrAdminCallerB(), "Not required Web or Admin caller");
     _;
   }
   modifier IsActive {
@@ -80,7 +88,8 @@ contract OwnedHub is Constants {
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]);
+         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
+         && vNewOwnerA != iOwnersYA[WEB_OWNER_X]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }

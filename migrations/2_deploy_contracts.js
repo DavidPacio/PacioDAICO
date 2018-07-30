@@ -28,7 +28,7 @@ Then:
 
 OpMan owned by 0 Deployer, 1 OpMan (self), 2 Admin
 -----
-OpMan.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+OpMan.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.
@@ -39,8 +39,9 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
 ---
 Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
-Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 Hub.Initialise() to set the contract address variables.
 Hub.SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
                        uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3)

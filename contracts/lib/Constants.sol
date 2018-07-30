@@ -23,12 +23,12 @@ contract Constants {
   // Owner Indices
   // Contract  Owned By
   // OpMan     Deployer, Self,  Admin
-  // Hub       Deployer, OpMan, Admin, Sale
+  // Hub       Deployer, OpMan, Admin, Sale, Web
   // Sale      Deployer, OpMan, Hub
-  // Token     Deployer, OpMan, Hub, Sale, Mvp
-  // List      Deployer, OpMan, Hub, Token
-  // Escrow    Deployer, OpMan, Hub, Sale
-  // Grey      Deployer, OpMan, Hub, Sale
+  // Token     Deployer, OpMan, Hub,   Sale, Mvp
+  // List      Deployer, OpMan, Hub,   Token
+  // Escrow    Deployer, OpMan, Hub,   Sale
+  // Grey      Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
   // VoteEnd   Deployer, OpMan, Hub
   // Mvp       Deployer, OpMan, Hub
@@ -38,6 +38,7 @@ contract Constants {
   uint256 internal constant ADMIN_OWNER_X  = 2;
   uint256 internal constant SALE_OWNER_X   = 3;
   uint256 internal constant TOKEN_OWNER_X  = 3;
+  uint256 internal constant WEB_OWNER_X    = 4;
   uint256 internal constant MVP_OWNER_X    = 4;
 
   // Managed Operation Indices

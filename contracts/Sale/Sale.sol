@@ -3,17 +3,11 @@
 The sale contract for the Pacio DAICO
 
 Owners:
-0 OpMan
-1 Hub
+0 Deployer
+1 OpMan
+2 Hub
 
 Calls: OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
-
-djh??
-pragma experimental "v0.5.0";
-- add error msg strings to requires
-fn for money to grey list entry
-fns for new Escrow, Grey, VoteTap, VoteEnd
-review all manual fns for God issues a la Binod
 
 View Methods
 ============
@@ -161,7 +155,6 @@ contract Sale is OwnedByOpManAndHub, Math {
     pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_X));
     pGreyC   = I_GreySale(opManC.ContractXA(GREY_X));
     emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
-  //iPausedB       =        // left paused
     iInitialisingB = false;
   }
 
@@ -187,17 +180,8 @@ contract Sale is OwnedByOpManAndHub, Math {
     pPriceCCentsT2 = vPriceCCentsT2; // PIOE price for tranche 2 in centi-cents i.e.  875 for 8.75
     pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
     emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
+    emit SetUsdHardCapBV(true);
     iPausedB       = false; // make active
-  }
-
-  // Sale.SetUsdHardCapB()
-  // ---------------------
-  // Called from Hub.SetUsdHardCapB() to set/unset pUsdHardCapB:
-  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
-  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  function SetUsdHardCapB(bool B) external IsHubCaller {
-    pUsdHardCapB = B;
-    emit SetUsdHardCapBV(B);
   }
 
   // Sale.SetUsdEtherPrice()
@@ -233,6 +217,16 @@ contract Sale is OwnedByOpManAndHub, Math {
     iPausedB = false;
     pSaleOpenB = true; // Set to false when the sale is closed by any method
     emit StartSaleV(vStartT, vEndT);
+  }
+
+  // Sale.SetUsdHardCapB()
+  // ---------------------
+  // Called from Hub.SetUsdHardCapB() to set/unset pUsdHardCapB:
+  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
+  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
+  function SetUsdHardCapB(bool B) external IsHubCaller {
+    pUsdHardCapB = B;
+    emit SetUsdHardCapBV(B);
   }
 
   // View Methods

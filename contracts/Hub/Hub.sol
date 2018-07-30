@@ -7,6 +7,7 @@ Owned by
 1 OpMan
 2 Admin
 3 Sale
+4 Web
 
 Calls
 OpMan; Sale; Token; List; Escrow; Grey;
@@ -73,15 +74,17 @@ contract Hub is OwnedHub, Math {
   // Initialisation/Setup Methods
   // ============================
 
-  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
+  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Web
   // Owners must first be set by deploy script calls:
   //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
-  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet address as Admin)
+  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()
   // ----------------
   // To be called by the deploy script to set the contract address variables.
+  // The deploy script must make a call to EndInitialising() once other initialising calls have been completed.
   function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);  // djh State var?
     pSaleC   = I_Sale(opManC.ContractXA(SALE_X));
@@ -90,8 +93,6 @@ contract Hub is OwnedHub, Math {
     pEscrowC = I_EscrowHub(opManC.ContractXA(ESCROW_X));
     pGreyC   = I_GreyHub(opManC.ContractXA(GREY_X));
     emit InitialiseV(pSaleC, pTokenC, pListC, pEscrowC, pGreyC);
-    iPausedB       =        // make active
-    iInitialisingB = false;
   }
 
   // Hub.SetCapsAndTranches()
@@ -108,7 +109,7 @@ contract Hub is OwnedHub, Math {
   // ----------------------
   // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
   function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
-    require(iIsInitialisingB() || iIsAdminCallerB());
+    require(iIsInitialisingB() || iIsWebOrAdminCallerB());
     pSaleC.SetUsdEtherPrice(vUsdEtherPrice);
   }
   // Hub.SetPclAccount()
@@ -131,7 +132,7 @@ contract Hub is OwnedHub, Math {
   // To be called repeatedly for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
-  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsAdminCaller {
+  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsWebOrAdminCaller {
     require(pListC.CreatePresaleEntry(toA, vDbId, vAddedT, vNumContribs));
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
@@ -139,7 +140,7 @@ contract Hub is OwnedHub, Math {
   // ---------------
   // To be called manually by Admin to start the sale going
   // Can also be called to adjust settings.
-  // Initialise(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
+  // Initialise(), SetCapsAndTranches(), SetUsdEtherPrice(), SetUsdEtherPrice(), SetPclAccount(), EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     pSaleC.StartSale(vStartT, vEndT);
     pTokenC.StartSale();
@@ -275,56 +276,55 @@ djh??
   // - typeN  type of the entry { None, Contract, Grey, White, Presale, Member, Refunded, White, Downgraded }
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
   //       The calling app will need to do the looping if necessary, thus the return of typeN.
-  function Browse(address currentA, uint8 vActionN) external view IsAdminCaller returns (address retA, uint8 typeN) {
+  function Browse(address currentA, uint8 vActionN) external view IsWebOrAdminCaller returns (address retA, uint8 typeN) {
     return pListC.Browse(currentA, vActionN);
   }
   // Hub.NextEntry()
   // ---------------
-  function NextEntry(address accountA) external view IsAdminCaller returns (address) {
+  function NextEntry(address accountA) external view IsWebOrAdminCaller returns (address) {
     return pListC.NextEntry(accountA);
   }
   // Hub.PrevEntry()
   // ---------------
-  function PrevEntry(address accountA) external view IsAdminCaller returns (address) {
+  function PrevEntry(address accountA) external view IsWebOrAdminCaller returns (address) {
     return pListC.PrevEntry(accountA);
   }
   // Hub.Proxy()
   // -----------
-  function Proxy(address accountA) external view IsAdminCaller returns (address) {
+  function Proxy(address accountA) external view IsWebOrAdminCaller returns (address) {
     return pListC.Proxy(accountA);
   }
 
   // Hub.CreateEntry()
   // -----------------
   // Create a new list entry, and add it into the doubly linked list
-  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsAdminCaller IsActive returns (bool) {
+  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.CreateEntry(vEntryA, vBits, vDbId);
   }
-
 
   // Hub.Whitelist()
   // ---------------
   // Whitelist an entry
-  function Whitelist(address vEntryA, uint32 vWhiteT) external IsAdminCaller IsActive returns (bool) {
+  function Whitelist(address vEntryA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.Whitelist(vEntryA, vWhiteT);
   }
   // Hub.Downgrade()
   // ---------------
   // Downgrades an entry from whitelisted
-  function Downgrade(address vEntryA, uint32 vDownT) external IsAdminCaller IsActive returns (bool) {
+  function Downgrade(address vEntryA, uint32 vDownT) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.Downgrade(vEntryA, vDownT);
   }
   // Hub.SetBonus()
   // --------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-  function SetBonus(address vEntryA, uint32 vBonusPc) external IsAdminCaller IsActive returns (bool) {
+  function SetBonus(address vEntryA, uint32 vBonusPc) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetBonus(vEntryA, vBonusPc);
   }
   // Hub.SetProxy()
   // --------------
   // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address vEntryA, address vProxyA) external IsAdminCaller IsActive returns (bool) {
+  function SetProxy(address vEntryA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetProxy(vEntryA, vProxyA);
   }
 
@@ -338,7 +338,7 @@ djh??
   // Hub.SetTransferOk()
   // -------------------
   // To set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsAdminCaller IsActive returns (bool) {
+  function SetTransferOk(address vEntryA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetTransferOk(vEntryA, B);
   }
 
