@@ -14,30 +14,26 @@
 pragma solidity ^0.4.24;
 
 contract Math {
-  /*
-  standard uint256 functions
-  */
-
-  function safeAdd(uint x, uint y) internal pure returns (uint z) {
+  function safeAdd(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require((z = x + y) >= x);
   }
 
-  function safeSub(uint x, uint y) internal pure returns (uint z) {
+  function safeSub(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require((z = x - y) <= x);
   }
 
-  function safeMul(uint x, uint y) internal pure returns (uint z) {
+  function safeMul(uint256 x, uint256 y) internal pure returns (uint256 z) {
     require(y == 0 || (z = x * y) / y == x);
   }
 
   // div isn't needed. Only error case is div by zero and Solidity throws on that
-  // function div(uint x, uint y) internal pure returns (uint z) {
+  // function div(uint256 x, uint256 y) internal pure returns (uint256 z) {
   //   z = x / y;
   // }
 
   // subMaxZero(x, y)
   // Pacio addition to avoid throwing if a subtraction goes below zero and return 0 in that case.
-  function subMaxZero(uint x, uint y) internal pure returns (uint z) {
+  function subMaxZero(uint256 x, uint256 y) internal pure returns (uint256 z) {
     if (y > x)
       z = 0;
     else

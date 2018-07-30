@@ -61,10 +61,10 @@ contract Escrow is OwnedEscrow, Math {
 
   // Events
   // ======
-  event InitialiseV(uint256 TapRateEtherPm, uint256 SoftCapTapPc);
   event SetPclAccountV(address PclAccount);
-  event DepositV(address indexed Account, uint256 Wei);
+  event  DepositV(address indexed Account, uint256 Wei);
   event WithdrawV(address indexed Account, uint256 Wei);
+  event SoftCapReachedV();
 
   // Initialisation/Setup Functions
   // ==============================
@@ -80,7 +80,6 @@ contract Escrow is OwnedEscrow, Math {
   function Initialise() external IsInitialising {
   //require(EscrowStateN == NEscrowState.None); // can only be called before the sale starts
     pTapRateEtherPm = INITIAL_TAP_RATE_ETH_PM; // 100
-    emit InitialiseV(INITIAL_TAP_RATE_ETH_PM, SOFT_CAP_TAP_PC);
     iPausedB       =        // make Escrow active
     iInitialisingB = false;
   }
@@ -88,8 +87,9 @@ contract Escrow is OwnedEscrow, Math {
   // -----------------
   // Called from Hub.StartSale()
   function StartSale() external IsHubCaller {
-    require(EscrowStateN == NEscrowState.None); // can only be called before the sale starts
-    EscrowStateN = NEscrowState.PreSoftCap;     // Sale running prior to soft cap
+    require(EscrowStateN == NEscrowState.None // can only be called before the sale starts
+         && pPclAccountA != address(0));      // must have set the PCL account
+    EscrowStateN = NEscrowState.PreSoftCap;   // Sale running prior to soft cap
     iPausedB = false; // make Escrow active
   }
   // Escrow.EndSale()
@@ -111,21 +111,37 @@ contract Escrow is OwnedEscrow, Math {
 
   // View Methods
   // ============
-  // djh?? more...
   // Escrow.WeiInEscrow() -- Echoed in Sale View Methods
   function WeiInEscrow() external view returns (uint256) {
     return pWeiBalance;
+  }
+  // Escrow.State()
+  function State() external view returns (uint8) {
+    return uint8(EscrowStateN);
+  }
+  // Escrow.InitialTapRateEtherPm()
+  function InitialTapRateEtherPm() external pure returns (uint256) {
+    return INITIAL_TAP_RATE_ETH_PM;
+  }
+  // Escrow.TapRateEtherPm()
+  function TapRateEtherPm() external view returns (uint256) {
+    return pTapRateEtherPm;
+  }
+  // Escrow.LastWithdrawalTime()
+  function LastWithdrawalTime() external view returns (uint256) {
+    return pLastWithdrawT;
+  }
+  // Escrow.SoftCapReachedDispersalPercent()
+  function SoftCapReachedDispersalPercent() external pure returns (uint256) {
+    return SOFT_CAP_TAP_PC;
   }
   // Escrow.PclAccount()
   function PclAccount() external view returns (address) {
     return pPclAccountA;
   }
 
-
   // Modifier functions
   // ==================
-
-
 
 
   // State changing methods
@@ -145,7 +161,19 @@ contract Escrow is OwnedEscrow, Math {
   // Is called from Hub.SoftCapReached() when soft cap is reached
   function SoftCapReached() external IsHubCaller {
     EscrowStateN = NEscrowState.SoftCapReached;
-    // djh?? to be completed to do softcap withdrawal
+    emit SoftCapReachedV();
+    // Make the soft cap withdrawal
+    pWithdraw(safeMul(pWeiBalance, SOFT_CAP_TAP_PC) / 100);
+  }
+
+  // EscrowC.pWithdraw()
+  // ------------------
+  // Called here locally to withdraw
+  function pWithdraw(uint256 vWithdrawWei) private {
+    pPclAccountA.transfer(vWithdrawWei); // throws on failure
+    pWeiBalance = subMaxZero(pWeiBalance, vWithdrawWei);
+    pLastWithdrawT = now;
+    emit WithdrawV(pPclAccountA, vWithdrawWei);
   }
 
 
