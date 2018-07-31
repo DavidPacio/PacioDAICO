@@ -9,19 +9,19 @@ These methods are often public in other EIP 20 implementations but they can be e
 
 EIP20 View Methods
 ------------------
-function balanceOf(address accountA) external view returns (uint256 balance);
-function allowance(address accountA, address spenderA) external view returns (uint256 remaining);
+EIP20Token.balanceOf(address accountA) external view returns (uint256 balance);
+EIP20Token.allowance(address accountA, address spenderA) external view returns (uint256 remaining);
 
 EIP20 State Changing Public Methods
 -----------------------------------
-function transfer(address toA, uint256 value) external returns (bool success);
-function transferFrom(address frA, address toA, uint256 value) external returns (bool success);
-function approve(address spenderA, uint256 value) external returns (bool success);
+EIP20Token.transfer(address toA, uint256 value) external returns (bool success);
+EIP20Token.transferFrom(address frA, address toA, uint256 value) external returns (bool success);
+EIP20Token.approve(address spenderA, uint256 value) external returns (bool success);
 
 EIP20 Events
 ------------
-event Transfer(address indexed From, address indexed To, uint256 Value);
-event Approval(address indexed Account, address indexed Spender, uint256 Value);
+EIP20Token event Transfer(address indexed From, address indexed To, uint256 Value);
+EIP20Token event Approval(address indexed Account, address indexed Spender, uint256 Value);
 
 */
 
@@ -66,14 +66,14 @@ contract EIP20Token is OwnedToken {
 
   // View Methods
   // ------------
-  // balanceOf()
-  // -----------
+  // EIP20Token.balanceOf()
+  // ----------------------
   // Returns the token balance of account with address accountA
   function balanceOf(address accountA) external view returns (uint256 balance) {
     return iListC.PicosBalance(accountA);
   }
-  // allowance()
-  // -----------
+  // EIP20Token.allowance()
+  // ----------------------
   // Returns the number of tokens approved by accountA that can be transferred ("spent") by spenderA
   function allowance(address accountA, address spenderA) external view returns (uint256 remaining) {
     return allowed[accountA][spenderA];
@@ -81,17 +81,17 @@ contract EIP20Token is OwnedToken {
 
   // State changing external methods made pause-able via IsTransferOK()
   // -----------------------------
-  // transfer()
-  // ----------
+  // EIP20Token.transfer()
+  // ---------------------
   // Transfers value of sender's tokens to another account, address toA
   function transfer(address toA, uint256 value) external IsTransferOK(msg.sender, toA) returns (bool success) {
     require(iListC.Transfer(msg.sender, toA, value));
-    emit Transfer(msg.sender, toA, value); //solhint-disable-line indent, no-unused-vars
+    emit Transfer(msg.sender, toA, value);
     return true;
   }
 
-  // transferFrom()
-  // --------------
+  // EIP20Token.transferFrom()
+  // -------------------------
   // Sender transfers value tokens from account frA to account toA, if
   // sender had been approved by frA for a transfer of >= value tokens from frA's account
   // by a prior call to approve() with that call's sender being this call's frA,
@@ -104,8 +104,8 @@ contract EIP20Token is OwnedToken {
     return true;
   }
 
-  // approve()
-  // ---------
+  // EIP20Token.approve()
+  // --------------------
   // Approves the passed address (of spenderA) to spend up to value tokens on behalf of msg.sender,
   //  in one or more transferFrom() calls
   // If this function is called again it overwrites the current allowance with value.

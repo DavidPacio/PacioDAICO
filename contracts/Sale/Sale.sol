@@ -155,14 +155,15 @@ contract Sale is OwnedByOpManAndHub, Math {
     pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_X));
     pGreyC   = I_GreySale(opManC.ContractXA(GREY_X));
     emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
-    iInitialisingB = false;
+  //iInitialisingB = false; No. Leave in initialising state
   }
 
-  // Sale.SetCapsAndTranches()
-  // -------------------------
-  // Called from Hub.SetCapsAndTranches() by the deploy script or manually by Admin to set Sale caps and tranches.
-  function SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                              uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external IsHubCaller {
+  // Sale.SetCapsAndTranchesMO()
+  // ---------------------------
+  // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
+  function SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                                uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_X)));
     // Caps stuff
     pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
     pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
@@ -181,19 +182,28 @@ contract Sale is OwnedByOpManAndHub, Math {
     pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
     emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
     emit SetUsdHardCapBV(true);
-    iPausedB       = false; // make active
   }
 
   // Sale.SetUsdEtherPrice()
   // -----------------------
-  // Fn to be called from Hub.SetUsdEtherPrice() on significant Ether price movement to set the price
-  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external IsHubCaller {
+  // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
+  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
+    require(iIsInitialisingB() || iIsAdminCallerB());
     pUsdEtherPrice = vUsdEtherPrice; // 500
     pPicosPerEthT1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1   16 = 12 (picos per Pioe) + 4 from pPriceCCentsT1 -> $s = 6,666,666,666,666,666
     pPicosPerEthT2 = pUsdEtherPrice * 10**16 / pPriceCCentsT2; // Picos per Ether for tranche 2
     pPicosPerEthT3 = pUsdEtherPrice * 10**16 / pPriceCCentsT3; // Picos per Ether for tranche 3  // 5,000,000,000,000,000 for ETH = $500 and target PIOE price = $0.10
     emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthT1, pPicosPerEthT2, pPicosPerEthT3);
   }
+
+  // Sale.EndInitialise()
+  // --------------------
+  // To be called by the deploy script to end initialising
+  function EndInitialising() external IsInitialising {
+    iPausedB       =        // make active
+    iInitialisingB = false;
+  }
+
   // Sale.PresaleIssue()
   // -------------------
   // To be called repeatedly from Hub.PresaleIssue() for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
@@ -207,10 +217,11 @@ contract Sale is OwnedByOpManAndHub, Math {
     emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
     // No event emit as List.Issue() does it
   }
+
   // Sale.StartSale()
   // ----------------
   // Called from Hub.StartSale() to start the sale going
-  // Initialise(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
+  // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsHubCaller {
     pStartT  = vStartT;
     pEndT    = vEndT;

@@ -7,8 +7,8 @@ Interface for the Hub contract for the external functions called from the Sale c
 pragma solidity ^0.4.24;
 
 interface I_Hub {
-  function SoftCapReached() external;
-  function EndSale() external;
+  function SoftCapReachedMO() external;
+  function EndSaleMO() external;
 }
 // End I_Hub interface
 

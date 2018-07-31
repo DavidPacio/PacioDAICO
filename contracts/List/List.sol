@@ -288,14 +288,14 @@ contract List is OwnedList, Math {
   // ------------
   // Checks that the list is active; both frA and toA exist; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   // Also have an IsTransferOK modifier in EIP20Token
-  modifier IsTransferOK(address frA, address toA, uint256 value) {
-    require(value > 0                               // Non-zero transfer No! The EIP-20 std says: Note Transfers of 0 values MUST be treated as normal transfers and fire the Transfer event
+  modifier IsTransferOK(address frA, address toA, uint256 vPicos) {
+    require(vPicos > 0                              // Non-zero transfer No! The EIP-20 std says: Note Transfers of 0 vPicoss MUST be treated as normal transfers and fire the Transfer event
       // && toA != frA                              // Destination is different from source. Not here. Is checked in calling fn.
          && pListMR[frA].addedT > 0                 // frA exists
          && pListMR[toA].whiteT > 0                 // toA exists and is whitelisted
          && (pTransfersOkB                          // Transfers can be made                /- ok to transfer from frA
           || (pListMR[frA].bits & TRANSFER_OK) > 0) // or they are allowed for this member  |
-         && pListMR[frA].picosBalance >= value,     // frA has the picos available
+         && pListMR[frA].picosBalance >= vPicos,    // frA has the picos available
             "Transfer not allowed");
     _;
   }
@@ -471,11 +471,11 @@ contract List is OwnedList, Math {
 
   // List.Transfer()
   // ---------------
-  // Is called for all transfers including EIP20 ones
-  function Transfer(address frA, address toA, uint256 value) external IsTransferOK(frA, toA, value) IsTokenCaller returns (bool success) {
-    pListMR[frA].picosBalance -= value; // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= value check
-    pListMR[toA].picosBalance = safeAdd(pListMR[toA].picosBalance, value);
-    if (value > 0 && pListMR[frA].picosBalance == 0) // value > 0 check because EIP-20 allows transfers of 0
+  // Is called for EIP20 transfers from EIP20Token.transfer() and EIP20Token.transferFrom()
+  function Transfer(address frA, address toA, uint256 vPicos) external IsTransferOK(frA, toA, vPicos) IsTokenCaller returns (bool success) {
+    pListMR[frA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= vPicos check
+    pListMR[toA].picosBalance = safeAdd(pListMR[toA].picosBalance, vPicos);
+    if (vPicos > 0 && pListMR[frA].picosBalance == 0) // vPicos > 0 check because EIP-20 allows transfers of 0
       pNumMembers = subMaxZero(pNumMembers, 1);
     return true;
   }

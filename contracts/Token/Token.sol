@@ -133,17 +133,21 @@ contract Token is EIP20Token, Math {
 
   // View Methods
   // ============
+  // Token.IsSaleOpen()
+  function IsSaleOpen() external view returns (bool) {
+    return pSaleOpenB;
+  }
   // Token.PicosIssued()
   function PicosIssued() external view returns (uint256) {
     return pPicosIssued;
   }
-  // Token.WeiRaised()
-  function WeiRaised() external view returns (uint256) {
-    return pWeiRaised;
-  }
   // Token.pPicosAvailable()
   function PicosAvailable() external view returns (uint256) {
     return pPicosAvailable;
+  }
+  // Token.WeiRaised()
+  function WeiRaised() external view returns (uint256) {
+    return pWeiRaised;
   }
   // Token.Contributors()
   function Contributors() external view returns (uint256) {
@@ -152,10 +156,6 @@ contract Token is EIP20Token, Math {
   // Token.PclPicosAllocated()
   function PclPicosAllocated() external view returns (uint256) {
     return pPclPicosAllocated;
-  }
-  // Token.IsSaleOpen()
-  function IsSaleOpen() external view returns (bool) {
-    return pSaleOpenB;
   }
   // Token.IsTransferAllowedByDefault()
   function IsTransferAllowedByDefault() external view returns (bool) {
@@ -178,7 +178,8 @@ contract Token is EIP20Token, Math {
     pPicosIssued    = safeAdd(pPicosIssued,    vPicos);
     pPicosAvailable = safeSub(pPicosAvailable, vPicos); // Should never go neg due to reserve, even if final Buy() goes over the hardcap
     pWeiRaised      = safeAdd(pWeiRaised, vWei);
-    // No event emit as iListC.Issue() does it
+    emit Transfer(iOwnersYA[SALE_OWNER_X], toA, vPicos); // Was missing from the Presale contract
+    // iListC.Issue() makes an IssueV(toA, vPicos, vWei) event call
     return true;
   }
 

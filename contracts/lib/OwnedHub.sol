@@ -84,7 +84,7 @@ contract OwnedHub is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)))
+    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)))
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]

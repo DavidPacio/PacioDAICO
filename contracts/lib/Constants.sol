@@ -51,10 +51,12 @@ contract Constants {
   uint256 internal constant OP_MAN_CHANGE_SIGNER_X   =  8; // ChangeSignerMO()
   uint256 internal constant OP_MAN_UPDATE_CONTRACT_X =  9; // UpdateContractMO()
   uint256 internal constant OP_MAN_UPDATE_MAN_OP_X   = 10; // UpdateManOpMO()
-  uint256 internal constant HUB_SET_CAPS_TRANCHES_X  =  5; // Hub.SetCapsAndTranches()
-  uint256 internal constant HUB_SET_PCL_ACCOUNT_X    =  6; // Hub.SetCapsAndTranches()
-  uint256 internal constant HUB_SOFT_CAP_REACHED_X   =  7; // Hub.SoftCapReached()
-  uint256 internal constant HUB_END_SALE_X           =  8; // Hub.EndSale()
+  uint256 internal constant HUB_SOFT_CAP_REACHED_X   =  5; // Hub.SoftCapReachedMO()
+  uint256 internal constant HUB_END_SALE_X           =  6; // Hub.EndSaleMO()
+  uint256 internal constant SALE_SET_CAPS_TRANCHES_X =  5; // Sale.SetCapsAndTranchesMO()
+  uint256 internal constant ESCROW_SET_PCL_ACCOUNT_X =  5; // Escrow.SetPclAccountMO()
+  uint256 internal constant ESCROW_WITHDRAW_X        =  6; // Escrow.WithdrawMO()
+
 
     // Time
   uint32 internal constant DAY         = 86400;

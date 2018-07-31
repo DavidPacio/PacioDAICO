@@ -8,7 +8,6 @@ pragma solidity ^0.4.24;
 
 interface I_EscrowHub {
   function WeiInEscrow() external view returns (uint256);
-  function SetPclAccount(address vPclAccountA) external;
   function StartSale() external;
   function SoftCapReached() external;
   function EndSale() external;

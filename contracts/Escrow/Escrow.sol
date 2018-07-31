@@ -40,7 +40,7 @@ contract Escrow is OwnedEscrow, Math {
     None,            // 0 Not started yet
     SaleRefund,      // 1 Failed to reach soft cap, contributions being refunded
     TerminateRefund, // 2 A VoteEnd vote has voted to end the project, contributions being refunded
-    SaleClosed,      // 3 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations
+    SaleClosed,      // 3 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
     PreSoftCap,      // 4 Sale running prior to soft cap          /- deposits ok
     SoftCapReached   // 5 Soft cap reached, initial draw allowed  |
   }
@@ -80,9 +80,26 @@ contract Escrow is OwnedEscrow, Math {
   function Initialise() external IsInitialising {
   //require(EscrowStateN == NEscrowState.None); // can only be called before the sale starts
     pTapRateEtherPm = INITIAL_TAP_RATE_ETH_PM; // 100
-    iPausedB       =        // make Escrow active
+  }
+
+  // Escrow.SetPclAccountMO()
+  // ------------------------
+  // Called by the deploy script when initialising or manually as Admin as a managed op to set/update the Escrow PCL withdrawal account
+  function SetPclAccountMO(address vPclAccountA) external IsHubCaller {
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_SET_PCL_ACCOUNT_X)));
+    require(vPclAccountA != address(0));
+    pPclAccountA = vPclAccountA;
+    emit SetPclAccountV(vPclAccountA);
+  }
+
+  // Escrow.EndInitialise()
+  // ----------------------
+  // To be called by the deploy script to end initialising
+  function EndInitialising() external IsInitialising {
+    iPausedB       =        // make active
     iInitialisingB = false;
   }
+
   // Escrow.StartSale()
   // -----------------
   // Called from Hub.StartSale()
@@ -90,23 +107,14 @@ contract Escrow is OwnedEscrow, Math {
     require(EscrowStateN == NEscrowState.None // can only be called before the sale starts
          && pPclAccountA != address(0));      // must have set the PCL account
     EscrowStateN = NEscrowState.PreSoftCap;   // Sale running prior to soft cap
-    iPausedB = false; // make Escrow active
   }
+
   // Escrow.EndSale()
   // ----------------
   // Is called from Hub.EndSale() when hard cap is reached, time is up, or the sale is ended manually
   function EndSale() external IsHubCaller {
     EscrowStateN = NEscrowState.SaleClosed;
     // djh?? to be completed to
-  }
-
-  // Escrow.SetPclAccount()
-  // ----------------------
-  // Fn to be called via Hub.SetPclAccount() to set or change the PCL account to receive funds withdrawn via taps
-  function SetPclAccount(address vPclAccountA) external IsHubCaller {
-    require(vPclAccountA != address(0));
-    pPclAccountA = vPclAccountA;
-    emit SetPclAccountV(vPclAccountA);
   }
 
   // View Methods
@@ -166,13 +174,25 @@ contract Escrow is OwnedEscrow, Math {
     pWithdraw(safeMul(pWeiBalance, SOFT_CAP_TAP_PC) / 100);
   }
 
+  // Escrow.WithdrawMO()
+  // -------------------
+  // Is called by Admin to withdraw the available tap as a managed operation
+  function WithdrawMO() external IsAdminCaller {
+    require(EscrowStateN == NEscrowState.SaleClosed, "Sale not closed");
+    require(OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_WITHDRAW_X));
+    pWithdraw(777); // djh?? Finish
+  }
+
+  // Local private functions
+  // =======================
+
   // EscrowC.pWithdraw()
   // ------------------
   // Called here locally to withdraw
   function pWithdraw(uint256 vWithdrawWei) private {
-    pPclAccountA.transfer(vWithdrawWei); // throws on failure
     pWeiBalance = subMaxZero(pWeiBalance, vWithdrawWei);
     pLastWithdrawT = now;
+    pPclAccountA.transfer(vWithdrawWei); // throws on failure
     emit WithdrawV(pPclAccountA, vWithdrawWei);
   }
 
@@ -185,3 +205,39 @@ contract Escrow is OwnedEscrow, Math {
   }
 
 } // End Escrow contract
+
+/*
+    function getCurrentTapAmount() public constant returns(uint256) {
+        if(state != FundState.TeamWithdraw) {
+            return 0;
+        }
+        return calcTapAmount();
+    }
+
+    function calcTapAmount() internal view returns(uint256) {
+        uint256 amount = safeMul(safeSub(now, lastWithdrawTime), tap);
+        if(address(this).balance < amount) {
+            amount = address(this).balance;
+        }
+        return amount;
+    }
+
+    function firstWithdraw() public onlyOwner withdrawEnabled {
+        require(firstWithdrawAmount > 0);
+        uint256 amount = firstWithdrawAmount;
+        firstWithdrawAmount = 0;
+        teamWallet.transfer(amount);
+        Withdraw(amount, now);
+    }
+
+    //
+    // @dev Withdraw tap amount
+    //
+    function withdraw() public onlyOwner withdrawEnabled {
+        require(state == FundState.TeamWithdraw);
+        uint256 amount = calcTapAmount();
+        lastWithdrawTime = now;
+        teamWallet.transfer(amount);
+        Withdraw(amount, now);
+    }
+*/

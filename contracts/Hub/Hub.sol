@@ -93,36 +93,6 @@ contract Hub is OwnedHub, Math {
     pEscrowC = I_EscrowHub(opManC.ContractXA(ESCROW_X));
     pGreyC   = I_GreyHub(opManC.ContractXA(GREY_X));
     emit InitialiseV(pSaleC, pTokenC, pListC, pEscrowC, pGreyC);
-  }
-
-  // Hub.SetCapsAndTranches()
-  // ------------------------
-  // Called by the deploy script when initialising or manually as a managed op to set Sale caps and tranches.
-  function SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                              uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
-    require(iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SET_CAPS_TRANCHES_X)));
-    pSaleC.SetCapsAndTranches(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
-    // event call is in Sale
-  }
-
-  // Hub.SetUsdEtherPrice()
-  // ----------------------
-  // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
-  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
-    require(iIsInitialisingB() || iIsWebOrAdminCallerB());
-    pSaleC.SetUsdEtherPrice(vUsdEtherPrice);
-  }
-  // Hub.SetPclAccount()
-  // -------------------
-  // Called by the deploy script when initialising or manually as a managed op to set/update the Escrow PCL withdrawal account
-  function SetPclAccount(address vPclAccountA) external {
-    require(iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SET_PCL_ACCOUNT_X)));
-    pEscrowC.SetPclAccount(vPclAccountA);
-  }
-  // Hub.EndInitialise()
-  // -------------------
-  // To be called by the deploy script to end initialising
-  function EndInitialising() external IsInitialising {
     iPausedB       =        // make active
     iInitialisingB = false;
   }
@@ -136,11 +106,12 @@ contract Hub is OwnedHub, Math {
     require(pListC.CreatePresaleEntry(toA, vDbId, vAddedT, vNumContribs));
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
+
   // Hub.StartSale()
   // ---------------
   // To be called manually by Admin to start the sale going
   // Can also be called to adjust settings.
-  // Initialise(), SetCapsAndTranches(), SetUsdEtherPrice(), SetUsdEtherPrice(), SetPclAccount(), EndInitialise() and PresaleIssue() multiple times must have been called before this.
+  // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     pSaleC.StartSale(vStartT, vEndT);
     pTokenC.StartSale();
@@ -193,12 +164,13 @@ contract Hub is OwnedHub, Math {
 
   // State changing external methods
   // ===============================
-  // Hub.SoftCapReached()
-  // --------------------
+
+  // Hub.SoftCapReachedMO()
+  // ----------------------
   // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
-  // Can be called manually as a managed op if necessary.
-  function SoftCapReached() external {
-    require(msg.sender == address(pSaleC) || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SOFT_CAP_REACHED_X)));
+  // Can be called manually by Admin as a managed op if necessary.
+  function SoftCapReachedMO() external {
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SOFT_CAP_REACHED_X)));
       pSaleC.SoftCapReached();
    //pTokenC.SoftCapReached();
     pEscrowC.SoftCapReached();
@@ -206,12 +178,12 @@ contract Hub is OwnedHub, Math {
     // No SoftCapReached() for Grey, VoteTap, VoteEnd, Mvp
     emit SoftCapReachedV();
   }
-  // Hub.EndSale()
-  // -------------
+  // Hub.EndSaleMO()
+  // ---------------
   // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
-  // Can be called manually to end the sale prematurely as a managed op if necessary.
-  function EndSale() external {
-    require(msg.sender == address(pSaleC) || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_END_SALE_X)));
+  // Can be called manually by Admin to end the sale prematurely as a managed op if necessary.
+  function EndSaleMO() external {
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_END_SALE_X)));
     pSaleC.EndSale();
     pTokenC.EndSale();
     pEscrowC.EndSale();

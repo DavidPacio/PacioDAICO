@@ -43,17 +43,16 @@ Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 Hub.Initialise() to set the contract address variables.
-Hub.SetCapsAndTranches(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                       uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3)
-Hub.SetUsdEtherPrice(uint256 vUsdEtherPrice) - Requires IsAdminCaller which will pass if called by the deploy script before the owners are set.
-Hub.SetPclAccount(address vPclAccountA) external
-Hub.EndInitialise() to end initialising
 
 Sale owned by 0 Deployer, 1 OpMan, 2 Hub
 ----
 Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Sale.Initialise()  to set the contract address variables.
+Sale.SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                          uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3)
+Sale.SetUsdEtherPrice(uint256 vUsdEtherPrice)
+Sale.EndInitialise() to end initialising
 
 List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
 ----
@@ -76,6 +75,8 @@ Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Escrow.Initialise() to initialise the Escrow contract
+Escrow.SetPclAccountMO(address vPclAccountA) external
+Escrow.EndInitialise() to end initialising
 
 Grey owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
 ----
