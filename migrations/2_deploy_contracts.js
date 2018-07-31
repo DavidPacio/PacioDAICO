@@ -69,11 +69,12 @@ Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
 Token.Initialise() To set the contract variable, and do the PIOE minting.
 
-Escrow owned by Deployer, OpMan, Hub, Sale
+Escrow owned by Deployer, OpMan, Hub, Sale, Admin
 ------
 Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Escrow.ChangeOwnerMO(ADMIN_ESCROW_X, PCL hw wallet account address as Admin)
 Escrow.Initialise() to initialise the Escrow contract
 Escrow.SetPclAccountMO(address vPclAccountA) external
 Escrow.EndInitialise() to end initialising

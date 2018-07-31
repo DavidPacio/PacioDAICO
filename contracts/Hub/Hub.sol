@@ -120,14 +120,6 @@ contract Hub is OwnedHub, Math {
     // No StartSale() for Grey, VoteTap, VoteEnd, Mvp
     emit StartSaleV(vStartT, vEndT);
   }
-  // Hub.SetUsdHardCapB()
-  // --------------------
-  // Called by Admin to set/unset Sale.pUsdHardCapB:
-  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
-  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  function SetUsdHardCapB(bool B) external IsAdminCaller {
-    pSaleC.SetUsdHardCapB(B);
-  }
 
   // View Methods
   // ============

@@ -1,6 +1,6 @@
 // lib\OwnedEscrow.sol
 //
-// Version of Owned for Escrow and Grey which is owned by Deployer, OpMan, Hub, Sale
+// Version of Owned for Escrow and Grey which is owned by Deployer, OpMan, Hub, Sale, Admin
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,13 +9,14 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedEscrow is Constants {
-  uint256 internal constant NUM_OWNERS = 4;
+  uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner, in this OpMan case is self
                                           // 2 Hub owner
                                           // 3 Sale  owner
+                                          // 4 Admin owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -37,6 +38,9 @@ contract OwnedEscrow is Constants {
   function iIsOpManCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
+  function iIsAdminCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[ADMIN_ESCROW_X];
+  }
 
   // Modifier functions
   // ------------------
@@ -54,6 +58,10 @@ contract OwnedEscrow is Constants {
   }
   modifier IsSaleCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
+    _;
+  }
+  modifier IsAdminCaller {
+    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsActive {
@@ -78,7 +86,8 @@ contract OwnedEscrow is Constants {
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[HUB_OWNER_X]
-         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]);
+         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
+         && vNewOwnerA != iOwnersYA[ADMIN_ESCROW_X]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }

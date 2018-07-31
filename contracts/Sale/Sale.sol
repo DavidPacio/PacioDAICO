@@ -6,6 +6,7 @@ Owners:
 0 Deployer
 1 OpMan
 2 Hub
+3 Admin
 
 Calls: OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
 
@@ -65,7 +66,7 @@ Events
 pragma solidity ^0.4.24;
 //pragma experimental "v0.5.0";
 
-import "../lib/OwnedByOpManAndHub.sol";
+import "../lib/OwnedSale.sol";
 import "../lib/Math.sol";
 import "../Hub/I_Hub.sol";
 import "../List/I_ListSale.sol";
@@ -78,7 +79,7 @@ import "../Escrow/I_GreySale.sol";
 // 2. 32 million PIOEs for >=   5 ETH && < 50 ETH at 8.75 Cts
 // 3. 350 million      for >= 0.1 ETH && < 5 ETH  at 10 Cents
 
-contract Sale is OwnedByOpManAndHub, Math {
+contract Sale is OwnedSale, Math {
   string  public  name = "Pacio DAICO Sale";
   uint256 private pStartT;        // i Sale start time
   uint256 private pEndT;          // i Sale end time
@@ -140,7 +141,7 @@ contract Sale is OwnedByOpManAndHub, Math {
 
   // Initialisation/Setup Methods
   // ============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
   // Owners must first be set by deploy script calls:
   //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
@@ -232,10 +233,10 @@ contract Sale is OwnedByOpManAndHub, Math {
 
   // Sale.SetUsdHardCapB()
   // ---------------------
-  // Called from Hub.SetUsdHardCapB() to set/unset pUsdHardCapB:
+  // Called by Admin to set/unset Sale.pUsdHardCapB:
   // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
   // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  function SetUsdHardCapB(bool B) external IsHubCaller {
+  function SetUsdHardCapB(bool B) external IsAdminCaller {
     pUsdHardCapB = B;
     emit SetUsdHardCapBV(B);
   }
@@ -421,7 +422,7 @@ contract Sale is OwnedByOpManAndHub, Math {
   // --------------------------
   function SoftCapReachedLocal() private {
     pSoftCapB = true;
-    I_Hub(iOwnersYA[HUB_OWNER_X]).SoftCapReached();
+    I_Hub(iOwnersYA[HUB_OWNER_X]).SoftCapReachedMO();
   }
   // Sale.SoftCapReached()
   // ---------------------
@@ -443,7 +444,7 @@ contract Sale is OwnedByOpManAndHub, Math {
   // -------------------
   function EndSaleLocal() private {
     pSaleOpenB = false;
-    I_Hub(iOwnersYA[HUB_OWNER_X]).EndSale();
+    I_Hub(iOwnersYA[HUB_OWNER_X]).EndSaleMO();
   }
   // Sale.EndSale()
   // --------------

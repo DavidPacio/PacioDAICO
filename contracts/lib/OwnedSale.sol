@@ -1,6 +1,6 @@
-// lib\OwnedHub.sol
+// lib\OwnedSale.sol
 //
-// Version of Owned for Hub which is owned by Deployer, OpMan, Admin, Sale
+// Version of Owned for Escrow and Grey which is owned by Deployer, OpMan, Hub, Sale
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -8,15 +8,14 @@ pragma solidity ^0.4.24;
 import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
-contract OwnedHub is Constants {
-  uint256 internal constant NUM_OWNERS = 5;
+contract OwnedSale is Constants {
+  uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner, in this OpMan case is self
-                                          // 2 Admin owner
-                                          // 3 Sale  owner
-                                          // 4 Web   owner
+                                          // 2 Hub owner
+                                          // 3 Admin owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -35,15 +34,13 @@ contract OwnedHub is Constants {
   function iIsInitialisingB() internal view returns (bool) {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
-  function iIsOpManCallerB() internal view returns (bool) {
+  function iIsOpManCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[ADMIN_OWNER_X];
+    return msg.sender == iOwnersYA[ADMIN_SALE_X];
   }
-  function iIsWebOrAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[WEB_OWNER_X] || iIsAdminCallerB();
-  }
+
   // Modifier functions
   // ------------------
   modifier IsInitialising {
@@ -54,16 +51,12 @@ contract OwnedHub is Constants {
     require(iIsOpManCallerB(), "Not required OpMan caller");
     _;
   }
+  modifier IsHubCaller {
+    require(msg.sender == iOwnersYA[HUB_OWNER_X], "Not required Hub caller");
+    _;
+  }
   modifier IsAdminCaller {
     require(iIsAdminCallerB(), "Not required Admin caller");
-    _;
-  }
-  modifier IsSaleCaller {
-    require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
-    _;
-  }
-  modifier IsWebOrAdminCaller {
-    require(iIsWebOrAdminCallerB(), "Not required Web or Admin caller");
     _;
   }
   modifier IsActive {
@@ -87,9 +80,8 @@ contract OwnedHub is Constants {
     require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)))
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
-         && vNewOwnerA != iOwnersYA[WEB_OWNER_X]);
+         && vNewOwnerA != iOwnersYA[HUB_OWNER_X]
+         && vNewOwnerA != iOwnersYA[ADMIN_SALE_X]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
@@ -110,4 +102,4 @@ contract OwnedHub is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End OwnedHub contract
+} // End OwnedEscrow contract
