@@ -45,7 +45,7 @@ contract Escrow is OwnedEscrow, Math {
     SoftCapReached   // 5 Soft cap reached, initial draw allowed  |
   }
   NEscrowState public EscrowStateN;
-  uint256 private pWeiBalance;     // wei in escrow
+//uint256 private pWeiBalance;     // wei in escrow. Don't need this. The amount in escrow is address(this).balance
   address private pPclAccountA;    // The PCL account (wallet or multi sig contract) for taps (withdrawals)
   uint256 private pTapRateEtherPm; // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;  // Last withdrawal time, 0 before any withdrawals
@@ -122,7 +122,7 @@ contract Escrow is OwnedEscrow, Math {
   // ============
   // Escrow.WeiInEscrow() -- Echoed in Sale View Methods
   function WeiInEscrow() external view returns (uint256) {
-    return pWeiBalance;
+    return address(this).balance;
   }
   // Escrow.State()
   function State() external view returns (uint8) {
@@ -135,6 +135,10 @@ contract Escrow is OwnedEscrow, Math {
   // Escrow.TapRateEtherPm()
   function TapRateEtherPm() external view returns (uint256) {
     return pTapRateEtherPm;
+  }
+  // Escrow.TapAvailableWei()
+  function TapAvailableWei() external view returns (uint256) {
+    return TapAmountWei();
   }
   // Escrow.LastWithdrawalTime()
   function LastWithdrawalTime() external view returns (uint256) {
@@ -161,7 +165,6 @@ contract Escrow is OwnedEscrow, Math {
   // Is called from Sale.Buy() to transfer the contribution for escrow keeping here, after the Issue() call which updates the list entry
   function Deposit(address vSenderA) external payable IsSaleCaller {
     require(EscrowStateN >= NEscrowState.PreSoftCap, "Deposit to Escrow not allowed"); // PreSoftCap or SoftCapReached = Deposits ok
-    pWeiBalance = safeAdd(pWeiBalance, msg.value);
     emit DepositV(vSenderA, msg.value);
   }
 
@@ -172,7 +175,7 @@ contract Escrow is OwnedEscrow, Math {
     EscrowStateN = NEscrowState.SoftCapReached;
     emit SoftCapReachedV();
     // Make the soft cap withdrawal
-    pWithdraw(safeMul(pWeiBalance, SOFT_CAP_TAP_PC) / 100);
+    pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);
   }
 
   // Escrow.WithdrawMO()
@@ -180,8 +183,10 @@ contract Escrow is OwnedEscrow, Math {
   // Is called by Admin to withdraw the available tap as a managed operation
   function WithdrawMO() external IsAdminCaller {
     require(EscrowStateN == NEscrowState.SaleClosed, "Sale not closed");
+    uint256 withdrawWei = TapAmountWei();
+    require(withdrawWei > 0, 'Available withdrawal is 0');
     require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_WITHDRAW_X));
-    pWithdraw(777); // djh?? Finish
+    pWithdraw(withdrawWei);
   }
 
   // Local private functions
@@ -191,12 +196,22 @@ contract Escrow is OwnedEscrow, Math {
   // ------------------
   // Called here locally to withdraw
   function pWithdraw(uint256 vWithdrawWei) private {
-    pWeiBalance = subMaxZero(pWeiBalance, vWithdrawWei);
     pLastWithdrawT = now;
     pPclAccountA.transfer(vWithdrawWei); // throws on failure
     emit WithdrawV(pPclAccountA, vWithdrawWei);
   }
 
+  // Escrow.TapAmountWei()
+  // ---------------------
+  // Private fn to calculate the amount available for taping (withdrawal)
+  function TapAmountWei() private view returns(uint256 amountWei) {
+    if (EscrowStateN == NEscrowState.SaleClosed) {
+      //                         tapRateWeiPerSec = (pTapRateEtherPm * 10**18) / MONTH
+      if ((amountWei = safeMul(now - pLastWithdrawT, (pTapRateEtherPm * 10**18) / MONTH)) > address(this).balance)
+        amountWei = address(this).balance;
+    }else
+      amountWei = 0;
+  }
 
   // Escrow Fallback function
   // ========================
@@ -207,38 +222,3 @@ contract Escrow is OwnedEscrow, Math {
 
 } // End Escrow contract
 
-/*
-    function getCurrentTapAmount() public constant returns(uint256) {
-        if(state != FundState.TeamWithdraw) {
-            return 0;
-        }
-        return calcTapAmount();
-    }
-
-    function calcTapAmount() internal view returns(uint256) {
-        uint256 amount = safeMul(safeSub(now, lastWithdrawTime), tap);
-        if(address(this).balance < amount) {
-            amount = address(this).balance;
-        }
-        return amount;
-    }
-
-    function firstWithdraw() public onlyOwner withdrawEnabled {
-        require(firstWithdrawAmount > 0);
-        uint256 amount = firstWithdrawAmount;
-        firstWithdrawAmount = 0;
-        teamWallet.transfer(amount);
-        Withdraw(amount, now);
-    }
-
-    //
-    // @dev Withdraw tap amount
-    //
-    function withdraw() public onlyOwner withdrawEnabled {
-        require(state == FundState.TeamWithdraw);
-        uint256 amount = calcTapAmount();
-        lastWithdrawTime = now;
-        teamWallet.transfer(amount);
-        Withdraw(amount, now);
-    }
-*/

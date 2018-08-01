@@ -63,6 +63,7 @@ contract Constants {
     // Time
   uint32 internal constant DAY         = 86400;
   uint32 internal constant HOUR        =  3600;
+  uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
   // List Contract bits                        /- bit
   uint32 internal constant PRESALE     = 1; // 0 Bit setting for a Presale List entry - Pacio Seed Presale or Pacio internal Placement
