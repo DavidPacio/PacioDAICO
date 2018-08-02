@@ -14,7 +14,7 @@ interface I_ListHub {
   function PrevEntry(address accountA) external view returns (address);
   function Proxy(address accountA) external view returns (address);
   function IsTransferAllowedByDefault() external view returns (bool);
-  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external returns (bool);
+  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external returns (bool);
   function CreatePresaleEntry(address vEntryA, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external returns (bool);
   function Whitelist(address vEntryA, uint32 vWhiteT) external returns (bool);
   function Downgrade(address vEntryA, uint32 vDownT)  external returns (bool);

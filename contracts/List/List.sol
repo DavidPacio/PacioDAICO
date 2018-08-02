@@ -29,12 +29,12 @@ address proxyA;        // Address of proxy for voting purposes
 uint32  bits;          // Bit settings
 uint32  addedT;        // Datetime when added
 uint32  whiteT;        // Datetime when whitelisted
-uint32  firstContribT; // Datetime when first contribution made
+uint32  firstContribT; // Datetime when first contribution made. Can be a grey contribution
 uint32  refundT;       // Datetime when refunded
 uint32  downT;         // Datetime when downgraded
 uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
 uint32  dbId;          // Id in DB for name and KYC info
-uint32  numContribs;   // Number of separate contributions made
+uint32  contributions; // Number of separate contributions made
 uint256 weiContributed;// wei contributed
 uint256 picosBought;   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
 uint256 picosBalance;  // Current token balance - determines who is a Pacio Member |
@@ -72,13 +72,13 @@ contract List is OwnedList, Math {
     uint32  addedT;        //  4 0 Datetime when added
     uint32  whiteT;        //  4 0 Datetime when whitelisted
     address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
-    uint32  firstContribT; //  4 1 Datetime when first contribution made
+    uint32  firstContribT; //  4 1 Datetime when first contribution made. Can be a grey contribution.
     uint32  refundT;       //  4 1 Datetime when refunded
     uint32  downT;         //  4 1 Datetime when downgraded
     address proxyA;        // 20 2 Address of proxy for voting purposes
     uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId;          //  4 2 Id in DB for name and KYC info
-    uint32  numContribs;   //  4 2 Number of separate contributions made
+    uint32  contributions; //  4 2 Number of separate contributions made
     uint256 weiContributed;// 32 3 wei contributed
     uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
@@ -95,13 +95,15 @@ contract List is OwnedList, Math {
   event SetTransfersOkByDefaultV(bool On);
   event SetTransferOkV(address indexed Entry, bool On);
   event IssueV(address indexed To, uint256 Picos, uint256 Wei);
+  event GreyDepositV(address indexed To, uint256 Wei);
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
   // Owners must first be set by deploy script calls:
   //   List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   List.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
 
   // List.Initialise()
@@ -273,13 +275,13 @@ contract List is OwnedList, Math {
     uint32  downT,         // Datetime when downgraded
     uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId,          // Id in DB for name and KYC info
-    uint32  numContribs,   // Number of separate contributions made
+    uint32  contributions, // Number of separate contributions made
     uint256 weiContributed,// wei contributed
     uint256 picosBought,   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance) {// Current token balance - determines who is a Pacio Member |
     R_List storage rsEntryR = pListMR[accountA];
     return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, refundT, rsEntryR.downT, rsEntryR.bonusCentiPc,
-            rsEntryR.dbId, rsEntryR.numContribs, rsEntryR.weiContributed, rsEntryR.picosBought, rsEntryR.picosBalance);
+            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.weiContributed, rsEntryR.picosBought, rsEntryR.picosBalance);
   }
 
   // Modifier functions
@@ -304,27 +306,27 @@ contract List is OwnedList, Math {
   // State changing methods
   // ======================
 
-  // List.CreateEntry()
-  // ------------------
+  // List.CreateListEntry()
+  // ----------------------
   // Create a new list entry, and add it into the doubly linked list
   // Is called from Hub
   // 0 OpMan, 1 Hub, 2 Sale, 3 Token
-  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsHubCaller returns (bool) {
+  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsHubCaller returns (bool) {
     return pCreateEntry(vEntryA, vBits, vDbId);
   }
 
   // List.pCreateEntry() private
   // ------------------
   // Create a new list entry, and add it into the doubly linked list
-  // Is called from Hub via List.CreateEntry()
+  // Is called from Hub via List.CreateListEntry()
   //    and locally from CreateSaleContractEntry() and CreatePresaleEntry()
   // 0 Deployer, 1 OpMan, 2 Hub, 3 Token
   function pCreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) private returns (bool) {
     require(vEntryA != address(0)     // Defined
          && vEntryA != iOwnersYA[OP_MAN_OWNER_X] // Not OpMan
          && vEntryA != iOwnersYA[HUB_OWNER_X]    // Not Hub
+      // && vEntryA != pSaleA                    // Not Sale - No as we do create a Sale contract entry
          && vEntryA != iOwnersYA[TOKEN_OWNER_X]  // Not Token
-      // && vEntryA != pSaleA         // Not Sale - No as we do create a Sale contract entry
          && vEntryA != address(this), // Not this list contract
             'Invalid account address');
     require(pListMR[vEntryA].addedT == 0, "Account already exists"); // Not already in existence
@@ -340,7 +342,7 @@ contract List is OwnedList, Math {
       0,            // address proxyA;        // 20 2 Address of proxy for voting purposes
       0,            // uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
       vDbId,        // uint32  dbId;          //  4 2 Id in DB for name and KYC info
-      0,            // uint32  numContribs;   //  4 2 Number of separate contributions made
+      0,            // uint32  contributions; //  4 2 Number of separate contributions made
       0,            // uint256 weiContributed;// 32 3 wei contributed
       0,            // uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0);           // uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
@@ -376,7 +378,7 @@ contract List is OwnedList, Math {
     pListMR[vEntryA].addedT        =
     pListMR[vEntryA].firstContribT = vAddedT; // firstContribT assumed to be the same as addedT for presale entries
     if (vNumContribs > 1)
-      pListMR[vEntryA].numContribs = vNumContribs - 1; // -1 because List.Issue() called subsequently will increment this
+      pListMR[vEntryA].contributions = vNumContribs - 1; // -1 because List.Issue() called subsequently will increment this
     pNumPresale++;
     return true;
   }
@@ -449,23 +451,41 @@ contract List is OwnedList, Math {
 
   // List.Issue()
   // ------------
-  // Is called from Token.Issue() which is called from Sale.PresaleIssue() or Sale.Buy()
+  // Is called from Token.Issue() which is called from Sale.Buy() or Sale.PresaleIssue()
+  //                                                   Sale.Buy() also calls Escrow.Deposit()
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenCaller returns (bool) {
-    require(pListMR[toA].addedT > 0, "Account not known"); // Entry is expected to exist
-    require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Picos are available
+    uint8 typeN = EntryType(toA);
+    require(typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
-    if (pListMR[toA].picosBalance == 0) {
-      if (pListMR[toA].firstContribT == 0) // first time for this entry
-        pListMR[toA].firstContribT = uint32(now);
-      if (pListMR[toA].whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
+    R_List storage rsEntryR = pListMR[toA];
+    if (rsEntryR.weiContributed == 0) {
+      rsEntryR.firstContribT = uint32(now);
+      if (rsEntryR.whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
         pNumMembers++;
     }
-    pListMR[toA].picosBought    = safeAdd(pListMR[toA].picosBought, vPicos);
-    pListMR[toA].picosBalance   = safeAdd(pListMR[toA].picosBalance, vPicos);
-    pListMR[toA].weiContributed = safeAdd(pListMR[toA].weiContributed, vWei);
-    pListMR[toA].numContribs++;
+    rsEntryR.picosBought    = safeAdd(rsEntryR.picosBought, vPicos);
+    rsEntryR.picosBalance   = safeAdd(rsEntryR.picosBalance, vPicos);
+    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
+    rsEntryR.contributions++;
     pListMR[pSaleA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the pListMR[pSaleA].picosBalance >= vPicos check
     emit IssueV(toA, vPicos, vWei);
+    return true;
+  }
+
+  // List.GreyDeposit()
+  // ------------------
+  // Is called from Sale.Buy() for grey funds being deposited
+  //                Sale.Buy() also calls Grey.Deposit()
+  function GreyDeposit(address toA, uint256 vWei) external IsSaleCaller returns (bool) {
+    uint8 typeN = EntryType(toA);
+    require(typeN == ENTRY_GREY, 'Invalid list type for Grey deposit');
+    R_List storage rsEntryR = pListMR[toA];
+    if (rsEntryR.weiContributed == 0)
+      rsEntryR.firstContribT = uint32(now);
+    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
+    rsEntryR.contributions++;
+    emit GreyDepositV(toA, vWei);
     return true;
   }
 

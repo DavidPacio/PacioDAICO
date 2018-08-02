@@ -212,7 +212,7 @@ contract Sale is OwnedSale, Math {
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubCaller IsActive {
     require(pStartT == 0); // sale hasn't started yet
-    pTokenC.Issue(toA, vPicos, vWei);
+    pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
     pWeiRaised = safeAdd(pWeiRaised, vWei);
     pPicosPresale += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
     emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
@@ -361,17 +361,31 @@ contract Sale is OwnedSale, Math {
 
   // Sale.Buy()
   // ----------
+  // Main function for funds being sent to the sale contract.
+  // A list entry for msg.sender is expected to exist for msg.sende rcreated via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(now >= pStartT, "Sale not open yet");  // sale is running (in conjunction with the IsActive test) tho this call could trigger soft cap, hard cap, over time
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pSaleOpenB, "Sale has closed");
     (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
-    if (typeN == ENTRY_GREY) {
-      pGreyC.Deposit.value(msg.value)(msg.sender);
-      emit GreyDepositV(msg.sender, msg.value);      return true;
+    // typeN could be:
+    // - ENTRY_NONE       0 An undefined entry with no add date
+    // - ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+    // - ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+    // - ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
+    // - ENTRY_REFUNDED   4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
+    // - ENTRY_DOWNGRADED 5 Has been downgraded from White or Member
+    // - ENTRY_BURNT      6 Has been burnt
+    // - ENTRY_WHITE      7 Whitelisted with no picosBalance
+    // - ENTRY_MEMBER     8 Whitelisted with a picosBalance
+    if (typeN == ENTRY_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
+      pListC.GreyDeposit(msg.sender, msg.value);   // updates the list entry
+      pGreyC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Grey escrow account
+      emit GreyDepositV(msg.sender, msg.value);
+      return true;
     }
-    require(typeN >= ENTRY_WHITE, "Not whitelisted"); // sender is White or Member = whitelisted and ok to buy
-    // Which tranche?
+    require(typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    // Which tranche?                                                         // rejects ENTRY_NONE, ENTRY_CONTRACT, ENTRY_REFUNDED, ENTRY_DOWNGRADED, ENTRY_BURNT
     uint32  tranche = 3;                 // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;
     if (msg.value >= pMinWeiT2) {
@@ -389,8 +403,8 @@ contract Sale is OwnedSale, Math {
     if (bonusCentiPc > 0) // 675 for 6.75%
       picos += safeMul(picos, bonusCentiPc) / 10000;
     pWeiRaised = safeAdd(pWeiRaised, msg.value);
-    pTokenC.Issue(msg.sender, picos, msg.value);
-    pEscrowC.Deposit.value(msg.value)(msg.sender);
+    pTokenC.Issue(msg.sender, picos, msg.value); // which calls List.Issue()
+    pEscrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Escrow account
     uint256 usdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     emit SaleV(msg.sender, picos, msg.value, tranche, pUsdEtherPrice, picosPerEth, bonusCentiPc);
     if (!pSoftCapB && usdRaised >= pUsdSoftCap)

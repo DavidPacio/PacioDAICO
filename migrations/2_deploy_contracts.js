@@ -54,10 +54,11 @@ Sale.SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPic
 Sale.SetUsdEtherPrice(uint256 vUsdEtherPrice)
 Sale.EndInitialise() to end initialising
 
-List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Token
+List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 ----
 List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+List.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
 List.Initialise()  to set the contract address variables.
 

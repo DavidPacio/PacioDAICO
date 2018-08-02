@@ -26,7 +26,7 @@ contract Constants {
   // Hub       Deployer, OpMan, Admin, Sale,  Web
   // Sale      Deployer, OpMan, Hub,   Admin
   // Token     Deployer, OpMan, Hub,   Sale,  Mvp
-  // List      Deployer, OpMan, Hub,   Token
+  // List      Deployer, OpMan, Hub,   Sale,  Token
   // Escrow    Deployer, OpMan, Hub,   Sale,  Admin
   // Grey      Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
@@ -39,7 +39,7 @@ contract Constants {
   uint256 internal constant ADMIN_SALE_X   = 3;
   uint256 internal constant ADMIN_ESCROW_X = 4;
   uint256 internal constant SALE_OWNER_X   = 3;
-  uint256 internal constant TOKEN_OWNER_X  = 3;
+  uint256 internal constant TOKEN_OWNER_X  = 4;
   uint256 internal constant WEB_OWNER_X    = 4;
   uint256 internal constant MVP_OWNER_X    = 4;
 

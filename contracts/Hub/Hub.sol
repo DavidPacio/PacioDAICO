@@ -259,11 +259,11 @@ djh??
     return pListC.Proxy(accountA);
   }
 
-  // Hub.CreateEntry()
-  // -----------------
+  // Hub.CreateListEntry()
+  // ---------------------
   // Create a new list entry, and add it into the doubly linked list
-  function CreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.CreateEntry(vEntryA, vBits, vDbId);
+  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.CreateListEntry(vEntryA, vBits, vDbId);
   }
 
   // Hub.Whitelist()

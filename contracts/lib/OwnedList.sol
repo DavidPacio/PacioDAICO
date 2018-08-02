@@ -1,6 +1,6 @@
 // lib\OwnedList.sol
 //
-// Version of Owned for List which is owned by Deployer, OpMan, Hub, and Token
+// Version of Owned for List which is owned by Deployer, OpMan, Hub, Sale, and Token
 // Is NOT pausable
 
 pragma solidity ^0.4.24;
@@ -9,12 +9,13 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedList is Constants {
-  uint256 internal constant NUM_OWNERS = 4;
+  uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner, in this OpMan case is self
                                           // 2 Hub   owner
-                                          // 3 Token owner
+                                          // 3 Sale  owner
+                                          // 4 Token owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -48,6 +49,10 @@ contract OwnedList is Constants {
     require(msg.sender == iOwnersYA[HUB_OWNER_X], "Not required Hub caller");
     _;
   }
+  modifier IsSaleCaller {
+    require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
+    _;
+  }
   modifier IsTokenCaller {
     require(msg.sender == iOwnersYA[TOKEN_OWNER_X], "Not required Token caller");
     _;
@@ -68,6 +73,7 @@ contract OwnedList is Constants {
          && vNewOwnerA != iOwnersYA[DEPLOYER_X]
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[HUB_OWNER_X]
+         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
          && vNewOwnerA != iOwnersYA[TOKEN_OWNER_X]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
