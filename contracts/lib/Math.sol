@@ -34,9 +34,12 @@ contract Math {
   // subMaxZero(x, y)
   // Pacio addition to avoid throwing if a subtraction goes below zero and return 0 in that case.
   function subMaxZero(uint256 x, uint256 y) internal pure returns (uint256 z) {
-    if (y > x)
-      z = 0;
-    else
-      z = x - y;
+    z = x <= y ? 0 : x - y;
   }
+
+  // Min(x, y)
+  function Min(uint256 x, uint256 y) internal pure returns (uint256 z) {
+    z = x <= y ? x : y;
+  }
+
 } // End Math Contract

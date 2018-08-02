@@ -40,12 +40,13 @@ contract Grey is OwnedEscrow, Math {
     SaleClosed,      // 2 Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded
     Open             // 3 Grey escrow is open for deposits
   }
-  NGreyState public EGreyStateN;
+  NGreyState private pStateN;
   uint256 private pWeiBalance;     // wei in escrow
 
   // Events
   // ======
   event InitialiseV();
+  event DepositV(address indexed Account, uint256 Wei);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -59,8 +60,8 @@ contract Grey is OwnedEscrow, Math {
   // -----------------
   // Called from the deploy script to initialise the Grey contract
   function Initialise() external IsInitialising {
-  //require(EGreyStateN == NGreyState.None); // can only be called before the sale starts
-    EGreyStateN = NGreyState.Open;
+  //require(pEStateN == NGreyState.None); // can only be called before the sale starts
+    pStateN = NGreyState.Open;
     iPausedB       =        // make Grey Escrow active
     iInitialisingB = false;
     emit InitialiseV();
@@ -70,8 +71,8 @@ contract Grey is OwnedEscrow, Math {
 
   // View Methods
   // ============
-  // Escrow.WeiInEscrow() -- Echoed in Sale View Methods
-  function WeiInEscrow() external view returns (uint256) {
+  // Escrow.EscrowWei() -- Echoed in Sale View Methods
+  function EscrowWei() external view returns (uint256) {
     return pWeiBalance;
   }
 
@@ -85,8 +86,10 @@ contract Grey is OwnedEscrow, Math {
   // Grey.Deposit()
   // --------------
   // Called from Sale.Buy() for a grey list case to transfer the contribution for escrow keeping here
+  //                        after a List.GreyDeposit() call to update the list entry
   function Deposit(address vSenderA) external payable IsSaleCaller {
-    // djh?? to be completed
+    require(pStateN == NGreyState.Open, "Deposit to Grey Escrow not allowed");
+    emit DepositV(vSenderA, msg.value);
   }
 
   // Grey Fallback function

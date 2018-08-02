@@ -7,7 +7,7 @@ Interface for the Escrow contract external functions which are called from the H
 pragma solidity ^0.4.24;
 
 interface I_EscrowHub {
-  function WeiInEscrow() external view returns (uint256);
+  function EscrowWei() external view returns (uint256);
   function StartSale() external;
   function SoftCapReached() external;
   function EndSale() external;

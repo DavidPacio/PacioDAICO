@@ -14,7 +14,9 @@ OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
-• fns for contracts - all of them
+• PushRefund()
+• Hub.Terminate() when a VoteEnd vote has voted to end the project, proprotional contributions being refunded
+• fns for replacing contracts - all of them
 
 Initialisation/Setup Functions
 ==============================

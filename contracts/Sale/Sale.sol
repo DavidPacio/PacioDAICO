@@ -33,8 +33,8 @@ Sale.PicosSoldTranche1() external view returns (uint256)
 Sale.PicosSoldTranche2() external view returns (uint256)
 Sale.PicosSoldTranche3() external view returns (uint256)
 Sale.WeiRaised() external view returns (uint256)
-Sale.WeiInEscrow() external view returns (uint256)
-Sale.WeiInGreyEscrow() external view returns (uint256)
+Sale.EscrowWei() external view returns (uint256)
+Sale.GreyEscrowWei() external view returns (uint256)
 Sale.UsdEtherPrice() external view returns (uint256)
 Sale.HardCapByUsd() external view returns (bool)
 Sale.IsSoftCapReached() external view returns (bool)
@@ -327,13 +327,13 @@ contract Sale is OwnedSale, Math {
   function WeiRaised() external view returns (uint256) {
     return pWeiRaised;
   }
-  // Sale.WeiInEscrow()
-  function WeiInEscrow() external view returns (uint256) {
-    return pEscrowC.WeiInEscrow();
+  // Sale.EscrowWei()
+  function EscrowWei() external view returns (uint256) {
+    return pEscrowC.EscrowWei();
   }
-  // Sale.WeiInGreyEscrow()
-  function WeiInGreyEscrow() external view returns (uint256) {
-    return pGreyC.WeiInEscrow();
+  // Sale.GreyEscrowWei()
+  function GreyEscrowWei() external view returns (uint256) {
+    return pGreyC.EscrowWei();
   }
   // Sale.UsdEtherPrice()
   function UsdEtherPrice() external view returns (uint256) {

@@ -68,6 +68,13 @@ contract OwnedEscrow is Constants {
     require(!iPausedB, "Contract is Paused");
     _;
   }
+  modifier IsNotContractCaller {
+    address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
+    uint256 codeSize;
+    assembly {codeSize := extcodesize(callerA)}
+    require(codeSize == 0, 'No contract callers');
+    _;
+  }
 
   // Events
   // ------

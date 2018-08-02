@@ -2,13 +2,11 @@
 
 List of people/addresses to do with Pacio
 
-Owned by
-0 Deployer
-1 OpMan
-2 Hub
-3 Token
+Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
+• add Escrow and Grey owners
+• add  function Refund(address vSenderA, uint256 vRefundWei, uint8 vEscrowStateN) external IsEscrowCaller returns (uint256 refundWei)
 - other owners e.g. voting contract?
 - add vote count data
 
@@ -35,7 +33,7 @@ uint32  downT;         // Datetime when downgraded
 uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
 uint32  dbId;          // Id in DB for name and KYC info
 uint32  contributions; // Number of separate contributions made
-uint256 weiContributed;// wei contributed
+uint256 contributedWei;// wei contributed
 uint256 picosBought;   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
 uint256 picosBalance;  // Current token balance - determines who is a Pacio Member |
 */
@@ -79,7 +77,7 @@ contract List is OwnedList, Math {
     uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId;          //  4 2 Id in DB for name and KYC info
     uint32  contributions; //  4 2 Number of separate contributions made
-    uint256 weiContributed;// 32 3 wei contributed
+    uint256 contributedWei;// 32 3 wei contributed
     uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
   }
@@ -190,10 +188,13 @@ contract List is OwnedList, Math {
   function ListEntryExists(address accountA) external view returns (bool) {
     return pListMR[accountA].addedT > 0;
   }
-  function PicosBalance(address accountA) external view returns (uint256 balance) {
+  function ContributedWei(address accountA) external view returns (uint256) {
+    return pListMR[accountA].contributedWei;
+  }
+  function PicosBalance(address accountA) external view returns (uint256) {
     return pListMR[accountA].picosBalance;
   }
-  function PicosBought(address accountA) external view returns (uint256 balance) {
+  function PicosBought(address accountA) external view returns (uint256) {
     return pListMR[accountA].picosBought;
   }
   function BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN) {
@@ -276,12 +277,12 @@ contract List is OwnedList, Math {
     uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId,          // Id in DB for name and KYC info
     uint32  contributions, // Number of separate contributions made
-    uint256 weiContributed,// wei contributed
+    uint256 contributedWei,// wei contributed
     uint256 picosBought,   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance) {// Current token balance - determines who is a Pacio Member |
     R_List storage rsEntryR = pListMR[accountA];
     return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, refundT, rsEntryR.downT, rsEntryR.bonusCentiPc,
-            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.weiContributed, rsEntryR.picosBought, rsEntryR.picosBalance);
+            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.contributedWei, rsEntryR.picosBought, rsEntryR.picosBalance);
   }
 
   // Modifier functions
@@ -343,7 +344,7 @@ contract List is OwnedList, Math {
       0,            // uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
       vDbId,        // uint32  dbId;          //  4 2 Id in DB for name and KYC info
       0,            // uint32  contributions; //  4 2 Number of separate contributions made
-      0,            // uint256 weiContributed;// 32 3 wei contributed
+      0,            // uint256 contributedWei;// 32 3 wei contributed
       0,            // uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0);           // uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
     // Update other state vars
@@ -459,14 +460,14 @@ contract List is OwnedList, Math {
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     R_List storage rsEntryR = pListMR[toA];
-    if (rsEntryR.weiContributed == 0) {
+    if (rsEntryR.contributedWei == 0) {
       rsEntryR.firstContribT = uint32(now);
       if (rsEntryR.whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
         pNumMembers++;
     }
     rsEntryR.picosBought    = safeAdd(rsEntryR.picosBought, vPicos);
     rsEntryR.picosBalance   = safeAdd(rsEntryR.picosBalance, vPicos);
-    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
+    rsEntryR.contributedWei = safeAdd(rsEntryR.contributedWei, vWei);
     rsEntryR.contributions++;
     pListMR[pSaleA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the pListMR[pSaleA].picosBalance >= vPicos check
     emit IssueV(toA, vPicos, vWei);
@@ -481,9 +482,9 @@ contract List is OwnedList, Math {
     uint8 typeN = EntryType(toA);
     require(typeN == ENTRY_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
-    if (rsEntryR.weiContributed == 0)
+    if (rsEntryR.contributedWei == 0)
       rsEntryR.firstContribT = uint32(now);
-    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
+    rsEntryR.contributedWei = safeAdd(rsEntryR.contributedWei, vWei);
     rsEntryR.contributions++;
     emit GreyDepositV(toA, vWei);
     return true;
