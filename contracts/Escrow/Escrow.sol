@@ -5,6 +5,7 @@ Escrow management of funds from whitelisted participants in the Pacio DAICO
 Owned by Deployer, OpMan, Hub, Sale, Admin
 
 djh??
+• add the refund functions
 
 View Methods
 ============
@@ -49,10 +50,7 @@ contract Escrow is OwnedEscrow, Math {
   address private pPclAccountA;    // The PCL account (wallet or multi sig contract) for taps (withdrawals)
   uint256 private pTapRateEtherPm; // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;  // Last withdrawal time, 0 before any withdrawals
-
-  // uint256 public tap;
-  // uint256 public lastWithdrawTime = 0;
-  // uint256 public firstWithdrawAmount = 0;
+  bool    private pSoftCapB;       // Set to true when softcap is reached in Sale
 
   // event RefundContributor(address tokenHolder, uint256 amountWei, uint256 timestamp);
   // event RefundHolder(address tokenHolder, uint256 amountWei, uint256 tokenAmount, uint256 timestamp);
@@ -62,6 +60,8 @@ contract Escrow is OwnedEscrow, Math {
   // Events
   // ======
   event SetPclAccountV(address PclAccount);
+  event StartSaleV(NEscrowState State);
+  event EndSaleV(NEscrowState State);
   event  DepositV(address indexed Account, uint256 Wei);
   event WithdrawV(address indexed Account, uint256 Wei);
   event SoftCapReachedV();
@@ -102,20 +102,35 @@ contract Escrow is OwnedEscrow, Math {
   }
 
   // Escrow.StartSale()
-  // -----------------
+  // ------------------
   // Called from Hub.StartSale()
   function StartSale() external IsHubCaller {
-    require(EscrowStateN == NEscrowState.None // can only be called before the sale starts
-         && pPclAccountA != address(0));      // must have set the PCL account
-    EscrowStateN = NEscrowState.PreSoftCap;   // Sale running prior to soft cap
+    require(EscrowStateN == NEscrowState.None          // initial start
+         || EscrowStateN == NEscrowState.SaleClosed,   // a restart
+            'Invalid state for Escrow StartSale call');
+    EscrowStateN = pSoftCapB ? NEscrowState.SoftCapReached : NEscrowState.PreSoftCap;
+    emit StartSaleV(EscrowStateN);
+  }
+
+  // EscrowC.SoftCapReached()
+  // ------------------------
+  // Is called from Hub.SoftCapReached() when soft cap is reached
+  function SoftCapReached() external IsHubCaller {
+    require(EscrowStateN == NEscrowState.PreSoftCap, 'Invalid state for Escrow Softcap call');
+    EscrowStateN = NEscrowState.SoftCapReached;
+    pSoftCapB = true;
+    // Make the soft cap withdrawal
+    pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);
+    emit SoftCapReachedV();
   }
 
   // Escrow.EndSale()
   // ----------------
   // Is called from Hub.EndSale() when hard cap is reached, time is up, or the sale is ended manually
   function EndSale() external IsHubCaller {
-    EscrowStateN = NEscrowState.SaleClosed;
-    // djh?? to be completed to
+    EscrowStateN = pSoftCapB ? NEscrowState.SaleClosed  // good end which permits withdrawals
+                             : NEscrowState.SaleRefund; // bad end before soft cap -> refund state
+    emit EndSaleV(EscrowStateN);
   }
 
   // View Methods
@@ -157,25 +172,15 @@ contract Escrow is OwnedEscrow, Math {
   // ==================
 
 
-  // State changing methods
-  // ======================
+  // State changing external methods
+  // ===============================
 
   // Escrow.Deposit()
-  // -----------------
+  // ----------------
   // Is called from Sale.Buy() to transfer the contribution for escrow keeping here, after the Issue() call which updates the list entry
   function Deposit(address vSenderA) external payable IsSaleCaller {
     require(EscrowStateN >= NEscrowState.PreSoftCap, "Deposit to Escrow not allowed"); // PreSoftCap or SoftCapReached = Deposits ok
     emit DepositV(vSenderA, msg.value);
-  }
-
-  // EscrowC.SoftCapReached()
-  // ------------------------
-  // Is called from Hub.SoftCapReached() when soft cap is reached
-  function SoftCapReached() external IsHubCaller {
-    EscrowStateN = NEscrowState.SoftCapReached;
-    emit SoftCapReachedV();
-    // Make the soft cap withdrawal
-    pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);
   }
 
   // Escrow.WithdrawMO()
@@ -196,6 +201,7 @@ contract Escrow is OwnedEscrow, Math {
   // ------------------
   // Called here locally to withdraw
   function pWithdraw(uint256 vWithdrawWei) private {
+    require(pPclAccountA != address(0), 'PCL account not set'); // must have set the PCL account
     pLastWithdrawT = now;
     pPclAccountA.transfer(vWithdrawWei); // throws on failure
     emit WithdrawV(pPclAccountA, vWithdrawWei);
