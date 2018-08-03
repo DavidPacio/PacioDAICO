@@ -1,6 +1,6 @@
 // lib\OwnedHub.sol
 //
-// Version of Owned for Hub which is owned by Deployer, OpMan, Admin, Sale
+// Version of Owned for Hub which is owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,14 +9,16 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedHub is Constants {
-  uint256 internal constant NUM_OWNERS = 5;
+  uint256 internal constant NUM_OWNERS = 7;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Admin owner
                                           // 3 Sale  owner
-                                          // 4 Web   owner
+                                          // 4 VoteTap owner
+                                          // 5 VoteEnd owner
+                                          // 6 Web   owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -62,6 +64,14 @@ contract OwnedHub is Constants {
     require(msg.sender == iOwnersYA[SALE_OWNER_X], "Not required Sale caller");
     _;
   }
+  modifier IsVoteTapCaller {
+    require(msg.sender == iOwnersYA[VOTE_TAP_OWNER_X], "Not required VoteTap caller");
+    _;
+  }
+  modifier IsVoteEndCaller {
+    require(msg.sender == iOwnersYA[VOTE_END_OWNER_X], "Not required VoteEnd caller");
+    _;
+  }
   modifier IsWebOrAdminCaller {
     require(iIsWebOrAdminCallerB(), "Not required Web or Admin caller");
     _;
@@ -84,12 +94,9 @@ contract OwnedHub is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)))
-         && vNewOwnerA != iOwnersYA[DEPLOYER_X]
-         && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
-         && vNewOwnerA != iOwnersYA[WEB_OWNER_X]);
+    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX))));
+    for (uint256 j=0; j<NUM_OWNERS; j++)
+      require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }

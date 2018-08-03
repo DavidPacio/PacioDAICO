@@ -2,21 +2,16 @@
 
 The hub or management contract for the Pacio DAICO
 
-Owned by
-0 Deployer
-1 OpMan
-2 Admin
-3 Sale
-4 Web
+Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 
 Calls
 OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
-• PushRefund()
-• Hub.Terminate() when a VoteEnd vote has voted to end the project, proprotional contributions being refunded
+• PushRefund() for web calling re the 3 refund cases PLUS for manual once off admin refunding
 • fns for replacing contracts - all of them
+• add manual account creation
 
 Initialisation/Setup Functions
 ==============================
@@ -66,6 +61,39 @@ contract Hub is OwnedHub, Math {
   // No Constructor
   // ==============
 
+  // View Methods
+  // ============
+  // Hub.IsSaleOpen()
+  function IsSaleOpen() external view returns (bool) {
+    return pSaleC.IsSaleOpen();
+  }
+  // Hub.IsTransferAllowedByDefault()
+  function IsTransferAllowedByDefault() external view returns (bool) {
+    return pListC.IsTransferAllowedByDefault();
+  }
+  // The Contracts
+  // -------------
+  // Hub.TheSaleContract()
+  function TheSaleContract() external view returns (address) {
+    return pSaleC;
+  }
+  // Hub.TheTokenContract()
+  function TheTokenContract() external view returns (address) {
+    return pTokenC;
+  }
+  // Hub.TheListContract()
+  function TheListContract() external view returns (address) {
+    return pListC;
+  }
+  // Hub.TheEscrowContract()
+  function TheEscrowContract() external view returns (address) {
+    return pEscrowC;
+  }
+  // Hub.TheGreyListEscrowContract()
+  function TheGreyListEscrowContract() external view returns (address) {
+    return pGreyC;
+  }
+
   // Events
   // ======
   event InitialiseV(address SaleContract, address TokenContract, address ListContract, address EscrowContract, address GreyContract);
@@ -76,11 +104,13 @@ contract Hub is OwnedHub, Math {
   // Initialisation/Setup Methods
   // ============================
 
-  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Web
+  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
   // Owners must first be set by deploy script calls:
   //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
-  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X,  PCL hw wallet account address as Admin)
+  //   Hub.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
+  //   Hub.ChangeOwnerMO(VOTE_TAP_OWNER_X , VoteTap address);
+  //   Hub.ChangeOwnerMO(VOTE_END_OWNER_X , VoteEnd address);
   //   Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()
@@ -123,39 +153,6 @@ contract Hub is OwnedHub, Math {
     emit StartSaleV(vStartT, vEndT);
   }
 
-  // View Methods
-  // ============
-  // Hub.IsSaleOpen()
-  function IsSaleOpen() external view returns (bool) {
-    return pSaleC.IsSaleOpen();
-  }
-  // Hub.IsTransferAllowedByDefault()
-  function IsTransferAllowedByDefault() external view returns (bool) {
-    return pListC.IsTransferAllowedByDefault();
-  }
-  // The Contracts
-  // -------------
-  // Hub.TheSaleContract()
-  function TheSaleContract() external view returns (address) {
-    return pSaleC;
-  }
-  // Hub.TheTokenContract()
-  function TheTokenContract() external view returns (address) {
-    return pTokenC;
-  }
-  // Hub.TheListContract()
-  function TheListContract() external view returns (address) {
-    return pListC;
-  }
-  // Hub.TheEscrowContract()
-  function TheEscrowContract() external view returns (address) {
-    return pEscrowC;
-  }
-  // Hub.TheGreyListEscrowContract()
-  function TheGreyListEscrowContract() external view returns (address) {
-    return pGreyC;
-  }
-
   // State changing external methods
   // ===============================
 
@@ -172,6 +169,7 @@ contract Hub is OwnedHub, Math {
     // No SoftCapReached() for Grey, VoteTap, VoteEnd, Mvp
     emit SoftCapReachedV();
   }
+
   // Hub.EndSaleMO()
   // ---------------
   // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
@@ -185,8 +183,13 @@ contract Hub is OwnedHub, Math {
     emit EndSaleV();
   }
 
-  // Functions to be called Manually
-  // ===============================
+  // Hub.Terminate()
+  // ---------------
+  // Called when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
+  function Terminate() external IsVoteEndCaller {
+    pEscrowC.Terminate(pTokenC.PicosIssued());
+  }
+
 /*
 djh??
   // If a New List contract is deployed

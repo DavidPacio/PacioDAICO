@@ -6,6 +6,8 @@ Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
 
 djh??
 • burn refunded PIOs
+• change refund to be on the basis of PIOs held
+• From Marcell: I am for option c.) store the Eth, only send PIO if and when there is an account. And have a manual send back Eth process just in case.
 - other owners e.g. voting contract?
 - add vote count data
 
@@ -47,7 +49,6 @@ import "../OpMan/I_OpMan.sol";
 
 contract List is OwnedList, Math {
   string  public  name = "Pacio DAICO Participants List";
-  bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
   address private pFirstEntryA;   // Address of first entry
   address private pLastEntryA;    // Address of last entry
   uint256 private pNumEntries;    // Number of list entries
@@ -60,6 +61,7 @@ contract List is OwnedList, Math {
   uint256 private pNumBurnt;      // Number burnt
   uint256 private pNumDowngraded; // Number downgraded (from white list)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
+  bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
   bool    private pSoftCapB;      // Set to true when softcap is reached in Sale
 
   // Struct to hold member data, with a doubly linked list of List to permit traversing List
@@ -275,8 +277,8 @@ contract List is OwnedList, Math {
   // Returns information about the accountA list entry - all except for the addresses
   function Lookup(address accountA) external view returns (
     uint32  bits,          // Bit settings                                     /- All of R_List except for nextEntryA, prevEntryA, proxyA
-    uint32  addedT,        // Datetime when added                              |  Can't include all unless packing some together re Solidity stack size
-    uint32  whiteT,        // Datetime when whitelisted
+    uint32  addedT,        // Datetime when added                              |
+    uint32  whiteT,        // Datetime when whitelisted                        V
     uint32  firstContribT, // Datetime when first contribution made
     uint64  refundTnDownT, // refundT and downT packed because of stack overflow issues
     uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
@@ -286,14 +288,10 @@ contract List is OwnedList, Math {
     uint256 refundedWei,   // wei refunded
     uint256 picosBought,   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance) {// Current token balance - determines who is a Pacio Member |
-    R_List storage rsEntryR = pListMR[accountA];  // 10,000,000,000  10000000000
-                                                  //  1,527,066,000   1527066000 a current T 2018.05.23
-                                                  // 15,270,660,001,527,066,000
-                                                  // 18,446,744,073,709,551,615 max 64 bit int
-                                                  //  2,000,000,000   2000000000                          <--- use this one
-                                                  //  1,527,066,000   1527066000 a current T 2018.05.23 09:00
-                                                  //  3,054,132,001,527,066,000  for 2018.05.23 09:00 twice
-                                                  // 18,446,744,073,709,551,615 max unsigned 64 bit int
+    R_List storage rsEntryR = pListMR[accountA]; //  2,000,000,000   2000000000    Or could have used bit shifting.
+                                                 //  1,527,066,000   1527066000 a current T 2018.05.23 09:00
+                                                 //  3,054,132,001,527,066,000  for 2018.05.23 09:00 twice
+                                                 // 18,446,744,073,709,551,615 max unsigned 64 bit int
     return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, uint64(rsEntryR.refundT) * 2000000000 + uint64(rsEntryR.downT), rsEntryR.bonusCentiPc,
             rsEntryR.dbId, rsEntryR.contributions, rsEntryR.contributedWei, rsEntryR.refundedWei, rsEntryR.picosBought, rsEntryR.picosBalance);
   }

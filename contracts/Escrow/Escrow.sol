@@ -50,12 +50,64 @@ contract Escrow is OwnedEscrow, Math {
   }
   NEscrowState private pStateN;
   uint256 private pTotalDepositedWei; // Total wei deposited in escrow before any withdrawals or refunds
-  uint256 private pTerminationWei;    // address(this).balance when a TerminateRefund starts for proportional calcs
+  uint256 private pTerminationPicosIssued; // Token.PicosIssued() when a TerminateRefund starts for proportional calcs
   address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for taps (withdrawals)
   uint256 private pTapRateEtherPm;    // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;     // Last withdrawal time, 0 before any withdrawals
   bool    private pSoftCapB;          // Set to true when softcap is reached in Sale
-  I_ListEscrow private pListC;        // the List contract
+  I_ListEscrow private pListC;        // the List contract. Escrow is one of List's owners to allow checking of the Escrow caller.
+
+  // View Methods
+  // ============
+  // Escrow.TotalDepositedWei() Total wei deposited in escrow before any withdrawals or refunds
+  function TotalDepositedWei() external view returns (uint256) {
+    return pTotalDepositedWei;
+  }
+  // Escrow.EscrowWei() -- Echoed in Sale View Methods
+  function EscrowWei() external view returns (uint256) {
+    return address(this).balance;
+  }
+  // Escrow.RefundAvailableWei()
+  function RefundAvailableWei() public view returns (uint256 refundWei) {
+    if (pStateN == NEscrowState.SoftCapMissRefund)
+      refundWei = pListC.ContributedWei(msg.sender);
+    else if (pStateN == NEscrowState.TerminateRefund)
+    //refundWei =        pTotalDepositedWei * pListC.PicosBalance(msg.sender) / pTerminationPicosIssued;
+      refundWei = safeMul(pTotalDepositedWei, pListC.PicosBalance(msg.sender)) / pTerminationPicosIssued;
+    return Min(refundWei, address(this).balance);
+  }
+  // Escrow.State()
+  function State() external view returns (uint8) {
+    return uint8(pStateN);
+  }
+  // Escrow.InitialTapRateEtherPm()
+  function InitialTapRateEtherPm() external pure returns (uint256) {
+    return INITIAL_TAP_RATE_ETH_PM;
+  }
+  // Escrow.CurrentTapRateEtherPm()
+  function CurrentTapRateEtherPm() external view returns (uint256) {
+    return pTapRateEtherPm;
+  }
+  // Escrow.TapAvailableWei()
+  function TapAvailableWei() external view returns (uint256) {
+    return TapAmountWei();
+  }
+  // Escrow.LastWithdrawalTime()
+  function LastWithdrawalTime() external view returns (uint256) {
+    return pLastWithdrawT;
+  }
+  // Escrow.TerminationPicosIssued() Token.PicosIssued() when a TerminateRefund starts for proportional calcs
+  function TerminationPicosIssued() external view returns (uint256) {
+    return pTerminationPicosIssued;
+  }
+  // Escrow.SoftCapReachedDispersalPercent()
+  function SoftCapReachedDispersalPercent() external pure returns (uint256) {
+    return SOFT_CAP_TAP_PC;
+  }
+  // Escrow.PclAccount()
+  function PclAccount() external view returns (address) {
+    return pPclAccountA;
+  }
 
   // Events
   // ======
@@ -63,7 +115,7 @@ contract Escrow is OwnedEscrow, Math {
   event StartSaleV(NEscrowState State);
   event SoftCapReachedV(NEscrowState State);
   event EndSaleV(NEscrowState State);
-  event TerminateV(NEscrowState State, uint256 TerminationWei);
+  event TerminateV(NEscrowState State, uint256 TerminationPicosIssued);
   event RefundingCompleteV(NEscrowState State);
   event  DepositV(address indexed Account, uint256 Wei);
   event WithdrawV(address indexed Account, uint256 Wei);
@@ -139,63 +191,11 @@ contract Escrow is OwnedEscrow, Math {
 
   // Escrow.Terminate()
   // ------------------
-  // Is called from Hub.Terminate() when a VoteEnd vote has voted to end the project, proprotional contributions being refunded
-  function Terminate() external IsHubCaller {
+  // Is called from Hub.Terminate() when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
+  function Terminate(uint256 vPicosIssued) external IsHubCaller { // pTokenC.PicosIssued() is passed
     pStateN = NEscrowState.TerminateRefund; // A VoteEnd vote has voted to end the project, contributions being refunded
-    pTerminationWei = address(this).balance;
-    emit TerminateV(pStateN, pTerminationWei);
-  }
-
-  // View Methods
-  // ============
-  // Escrow.TotalDepositedWei() Total wei deposited in escrow before any withdrawals or refunds
-  function TotalDepositedWei() external view returns (uint256) {
-    return pTotalDepositedWei;
-  }
-  // Escrow.EscrowWei() -- Echoed in Sale View Methods
-  function EscrowWei() external view returns (uint256) {
-    return address(this).balance;
-  }
-  // Escrow.RefundAvailableWei()
-  function RefundAvailableWei() external view returns (uint256 refundWei) {
-    if (pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund) {
-      refundWei = pListC.ContributedWei(msg.sender);
-      if (pStateN == NEscrowState.TerminateRefund)
-      //refundWei = pTerminationWei * refundWei / pTotalDepositedWei;
-        refundWei = safeMul(pTerminationWei, refundWei) / pTotalDepositedWei;
-    }
-  }
-  // Escrow.State()
-  function State() external view returns (uint8) {
-    return uint8(pStateN);
-  }
-  // Escrow.InitialTapRateEtherPm()
-  function InitialTapRateEtherPm() external pure returns (uint256) {
-    return INITIAL_TAP_RATE_ETH_PM;
-  }
-  // Escrow.CurrentTapRateEtherPm()
-  function CurrentTapRateEtherPm() external view returns (uint256) {
-    return pTapRateEtherPm;
-  }
-  // Escrow.TapAvailableWei()
-  function TapAvailableWei() external view returns (uint256) {
-    return TapAmountWei();
-  }
-  // Escrow.LastWithdrawalTime()
-  function LastWithdrawalTime() external view returns (uint256) {
-    return pLastWithdrawT;
-  }
-  // Escrow.TerminationRefundTotalWei() address(this).balance when a TerminateRefund starts for proportional calcs
-  function TerminationRefundTotalWei() external view returns (uint256) {
-    return pTerminationWei;
-  }
-  // Escrow.SoftCapReachedDispersalPercent()
-  function SoftCapReachedDispersalPercent() external pure returns (uint256) {
-    return SOFT_CAP_TAP_PC;
-  }
-  // Escrow.PclAccount()
-  function PclAccount() external view returns (address) {
-    return pPclAccountA;
+    pTerminationPicosIssued = vPicosIssued; // Token.PicosIssued()
+    emit TerminateV(pStateN, pTerminationPicosIssued);
   }
 
   // Private functions
@@ -228,7 +228,7 @@ contract Escrow is OwnedEscrow, Math {
   // Is called from Sale.Buy() to transfer the contribution for escrow keeping here, after the Issue() call which updates the list entry
   function Deposit(address vSenderA) external payable IsSaleCaller {
     require(pStateN >= NEscrowState.PreSoftCap, "Deposit to Escrow not allowed"); // PreSoftCap or SoftCapReached = Deposits ok
-    pTotalDepositedWei = safeAdd(pTerminationWei, msg.value);
+    pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
     emit DepositV(vSenderA, msg.value);
   }
 
@@ -250,12 +250,8 @@ contract Escrow is OwnedEscrow, Math {
   // ---------------
   // Pull refund request from a contributor
   function Refund() external IsNotContractCaller returns (bool) {
-    require(pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund, 'Not in refund state');
-    uint256 refundWei = Min(pListC.ContributedWei(msg.sender), address(this).balance);
+    uint256 refundWei = RefundAvailableWei();
     require(refundWei > 0, 'No refund available');
-    if (pStateN == NEscrowState.TerminateRefund)
-    //refundWei = pTerminationWei * refundWei / pTotalDepositedWei;
-      refundWei = safeMul(pTerminationWei, refundWei) / pTotalDepositedWei;
     pListC.Refund(msg.sender, refundWei, pStateN == NEscrowState.SoftCapMissRefund ? REFUND_SOFT_CAP_MISS : REFUND_TERMINATION);
     msg.sender.transfer(refundWei);
     emit RefundV(msg.sender, refundWei);

@@ -22,29 +22,31 @@ contract Constants {
 
   // Owner Indices
   // Contract  Owned By
-  //           0         1      2      3     4      5       6
+  //           0         1      2      3     4        5        6
   // OpMan     Deployer, Self,  Admin
-  // Hub       Deployer, OpMan, Admin, Sale, Web
+  // Hub       Deployer, OpMan, Admin, Sale, VoteTap, VoteEnd, Web
   // Sale      Deployer, OpMan, Hub,   Admin
   // Token     Deployer, OpMan, Hub,   Sale, Mvp
-  // List      Deployer, OpMan, Hub,   Sale, Token, Escrow, Grey
+  // List      Deployer, OpMan, Hub,   Sale, Token,   Escrow,  Grey
   // Escrow    Deployer, OpMan, Hub,   Sale, Admin
   // Grey      Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
   // VoteEnd   Deployer, OpMan, Hub
   // Mvp       Deployer, OpMan, Hub
-  uint256 internal constant DEPLOYER_X     = 0;
-  uint256 internal constant OP_MAN_OWNER_X = 1;
-  uint256 internal constant HUB_OWNER_X    = 2;
-  uint256 internal constant ADMIN_OWNER_X  = 2;
+  uint256 internal constant DEPLOYER_X       = 0;
+  uint256 internal constant OP_MAN_OWNER_X   = 1;
+  uint256 internal constant HUB_OWNER_X      = 2;
+  uint256 internal constant ADMIN_OWNER_X    = 2;
   uint256 internal constant SALE_ADMIN_OWNER_X   = 3;
   uint256 internal constant ESCROW_ADMIN_OWNER_X = 4;
-  uint256 internal constant SALE_OWNER_X   = 3;
-  uint256 internal constant WEB_OWNER_X    = 4;
-  uint256 internal constant TOKEN_OWNER_X  = 4;
-  uint256 internal constant ESCROW_OWNER_X = 5;
-  uint256 internal constant GREY_OWNER_X   = 6;
-  uint256 internal constant MVP_OWNER_X    = 4;
+  uint256 internal constant SALE_OWNER_X     = 3;
+  uint256 internal constant VOTE_TAP_OWNER_X = 4;
+  uint256 internal constant VOTE_END_OWNER_X = 5;
+  uint256 internal constant WEB_OWNER_X      = 6;
+  uint256 internal constant TOKEN_OWNER_X    = 4;
+  uint256 internal constant ESCROW_OWNER_X   = 5;
+  uint256 internal constant GREY_OWNER_X     = 6;
+  uint256 internal constant MVP_OWNER_X      = 4;
 
   // Managed Operation Indices
   uint256 internal constant RESUME_X                 =  0; // ResumeMO()

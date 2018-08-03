@@ -1,4 +1,4 @@
-/* \Token\I_TokenSale.sol 2018.007.11 started
+/* \Token\I_TokenSale.sol 2018.07.11 started
 
 Interface for the Token contract for the external functions called from the Sale contract.
 

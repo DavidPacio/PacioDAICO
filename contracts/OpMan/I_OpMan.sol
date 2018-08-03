@@ -1,4 +1,4 @@
-// \OpMan\I_OpMan.sol 2018.007.20 started
+// \OpMan\I_OpMan.sol 2018.07.20 started
 //
 // Interface for the OpMan contract for the external functions called from other contracts.
 //

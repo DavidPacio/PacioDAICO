@@ -36,11 +36,13 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
 
-Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale
+Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 ---
 Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Hub.ChangeOwnerMO(VOTE_TAP_OWNER_X , VoteTap address);
+Hub.ChangeOwnerMO(VOTE_END_OWNER_X , VoteEnd address);
 Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 Hub.Initialise() to set the contract address variables.
 

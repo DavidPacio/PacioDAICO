@@ -71,7 +71,7 @@ import "../List/I_ListToken.sol";
 import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
 contract Token is EIP20Token, Math {
-  uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.pPicosSold
+  uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.PicosSold() unless refunding/burning/destroying happens
   uint256 private pWeiRaised;        // cumulative wei raised. Should == Sale.pWeiRaised
   uint256 private pPicosAvailable;   // Picos available = total supply less allocated and issued tokens
   uint256 private pContributors;     // Number of contributors

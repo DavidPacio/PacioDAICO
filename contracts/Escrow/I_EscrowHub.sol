@@ -11,5 +11,6 @@ interface I_EscrowHub {
   function StartSale() external;
   function SoftCapReached() external;
   function EndSale() external;
+  function Terminate(uint256 vPicosIssued) external;
 }
 // End I_EscrowHub interface

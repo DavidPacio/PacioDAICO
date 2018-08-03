@@ -1,4 +1,4 @@
-/* \Sale\I_Sale.sol 2018.007.13 started
+/* \Sale\I_Sale.sol 2018.07.13 started
 
 Interface for the Sale contract for the external functions called from the Hub contract.
 

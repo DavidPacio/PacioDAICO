@@ -1,4 +1,4 @@
-// \lib\I_Owned.sol 2018.007.21 started
+// \lib\I_Owned.sol 2018.07.21 started
 //
 // Interface for the Owned contracts for the external functions called from OpMan
 //

@@ -6,6 +6,8 @@ Owned by Deployer, OpMan, Hub
 
 djh??
 
+• to call Hub.Terminate() on a Yes to end vote
+
 View Methods
 ============
 
