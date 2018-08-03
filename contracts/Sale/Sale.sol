@@ -145,6 +145,7 @@ contract Sale is OwnedSale, Math {
   // Owners must first be set by deploy script calls:
   //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Sale.ChangeOwnerMO(SALE_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // Sale.Initialise()
   // -----------------

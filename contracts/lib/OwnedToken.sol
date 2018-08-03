@@ -13,7 +13,7 @@ contract OwnedToken is Constants {
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner, in this OpMan case is self
+                                          // 1 OpMan owner
                                           // 2 Hub  owner
                                           // 3 Sale owner
                                           // 4 Mvp  owner

@@ -22,12 +22,13 @@ contract Constants {
 
   // Owner Indices
   // Contract  Owned By
+  //           0         1      2      3     4      5       6
   // OpMan     Deployer, Self,  Admin
-  // Hub       Deployer, OpMan, Admin, Sale,  Web
+  // Hub       Deployer, OpMan, Admin, Sale, Web
   // Sale      Deployer, OpMan, Hub,   Admin
-  // Token     Deployer, OpMan, Hub,   Sale,  Mvp
-  // List      Deployer, OpMan, Hub,   Sale,  Token
-  // Escrow    Deployer, OpMan, Hub,   Sale,  Admin
+  // Token     Deployer, OpMan, Hub,   Sale, Mvp
+  // List      Deployer, OpMan, Hub,   Sale, Token, Escrow, Grey
+  // Escrow    Deployer, OpMan, Hub,   Sale, Admin
   // Grey      Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
   // VoteEnd   Deployer, OpMan, Hub
@@ -36,11 +37,13 @@ contract Constants {
   uint256 internal constant OP_MAN_OWNER_X = 1;
   uint256 internal constant HUB_OWNER_X    = 2;
   uint256 internal constant ADMIN_OWNER_X  = 2;
-  uint256 internal constant ADMIN_SALE_X   = 3;
-  uint256 internal constant ADMIN_ESCROW_X = 4;
+  uint256 internal constant SALE_ADMIN_OWNER_X   = 3;
+  uint256 internal constant ESCROW_ADMIN_OWNER_X = 4;
   uint256 internal constant SALE_OWNER_X   = 3;
-  uint256 internal constant TOKEN_OWNER_X  = 4;
   uint256 internal constant WEB_OWNER_X    = 4;
+  uint256 internal constant TOKEN_OWNER_X  = 4;
+  uint256 internal constant ESCROW_OWNER_X = 5;
+  uint256 internal constant GREY_OWNER_X   = 6;
   uint256 internal constant MVP_OWNER_X    = 4;
 
   // Managed Operation Indices
@@ -59,17 +62,19 @@ contract Constants {
   uint256 internal constant ESCROW_SET_PCL_ACCOUNT_X =  5; // Escrow.SetPclAccountMO()
   uint256 internal constant ESCROW_WITHDRAW_X        =  6; // Escrow.WithdrawMO()
 
-
     // Time
   uint32 internal constant DAY         = 86400;
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
-  // List Contract bits                        /- bit
-  uint32 internal constant PRESALE     = 1; // 0 Bit setting for a Presale List entry - Pacio Seed Presale or Pacio internal Placement
-  uint32 internal constant TRANSFER_OK = 2; // 1 Bit setting for transfers allowed for this member even if pTransfersOkB is false
-  uint32 internal constant HAS_PROXY   = 4; // 2 Bit setting for this entry having a Proxy appointed
-  uint32 internal constant BURNT       = 8; // 3 Bit setting for this entry having had its PIOEs burnt
+  // List Contract bits                                  /- bit and bit setting description
+  uint32 internal constant PRESALE              =  1; // 0 A Presale List entry - Pacio Seed Presale or Pacio internal Placement
+  uint32 internal constant TRANSFER_OK          =  2; // 1 Transfers allowed for this member even if pTransfersOkB is false
+  uint32 internal constant HAS_PROXY            =  4; // 2 This entry has a Proxy appointed
+  uint32 internal constant BURNT                =  8; // 3 This entry has had its PIOs burnt
+  uint32 internal constant REFUND_SOFT_CAP_MISS = 16; // 4 Refund of all funds due to soft cap not being reached
+  uint32 internal constant REFUND_TERMINATION   = 32; // 5 Refund of remaining funds proportionately following a yes vote for project termination
+  uint32 internal constant REFUND_GREY          = 64; // 6 Refund of grey escrow funds that have not been white listed by the time that the sale closes
 
   // List Contract Browsing actions
   uint8 internal constant BROWSE_FIRST = 1;

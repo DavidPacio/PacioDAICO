@@ -5,7 +5,7 @@ Escrow management of funds from whitelisted participants in the Pacio DAICO
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
 
 djh??
-• add the refund functions
+• add the push refund function
 
 View Methods
 ============
@@ -40,13 +40,13 @@ contract Escrow is OwnedEscrow, Math {
   uint256 private constant SOFT_CAP_TAP_PC         = 50;  // % of escrow balance to be dispersed on soft cap being reached
   string  public name = "Pacio DAICO Escrow";
   enum NEscrowState {
-    None,            // 0 Not started yet
-    SaleRefund,      // 1 Failed to reach soft cap, contributions being refunded
-    TerminateRefund, // 2 A VoteEnd vote has voted to end the project, contributions being refunded
-    EscrowClosed,    // 3 Escrow is empty as s result of refunds or withdrawals emptying the pot
-    SaleClosed,      // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
-    PreSoftCap,      // 5 Sale running prior to soft cap          /- deposits ok
-    SoftCapReached   // 6 Soft cap reached, initial draw allowed  |
+    None,              // 0 Not started yet
+    SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
+    TerminateRefund,   // 2 A VoteEnd vote has voted to end the project, contributions being refunded
+    EscrowClosed,      // 3 Escrow is empty as s result of refunds or withdrawals emptying the pot
+    SaleClosed,        // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
+    PreSoftCap,        // 5 Sale running prior to soft cap          /- deposits ok
+    SoftCapReached     // 6 Soft cap reached, initial draw allowed  |
   }
   NEscrowState private pStateN;
   uint256 private pTotalDepositedWei; // Total wei deposited in escrow before any withdrawals or refunds
@@ -76,7 +76,7 @@ contract Escrow is OwnedEscrow, Math {
   //   Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Escrow.ChangeOwnerMO(ADMIN_ESCROW_X, PCL hw wallet account address as Admin)
+  //   Escrow.ChangeOwnerMO(ESCROW_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // Escrow.Initialise()
   // -------------------
@@ -132,8 +132,8 @@ contract Escrow is OwnedEscrow, Math {
   // ----------------
   // Is called from Hub.EndSale() when hard cap is reached, time is up, or the sale is ended manually
   function EndSale() external IsHubCaller {
-    pStateN = pSoftCapB ? NEscrowState.SaleClosed  // good end which permits withdrawals
-                        : NEscrowState.SaleRefund; // bad end before soft cap -> refund state
+    pStateN = pSoftCapB ? NEscrowState.SaleClosed         // good end which permits withdrawals
+                        : NEscrowState.SoftCapMissRefund; // bad end before soft cap -> refund state
     emit EndSaleV(pStateN);
   }
 
@@ -158,7 +158,7 @@ contract Escrow is OwnedEscrow, Math {
   }
   // Escrow.RefundAvailableWei()
   function RefundAvailableWei() external view returns (uint256 refundWei) {
-    if (pStateN == NEscrowState.SaleRefund || pStateN == NEscrowState.TerminateRefund) {
+    if (pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund) {
       refundWei = pListC.ContributedWei(msg.sender);
       if (pStateN == NEscrowState.TerminateRefund)
       //refundWei = pTerminationWei * refundWei / pTotalDepositedWei;
@@ -250,14 +250,13 @@ contract Escrow is OwnedEscrow, Math {
   // ---------------
   // Pull refund request from a contributor
   function Refund() external IsNotContractCaller returns (bool) {
-    require(pStateN == NEscrowState.SaleRefund || pStateN == NEscrowState.TerminateRefund, 'Not in refund state');
+    require(pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund, 'Not in refund state');
     uint256 refundWei = Min(pListC.ContributedWei(msg.sender), address(this).balance);
     require(refundWei > 0, 'No refund available');
     if (pStateN == NEscrowState.TerminateRefund)
     //refundWei = pTerminationWei * refundWei / pTotalDepositedWei;
       refundWei = safeMul(pTerminationWei, refundWei) / pTotalDepositedWei;
-    refundWei = pListC.Refund(msg.sender, refundWei, uint8(pStateN));
-    require(refundWei > 0, 'No refund available');
+    pListC.Refund(msg.sender, refundWei, pStateN == NEscrowState.SoftCapMissRefund ? REFUND_SOFT_CAP_MISS : REFUND_TERMINATION);
     msg.sender.transfer(refundWei);
     emit RefundV(msg.sender, refundWei);
     if (address(this).balance == 0) { // refunding is complete

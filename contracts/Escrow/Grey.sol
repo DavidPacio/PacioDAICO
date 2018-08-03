@@ -6,6 +6,8 @@ Owned by Deployer, OpMan, Hub, Sale
 
 djh??
 Different owned wo Admin?
+•  uint32 internal constant REFUND_GREY          = 64; // 6 Refund of grey escrow funds that have not been white listed by the time that the sale closes
+
 
 View Methods
 ============

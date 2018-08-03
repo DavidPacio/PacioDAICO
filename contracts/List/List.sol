@@ -2,11 +2,10 @@
 
 List of people/addresses to do with Pacio
 
-Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
 
 djh??
-• add Escrow and Grey owners
-• add  function Refund(address vSenderA, uint256 vRefundWei, uint8 vEscrowStateN) external IsEscrowCaller returns (uint256 refundWei)
+• burn refunded PIOs
 - other owners e.g. voting contract?
 - add vote count data
 
@@ -34,6 +33,7 @@ uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. 
 uint32  dbId;          // Id in DB for name and KYC info
 uint32  contributions; // Number of separate contributions made
 uint256 contributedWei;// wei contributed
+uint256 refundedWei;   // wei refunded
 uint256 picosBought;   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
 uint256 picosBalance;  // Current token balance - determines who is a Pacio Member |
 */
@@ -78,8 +78,9 @@ contract List is OwnedList, Math {
     uint32  dbId;          //  4 2 Id in DB for name and KYC info
     uint32  contributions; //  4 2 Number of separate contributions made
     uint256 contributedWei;// 32 3 wei contributed
-    uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
-    uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
+    uint256 refundedWei;   // 32 4 wei refunded
+    uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
+    uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
   }
   mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
 
@@ -97,12 +98,14 @@ contract List is OwnedList, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
   // Owners must first be set by deploy script calls:
-  //   List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-  //   List.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   List.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+  //   List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
+  //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
+  //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
+  //   List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
+  //   List.ChangeOwnerMO(ESCROW_OWNER_X, Escrow address)
+  //   List.ChangeOwnerMO(GREY_OWNER_X,   Grey address)
 
   // List.Initialise()
   // -----------------
@@ -191,6 +194,9 @@ contract List is OwnedList, Math {
   function ContributedWei(address accountA) external view returns (uint256) {
     return pListMR[accountA].contributedWei;
   }
+  function RefundedWei(address accountA) external view returns (uint256) {
+    return pListMR[accountA].refundedWei;
+  }
   function PicosBalance(address accountA) external view returns (uint256) {
     return pListMR[accountA].picosBalance;
   }
@@ -270,19 +276,26 @@ contract List is OwnedList, Math {
   function Lookup(address accountA) external view returns (
     uint32  bits,          // Bit settings                                     /- All of R_List except for nextEntryA, prevEntryA, proxyA
     uint32  addedT,        // Datetime when added                              |  Can't include all unless packing some together re Solidity stack size
-    uint32  whiteT,        // Datetime when whitelisted                        V
+    uint32  whiteT,        // Datetime when whitelisted
     uint32  firstContribT, // Datetime when first contribution made
-    uint32  refundT,       // Datetime when refunded
-    uint32  downT,         // Datetime when downgraded
+    uint64  refundTnDownT, // refundT and downT packed because of stack overflow issues
     uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId,          // Id in DB for name and KYC info
     uint32  contributions, // Number of separate contributions made
     uint256 contributedWei,// wei contributed
+    uint256 refundedWei,   // wei refunded
     uint256 picosBought,   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance) {// Current token balance - determines who is a Pacio Member |
-    R_List storage rsEntryR = pListMR[accountA];
-    return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, refundT, rsEntryR.downT, rsEntryR.bonusCentiPc,
-            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.contributedWei, rsEntryR.picosBought, rsEntryR.picosBalance);
+    R_List storage rsEntryR = pListMR[accountA];  // 10,000,000,000  10000000000
+                                                  //  1,527,066,000   1527066000 a current T 2018.05.23
+                                                  // 15,270,660,001,527,066,000
+                                                  // 18,446,744,073,709,551,615 max 64 bit int
+                                                  //  2,000,000,000   2000000000                          <--- use this one
+                                                  //  1,527,066,000   1527066000 a current T 2018.05.23 09:00
+                                                  //  3,054,132,001,527,066,000  for 2018.05.23 09:00 twice
+                                                  // 18,446,744,073,709,551,615 max unsigned 64 bit int
+    return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, uint64(rsEntryR.refundT) * 2000000000 + uint64(rsEntryR.downT), rsEntryR.bonusCentiPc,
+            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.contributedWei, rsEntryR.refundedWei, rsEntryR.picosBought, rsEntryR.picosBalance);
   }
 
   // Modifier functions
@@ -302,7 +315,6 @@ contract List is OwnedList, Math {
             "Transfer not allowed");
     _;
   }
-
 
   // State changing methods
   // ======================
@@ -345,8 +357,9 @@ contract List is OwnedList, Math {
       vDbId,        // uint32  dbId;          //  4 2 Id in DB for name and KYC info
       0,            // uint32  contributions; //  4 2 Number of separate contributions made
       0,            // uint256 contributedWei;// 32 3 wei contributed
-      0,            // uint256 picosBought;   // 32 4 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
-      0);           // uint256 picosBalance;  // 32 5 Current token balance - determines who is a Pacio Member |
+      0,            // uint256 refundedWei;   // 32 4 wei refunded
+      0,            // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
+      0);           // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
     // Update other state vars
     pNumGrey++;     // Assumed grey initially
     if (++pNumEntries == 1) // Number of list entries
@@ -508,6 +521,25 @@ contract List is OwnedList, Math {
   function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenCaller returns (bool success) {
     pListMR[vNewSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
     pListMR[pSaleA].picosBalance = 0;
+    return true;
+  }
+
+  // List.Refund()
+  // -------------
+  // Called from Escrow.Refund() IsNotContractCaller
+  //          or   Grey.Refund() IsNotContractCaller
+  //  which are contributor called function to pull a refund, with this fn to process the list part of the refund.
+  // vSenderA is msg.sender of the call to Escrow.Refund()
+  // vRefundWei can be less than List.ContributedWei() for termination case where some of the contributed funds have been dispersed.
+  function Refund(address vSenderA, uint256 vRefundWei, uint32 vBit) external IsEscrowOrGreyCaller returns (bool)  {
+    R_List storage rsEntryR = pListMR[vSenderA];
+    require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
+    require(vRefundWei <= rsEntryR.contributedWei);
+    rsEntryR.refundT = uint32(now);
+    rsEntryR.refundedWei = safeAdd(rsEntryR.refundedWei, vRefundWei); // could we ever have duplicate calls requiring add here? djh??
+    rsEntryR.bits |= vBit; // REFUND_SOFT_CAP_MISS Refund of all funds due to soft cap not being reached
+                           // REFUND_TERMINATION   Refund of remaining funds proportionately following a yes vote for project termination
+                           // REFUND_GREY          Refund of grey escrow funds that have not been white listed by the time that the sale closes
     return true;
   }
 

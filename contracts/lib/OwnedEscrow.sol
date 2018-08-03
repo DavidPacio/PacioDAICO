@@ -13,7 +13,7 @@ contract OwnedEscrow is Constants {
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner, in this OpMan case is self
+                                          // 1 OpMan owner
                                           // 2 Hub owner
                                           // 3 Sale  owner
                                           // 4 Admin owner
@@ -39,7 +39,7 @@ contract OwnedEscrow is Constants {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[ADMIN_ESCROW_X];
+    return msg.sender == iOwnersYA[ESCROW_ADMIN_OWNER_X];
   }
 
   // Modifier functions
@@ -94,7 +94,7 @@ contract OwnedEscrow is Constants {
          && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
          && vNewOwnerA != iOwnersYA[HUB_OWNER_X]
          && vNewOwnerA != iOwnersYA[SALE_OWNER_X]
-         && vNewOwnerA != iOwnersYA[ADMIN_ESCROW_X]);
+         && vNewOwnerA != iOwnersYA[ESCROW_ADMIN_OWNER_X]);
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
