@@ -15,7 +15,7 @@ State changing methods
 
 Pause/Resume
 ============
-OpMan.Pause(ESCROW_X) IsConfirmedSigner
+OpMan.PauseContract(ESCROW_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(ESCROW_X) IsConfirmedSigner which is a managed op
 
 List.Fallback function
@@ -192,6 +192,8 @@ contract Escrow is OwnedEscrow, Math {
   // Escrow.Terminate()
   // ------------------
   // Is called from Hub.Terminate() when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
+  // Sets state to TerminateRefund and records pTerminationPicosIssued for use in the proportional refund calcs.
+  // Hub.Terminate() stops everything except refunds.
   function Terminate(uint256 vPicosIssued) external IsHubCaller { // pTokenC.PicosIssued() is passed
     pStateN = NEscrowState.TerminateRefund; // A VoteEnd vote has voted to end the project, contributions being refunded
     pTerminationPicosIssued = vPicosIssued; // Token.PicosIssued()

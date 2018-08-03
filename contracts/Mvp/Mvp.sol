@@ -24,7 +24,7 @@ State changing external methods
 
 Pause/Resume
 ============
-OpMan.Pause(MVP_LAUNCH_X) IsConfirmedSigner
+OpMan.PauseContract(MVP_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(MVP_LAUNCH_X) IsConfirmedSigner which is a managed op
 
 Mvp Fallback function

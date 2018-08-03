@@ -16,7 +16,7 @@ State changing methods
 
 Pause/Resume
 ============
-OpMan.Pause(VOTE_END_X) IsConfirmedSigner
+OpMan.PauseContract(VOTE_END_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(VOTE_END_X) IsConfirmedSigner which is a managed op
 
 List.Fallback function

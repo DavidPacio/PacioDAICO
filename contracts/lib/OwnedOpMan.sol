@@ -69,17 +69,16 @@ contract OwnedOpMan is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)))
-         && vNewOwnerA != iOwnersYA[DEPLOYER_X]
-         && vNewOwnerA != iOwnersYA[OP_MAN_OWNER_X]
-         && vNewOwnerA != iOwnersYA[ADMIN_OWNER_X]);
+    require(iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)));
+    for (uint256 j=0; j<NUM_OWNERS; j++)
+      require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
     iOwnersYA[vOwnerX] = vNewOwnerA;
   }
 
   // Pause()
   // -------
-  // Called by OpMan.Pause(vContractX) IsConfirmedSigner. Not a managed op.
+  // Called by OpMan.PauseContract(vContractX) IsHubCallerOrConfirmedSigner. Not a managed op.
   function Pause() external IsOpManCaller IsActive {
     iPausedB = true;
     emit PausedV();

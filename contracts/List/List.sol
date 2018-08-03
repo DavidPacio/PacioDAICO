@@ -300,7 +300,7 @@ contract List is OwnedList, Math {
   // ==================
   // IsTransferOK
   // ------------
-  // Checks that the list is active; both frA and toA exist; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
+  // Checks that both frA and toA exist; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   // Also have an IsTransferOK modifier in EIP20Token
   modifier IsTransferOK(address frA, address toA, uint256 vPicos) {
     require(vPicos > 0                              // Non-zero transfer No! The EIP-20 std says: Note Transfers of 0 vPicoss MUST be treated as normal transfers and fire the Transfer event

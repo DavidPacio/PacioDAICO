@@ -49,7 +49,7 @@ Token.Destroy(uint256 vPicos) external IsMvpCaller
 
 Pause/Resume
 ============
-OpMan.Pause(TOKEN_X) IsConfirmedSigner
+OpMan.PauseContract(TOKEN_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(TOKEN_X) IsConfirmedSigner which is a managed op
 
 Fallback function

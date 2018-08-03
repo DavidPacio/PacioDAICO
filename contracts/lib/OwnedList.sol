@@ -75,7 +75,7 @@ contract OwnedList is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require((iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX))));
+    require(iIsInitialisingB() || (iIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)));
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);

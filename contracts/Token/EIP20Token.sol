@@ -52,8 +52,9 @@ contract EIP20Token is OwnedToken {
 
   // IsTransferOK modifier function
   // ------------
-  // Checks that the token is active and toA is different from frA
-  // All transfer fns will also call List.IsTransferOK() which checks that the list is active; both frA and toA exist; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
+  // Checks that Token contract is active and toA is different from frA
+  // All transfer fns will also call List.IsTransferOK() which checks that both frA and toA exist in List; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
+  // = requires that Token is active; toA is different from frA; both frA and toA exist in List; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   modifier IsTransferOK(address frA, address toA) {
     require(!iPausedB    // The token IsActive
          && toA != frA); // Destination is different from source
@@ -84,6 +85,7 @@ contract EIP20Token is OwnedToken {
   // EIP20Token.transfer()
   // ---------------------
   // Transfers value of sender's tokens to another account, address toA
+  // Requires that Token is active; toA is different from msg.sender; both msg.sender and toA exist in List; transfer from msg.sender is ok; transfer to toA is ok (toA is whitelisted); and that msg.sender has the tokens available
   function transfer(address toA, uint256 value) external IsTransferOK(msg.sender, toA) returns (bool success) {
     require(iListC.Transfer(msg.sender, toA, value));
     emit Transfer(msg.sender, toA, value);
@@ -96,6 +98,7 @@ contract EIP20Token is OwnedToken {
   // sender had been approved by frA for a transfer of >= value tokens from frA's account
   // by a prior call to approve() with that call's sender being this call's frA,
   //  and its spenderA being this call's sender.
+  // Requires that Token is active; toA is different from frA; both frA and toA exist in List; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   function transferFrom(address frA, address toA, uint256 value) external IsTransferOK(frA, toA) returns (bool success) {
     require(allowed[frA][msg.sender] >= value); // Transfer is approved
     require(iListC.Transfer(frA, toA, value));

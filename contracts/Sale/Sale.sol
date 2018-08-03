@@ -51,7 +51,7 @@ Sale.HardCapReached() private
 
 Pause/Resume
 ============
-OpMan.Pause(SALE_X) IsConfirmedSigner
+OpMan.PauseContract(SALE_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(SALE_X) IsConfirmedSigner which is a managed op
 
 Sale Fallback function

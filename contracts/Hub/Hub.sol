@@ -24,7 +24,7 @@ State changing external methods
 
 Pause/Resume
 ============
-OpMan.Pause(HUB_X) IsConfirmedSigner
+OpMan.PauseContract(HUB_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(HUB_X) IsConfirmedSigner which is a managed op
 
 Hub Fallback function
@@ -41,6 +41,7 @@ pragma experimental "v0.5.0";
 
 import "../lib/OwnedHub.sol";
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
 import "../Sale/I_Sale.sol";
 import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
@@ -52,11 +53,12 @@ import "../Escrow/I_GreyHub.sol";
 
 contract Hub is OwnedHub, Math {
   string  public name = "Pacio DAICO Hub"; // contract name
+  I_OpMan     private pOpManC;   // the OpMan contract
   I_Sale      private pSaleC;    // the Sale contract
   I_TokenHub  private pTokenC;   // the Token contract
   I_ListHub   private pListC;    // the List contract
-  I_EscrowHub private pEscrowC;  // the Escrow contract        used? djh
-  I_GreyHub   private pGreyC;    // the Grey escrow contract   used? djh
+  I_EscrowHub private pEscrowC;  // the Escrow contract
+//I_GreyHub   private pGreyC;    // the Grey escrow contract
 
   // No Constructor
   // ==============
@@ -71,32 +73,10 @@ contract Hub is OwnedHub, Math {
   function IsTransferAllowedByDefault() external view returns (bool) {
     return pListC.IsTransferAllowedByDefault();
   }
-  // The Contracts
-  // -------------
-  // Hub.TheSaleContract()
-  function TheSaleContract() external view returns (address) {
-    return pSaleC;
-  }
-  // Hub.TheTokenContract()
-  function TheTokenContract() external view returns (address) {
-    return pTokenC;
-  }
-  // Hub.TheListContract()
-  function TheListContract() external view returns (address) {
-    return pListC;
-  }
-  // Hub.TheEscrowContract()
-  function TheEscrowContract() external view returns (address) {
-    return pEscrowC;
-  }
-  // Hub.TheGreyListEscrowContract()
-  function TheGreyListEscrowContract() external view returns (address) {
-    return pGreyC;
-  }
 
   // Events
   // ======
-  event InitialiseV(address SaleContract, address TokenContract, address ListContract, address EscrowContract, address GreyContract);
+  event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address EscrowContract);
   event StartSaleV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();
@@ -118,13 +98,13 @@ contract Hub is OwnedHub, Math {
   // To be called by the deploy script to set the contract address variables.
   // The deploy script must make a call to EndInitialising() once other initialising calls have been completed.
   function Initialise() external IsInitialising {
-    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);  // djh State var?
-    pSaleC   = I_Sale(opManC.ContractXA(SALE_X));
-    pTokenC  = I_TokenHub(opManC.ContractXA(TOKEN_X));
-    pListC   = I_ListHub(opManC.ContractXA(LIST_X));
-    pEscrowC = I_EscrowHub(opManC.ContractXA(ESCROW_X));
-    pGreyC   = I_GreyHub(opManC.ContractXA(GREY_X));
-    emit InitialiseV(pSaleC, pTokenC, pListC, pEscrowC, pGreyC);
+    pOpManC  = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    pSaleC   = I_Sale(iOwnersYA[SALE_OWNER_X]);
+    pTokenC  = I_TokenHub(pOpManC.ContractXA(TOKEN_X));
+    pListC   = I_ListHub(pOpManC.ContractXA(LIST_X));
+    pEscrowC = I_EscrowHub(pOpManC.ContractXA(ESCROW_X));
+  //pGreyC   = I_GreyHub(pOpManC.ContractXA(GREY_X));
+    emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
     iPausedB       =        // make active
     iInitialisingB = false;
   }
@@ -161,7 +141,7 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
   // Can be called manually by Admin as a managed op if necessary.
   function SoftCapReachedMO() external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SOFT_CAP_REACHED_X)));
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_X)));
       pSaleC.SoftCapReached();
    //pTokenC.SoftCapReached();
     pEscrowC.SoftCapReached();
@@ -175,7 +155,7 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
   // Can be called manually by Admin to end the sale prematurely as a managed op if necessary.
   function EndSaleMO() external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_END_SALE_X)));
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_X)));
     pSaleC.EndSale();
     pTokenC.EndSale();
     pEscrowC.EndSale();
@@ -186,8 +166,14 @@ contract Hub is OwnedHub, Math {
   // Hub.Terminate()
   // ---------------
   // Called when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
+  // After this only refunds and view functions should work. No transfers. No Deposits.
   function Terminate() external IsVoteEndCaller {
-    pEscrowC.Terminate(pTokenC.PicosIssued());
+    pEscrowC.Terminate(pTokenC.PicosIssued()); // Sets Escrow state to TerminateRefund and records pTokenC.PicosIssued() passed to it for use in the proportional refund calcs.
+    pOpManC.PauseContract(SALE_X); // IsHubCallerOrConfirmedSigner
+    pOpManC.PauseContract(TOKEN_X);
+    pOpManC.PauseContract(ESCROW_X);
+    pOpManC.PauseContract(GREY_X);
+    pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
 
 /*
@@ -209,7 +195,7 @@ djh??
   }
 
   // If a New Sale contract is deployed
-  // ***************************************
+  // **********************************
   // Hub.NewSaleContract()
   // ---------------------
   // To be called manually via the old Sale to change to the new Sale.

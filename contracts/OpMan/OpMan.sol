@@ -7,10 +7,11 @@ All contracts, including OpMan, should use managed ops for:
 - ownership changes
 - any administrator type operations
 
-Owners
+Owners Deployer, Self,  Admin
 ------
-0. OpMan (self)                          - Set by OwnedOpMan.sol constructor
-1. Admin, a PCL hardware wallet account  - Set by deploy script
+0. Deployer
+1. OpMan (self)                          - Set by OwnedOpMan.sol constructor
+2. Admin, a PCL hardware wallet account  - Set by deploy script
 
 OpMan Processes
 ---------------
@@ -31,7 +32,7 @@ OpMan Processes
 7. Signer to sign a manOp for approval
 8. Approve or reject a request by a contract function to perform a managed op
 9. Pause contract and ops
-   9.1 Signer to pause a contract, with a call to the contract's Pause() fn if the contract has one. Not a managed op.
+   9.1 Hub call or Signer to pause a contract, with a call to the contract's Pause() fn if the contract has one. Not a managed op.
    9.2 Signer to pause a manOp. Not a managed op.
 A. Resume contract and ops as managed ops
    A.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
@@ -40,7 +41,7 @@ B. Admin signer to change a contract owner as a managed op
 
 Pause/Resume
 ============
-OpMan.Pause(OP_MAN_X) IsConfirmedSigner
+OpMan.PauseContract(OP_MAN_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(OP_MAN_X) IsConfirmedSigner which is a managed op
 
 */
@@ -231,6 +232,10 @@ contract OpMan is OwnedOpMan {
   }
   modifier IsConfirmedSigner {
     require(pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a confirmed signer');
+    _;
+  }
+  modifier IsHubCallerOrConfirmedSigner {
+    require(pContractsYR[HUB_X].contractA == msg.sender || pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a Hub or confirmed signer');
     _;
   }
 
@@ -493,8 +498,8 @@ contract OpMan is OwnedOpMan {
 
   // OpMan.PauseContract()
   // ---------------------
-  // 9.1 Signer to pause a contract, with a call to the contract's Pause() fn if the contract has one. Not a managed op.
-  function PauseContract(uint256 vContractX) external IsConfirmedSigner returns (bool) {
+  // 9.1 Hub call or Signer to pause a contract, with a call to the contract's Pause() fn if the contract has one. Not a managed op.
+  function PauseContract(uint256 vContractX) external IsHubCallerOrConfirmedSigner returns (bool) {
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
     srContractR.pausedB = true;
