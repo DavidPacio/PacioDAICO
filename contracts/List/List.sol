@@ -88,31 +88,31 @@ contract List is OwnedList, Math {
 
   // View Methods
   // ============
-  function ListEntriesNumber() external view returns (uint256) {
+  function NumberOfListEntries() external view returns (uint256) {
     return pNumEntries;
   }
-  function GreyListNumber() external view returns (uint256) {
+  function NumberOfGreyListEntries() external view returns (uint256) {
     return pNumGrey;
   }
-  function WhiteListNumber() external view returns (uint256) {
+  function NumberOfWhiteListEntries() external view returns (uint256) {
     return pNumWhite;
   }
-  function PacioMemberNumber() external view returns (uint256) {
+  function NumberOfPacioMembers() external view returns (uint256) {
     return pNumMembers;
   }
-  function PresaleNumber() external view returns (uint256) {
+  function NumberOfPresaleEntries() external view returns (uint256) {
     return pNumPresale;
   }
-  function ProxiesNumber() external view returns (uint256) {
+  function NumberOfMembersWithProxy() external view returns (uint256) {
     return pNumProxies;
   }
-  function RefundedNumber() external view returns (uint256) {
+  function NumberOfRefunds() external view returns (uint256) {
     return pNumRefunded;
   }
-  function BurntNumber() external view returns (uint256) {
+  function NumberOfBurns() external view returns (uint256) {
     return pNumBurnt;
   }
-  function DowngradedNumber() external view returns (uint256) {
+  function NumberOfDowngrades() external view returns (uint256) {
     return pNumDowngraded;
   }
   function IsTransferAllowedByDefault() external view returns (bool) {
@@ -546,8 +546,8 @@ contract List is OwnedList, Math {
     rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> ENTRY_REFUNDED after this
     rsEntryR.bits |= vRefundBit;                            // REFUND_ESCROW_SOFT_CAP_MISS Refund of all Escrow funds due to soft cap not being reached
     emit RefundV(toA, refundPicos, vRefundWei, vRefundBit); // REFUND_ESCROW_TERMINATION   Refund of remaining Escrow funds proportionately following a yes vote for project termination
-  }                                                         // REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
-                                                            // REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
+    pNumRefunded++;                                         // REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
+  }                                                         // REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
                                                             // REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
                                                             // REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
   // List.Burn()
