@@ -13,7 +13,7 @@ OpMan    Operations management: multisig for critical ops Deployer, Self,  Admin
 Hub      Hub or management contract                       Deployer, OpMan, Admin, Sale, VoteTap, VoteEnd, Web OpMan; Sale; Token; List; Escrow; Grey; VoteTap; VoteEnd; Mvp
 Sale     Sale                                             Deployer, OpMan, Hub, Admin                         OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
 Token    Token contract with EIP-20 functions             Deployer, OpMan, Hub, Sale, Mvp                     OpMan; List
-List     List of participants                             Deployer, OpMan, Hub, Sale, Token, Escrow, Grey     OpMan
+List     List of participants                             Deployer, OpMan, Hub, Sale, Token                   OpMan
 Escrow   Escrow management of white list funds            Deployer, OpMan, Hub, Sale, Admin                   OpMan
 Grey     Escrow management of funds grey list funds       Deployer, OpMan, Hub, Sale                          OpMan
 VoteTap  For a tap vote                                   Deployer, OpMan, Hub                                OpMan; Hub -> Escrow, List
