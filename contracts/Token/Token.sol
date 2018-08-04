@@ -7,7 +7,7 @@ Owners:
 1 OpMan
 2 Hub
 3 Sale
-4 Mvp for burning/destroying with the transfer of PIOEs to PIOs
+4 Mvp for burning/destroying with the transfer of PIOs to the Pacio Blockchain
 
 Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
@@ -73,10 +73,47 @@ import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 contract Token is EIP20Token, Math {
   uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.PicosSold() unless refunding/burning/destroying happens
   uint256 private pWeiRaised;        // cumulative wei raised. Should == Sale.pWeiRaised
+  uint256 private pWeiRefunded;      // cumulative wei refunded. No Sale equivalent
   uint256 private pPicosAvailable;   // Picos available = total supply less allocated and issued tokens
   uint256 private pContributors;     // Number of contributors
   uint256 private pPclPicosAllocated;// PCL Picos allocated
+  address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pSaleOpenB;        // Is set to false when DAICO is complete or at least closed. Required for transfer of PIOEs to PIOs
+
+  // View Methods
+  // ============
+  // Token.IsSaleOpen()
+  function IsSaleOpen() external view returns (bool) {
+    return pSaleOpenB;
+  }
+  // Token.PicosIssued()
+  function PicosIssued() external view returns (uint256) {
+    return pPicosIssued;
+  }
+  // Token.PicosAvailable()
+  function PicosAvailable() external view returns (uint256) {
+    return pPicosAvailable;
+  }
+  // Token.WeiRaised()
+  function WeiRaised() external view returns (uint256) {
+    return pWeiRaised;
+  }
+  // Token.WeiRefunded()
+  function WeiRefunded() external view returns (uint256) {
+    return pWeiRefunded;
+  }
+  // Token.Contributors()
+  function Contributors() external view returns (uint256) {
+    return pContributors;
+  }
+  // Token.PclPicosAllocated()
+  function PclPicosAllocated() external view returns (uint256) {
+    return pPclPicosAllocated;
+  }
+  // Token.IsTransferAllowedByDefault()
+  function IsTransferAllowedByDefault() external view returns (bool) {
+    return iListC.IsTransferAllowedByDefault();
+  }
 
   // Events
   // ------
@@ -102,6 +139,7 @@ contract Token is EIP20Token, Math {
   function Initialise() external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X)); // The List contract
+    pSaleA   = iOwnersYA[SALE_OWNER_X];
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
     // Create the Sale sale contract list entry
@@ -113,7 +151,7 @@ contract Token is EIP20Token, Math {
     pPclPicosAllocated = 25*(10**19); // 250 million = 25 x 10 million
     pPicosAvailable    = 75*(10**19); // 750 million
     // From the EIP20 Standard: A token contract which creates new tokens SHOULD trigger a Transfer event with the _from address set to 0x0 when tokens are created.
-    emit Transfer(0x0, iOwnersYA[SALE_OWNER_X], 10**21); // log event 0x0 from == minting. iOwnersYA[SALE_OWNER_X] is the Sale contract
+    emit Transfer(0x0, pSaleA, 10**21); // log event 0x0 from == minting. pSaleA is the Sale contract
     iInitialisingB = false;
   }
   // Token.StartSale()
@@ -131,46 +169,15 @@ contract Token is EIP20Token, Math {
     emit EndSaleV();
   }
 
-  // View Methods
-  // ============
-  // Token.IsSaleOpen()
-  function IsSaleOpen() external view returns (bool) {
-    return pSaleOpenB;
-  }
-  // Token.PicosIssued()
-  function PicosIssued() external view returns (uint256) {
-    return pPicosIssued;
-  }
-  // Token.pPicosAvailable()
-  function PicosAvailable() external view returns (uint256) {
-    return pPicosAvailable;
-  }
-  // Token.WeiRaised()
-  function WeiRaised() external view returns (uint256) {
-    return pWeiRaised;
-  }
-  // Token.Contributors()
-  function Contributors() external view returns (uint256) {
-    return pContributors;
-  }
-  // Token.PclPicosAllocated()
-  function PclPicosAllocated() external view returns (uint256) {
-    return pPclPicosAllocated;
-  }
-  // Token.IsTransferAllowedByDefault()
-  function IsTransferAllowedByDefault() external view returns (bool) {
-    return iListC.IsTransferAllowedByDefault();
-  }
-
   // State changing external methods
   // ===============================
 
   // Token.Issue()
   // -------------
-  // To be called:
-  // . By Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
+  // Called by:
+  // . Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   //   List entry is created by Hub.Presale.Issue() which checks toA
-  // . from Sale.Buy() which checks toA
+  // . Sale.Buy() which checks toA
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleCaller IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)
       pContributors++;
@@ -178,8 +185,24 @@ contract Token is EIP20Token, Math {
     pPicosIssued    = safeAdd(pPicosIssued,    vPicos);
     pPicosAvailable = safeSub(pPicosAvailable, vPicos); // Should never go neg due to reserve, even if final Buy() goes over the hardcap
     pWeiRaised      = safeAdd(pWeiRaised, vWei);
-    emit Transfer(iOwnersYA[SALE_OWNER_X], toA, vPicos); // Was missing from the Presale contract
+    emit Transfer(pSaleA, toA, vPicos); // Was missing from the Presale contract
     // iListC.Issue() makes an IssueV(toA, vPicos, vWei) event call
+    return true;
+  }
+
+  // Token.Refund() Reverse of Issue
+  // -------------
+  // Called by:
+  // . Hub.Refund()     IsNotContractCaller
+  //   Hub.PushRefund() IsWebOrAdminCaller
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubCaller IsActive returns (bool) {
+    uint256 refundPicos = iListC.Refund(toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
+    pPicosIssued    = safeSub(pPicosIssued,    refundPicos);
+    pPicosAvailable = safeAdd(pPicosAvailable, refundPicos);
+    pWeiRefunded    = safeAdd(pWeiRefunded, vRefundWei);
+    if (refundPicos > 0)
+      emit Transfer(toA, pSaleA, refundPicos);
+    // iListC.Refund() makes a RefundV(toA, refundPicos, vRefundWei, vRefundBit) event call
     return true;
   }
 
@@ -206,7 +229,7 @@ contract Token is EIP20Token, Math {
 
   // Token.Destroy()
   // ---------------
-  // For use when transferring unissued PIOEs to PIOs
+  // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsMvpCaller {

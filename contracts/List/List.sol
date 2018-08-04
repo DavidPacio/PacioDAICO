@@ -2,7 +2,7 @@
 
 List of people/addresses to do with Pacio
 
-Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
+Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
 • burn refunded PIOs
@@ -16,8 +16,8 @@ None,       // 0 An undefined entry with no add date
 Contract,   // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
 Grey,       // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
 Presale,    // 3 Seed presale or private placement entry. Has PRESALE bit set. whiteT is not set
-Refunded,   // 4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
-Downgraded, // 5 Has been downgraded from White or Member
+Refunded,   // 4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+Downgraded, // 5 Has been downgraded from White or Member and refunded
 White,      // 6 Whitelisted with no picosBalance
 Member      // 7 Whitelisted with a picosBalance
 
@@ -34,8 +34,8 @@ uint32  downT;         // Datetime when downgraded
 uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
 uint32  dbId;          // Id in DB for name and KYC info
 uint32  contributions; // Number of separate contributions made
-uint256 contributedWei;// wei contributed
-uint256 refundedWei;   // wei refunded
+uint256 weiContributed;// wei contributed
+uint256 weiRefunded;   // wei refunded
 uint256 picosBought;   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
 uint256 picosBalance;  // Current token balance - determines who is a Pacio Member |
 */
@@ -79,80 +79,12 @@ contract List is OwnedList, Math {
     uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId;          //  4 2 Id in DB for name and KYC info
     uint32  contributions; //  4 2 Number of separate contributions made
-    uint256 contributedWei;// 32 3 wei contributed
-    uint256 refundedWei;   // 32 4 wei refunded
+    uint256 weiContributed;// 32 3 wei contributed
+    uint256 weiRefunded;   // 32 4 wei refunded
     uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
   }
   mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
-
-  // Events
-  // ======
-   event NewEntryV(address indexed Entry, uint32 Bits, uint32 DbId);
-  event WhitelistV(address indexed Entry, uint32 WhitelistT);
-  event DowngradeV(address indexed Entry, uint32 DowngradeT);
-   event SetBonusV(address indexed Entry, uint32 bonusCentiPc);
-   event SetProxyV(address indexed Entry, address Proxy);
-  event SetTransfersOkByDefaultV(bool On);
-  event SetTransferOkV(address indexed Entry, bool On);
-  event IssueV(address indexed To, uint256 Picos, uint256 Wei);
-  event GreyDepositV(address indexed To, uint256 Wei);
-
-  // Initialisation/Setup Functions
-  // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
-  // Owners must first be set by deploy script calls:
-  //   List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
-  //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
-  //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
-  //   List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
-  //   List.ChangeOwnerMO(ESCROW_OWNER_X, Escrow address)
-  //   List.ChangeOwnerMO(GREY_OWNER_X,   Grey address)
-
-  // List.Initialise()
-  // -----------------
-  // To be called by the deploy script to set the contract address variables.
-  function Initialise() external IsInitialising {
-    pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_X);
-    iInitialisingB = false;
-  }
-  // List.StartSale()
-  // -----------------
-  // Called only from Hub.StartSale()
-  function StartSale() external IsHubCaller {
-    pTransfersOkB = false; // Stop transfers by default
-  }
-
-  // List.SoftCapReached()
-  // ---------------------
-  // Is called from Hub.SoftCapReached() when soft cap is reached
-  function SoftCapReached() external IsHubCaller {
-    pSoftCapB = true;
-  }
-
-  // List.SetTransfersOkByDefault()
-  // ------------------------------
-  // Callable only from Hub to set/unset pTransfersOkB
-  function SetTransfersOkByDefault(bool B) external IsHubCaller returns (bool) {
-    if (B)
-      require(pSoftCapB, 'Requires Softcap');
-    pTransfersOkB = B;
-    emit SetTransfersOkByDefaultV(B);
-    return true;
-  }
-
-  // List.SetTransferOk()
-  // --------------------
-  // Callable only from Hub to set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsHubCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (B) // Set
-      pListMR[vEntryA].bits |= TRANSFER_OK;
-    else   // Unset
-      pListMR[vEntryA].bits &= ~TRANSFER_OK;
-    emit SetTransferOkV(vEntryA, B);
-    return true;
-  }
 
   // View Methods
   // ============
@@ -193,11 +125,11 @@ contract List is OwnedList, Math {
   function ListEntryExists(address accountA) external view returns (bool) {
     return pListMR[accountA].addedT > 0;
   }
-  function ContributedWei(address accountA) external view returns (uint256) {
-    return pListMR[accountA].contributedWei;
+  function WeiContributed(address accountA) external view returns (uint256) {
+    return pListMR[accountA].weiContributed;
   }
-  function RefundedWei(address accountA) external view returns (uint256) {
-    return pListMR[accountA].refundedWei;
+  function WeiRefunded(address accountA) external view returns (uint256) {
+    return pListMR[accountA].weiRefunded;
   }
   function PicosBalance(address accountA) external view returns (uint256) {
     return pListMR[accountA].picosBalance;
@@ -210,17 +142,16 @@ contract List is OwnedList, Math {
   }
   // List.EntryType()
   // ----------------
-  // Returns the entry type of the accountA list entry as one of the ENTRY_ constants
-  // Member types
-  // - ENTRY_NONE       0 An undefined entry with no add date
-  // - ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-  // - ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-  // - ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
-  // - ENTRY_REFUNDED   4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
-  // - ENTRY_DOWNGRADED 5 Has been downgraded from White or Member
-  // - ENTRY_BURNT      6 Has been burnt
-  // - ENTRY_WHITE      7 Whitelisted with no picosBalance
-  // - ENTRY_MEMBER     8 Whitelisted with a picosBalance
+  // Returns the entry type of the accountA list entry as one of the ENTRY_ constants:
+  // ENTRY_NONE       0 An undefined entry with no add date
+  // ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+  // ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+  // ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
+  // ENTRY_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+  // ENTRY_DOWNGRADED 5 Has been downgraded from White or Member and refunded
+  // ENTRY_BURNT      6 Has been burnt
+  // ENTRY_WHITE      7 Whitelisted with no picosBalance
+  // ENTRY_MEMBER     8 Whitelisted with a picosBalance
   function EntryType(address accountA) public view returns (uint8 typeN) {
     R_List storage rsEntryR = pListMR[accountA];
     return rsEntryR.addedT == 0 ? ENTRY_NONE :
@@ -284,8 +215,8 @@ contract List is OwnedList, Math {
     uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
     uint32  dbId,          // Id in DB for name and KYC info
     uint32  contributions, // Number of separate contributions made
-    uint256 contributedWei,// wei contributed
-    uint256 refundedWei,   // wei refunded
+    uint256 weiContributed,// wei contributed
+    uint256 weiRefunded,   // wei refunded
     uint256 picosBought,   // Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
     uint256 picosBalance) {// Current token balance - determines who is a Pacio Member |
     R_List storage rsEntryR = pListMR[accountA]; //  2,000,000,000   2000000000    Or could have used bit shifting.
@@ -293,8 +224,78 @@ contract List is OwnedList, Math {
                                                  //  3,054,132,001,527,066,000  for 2018.05.23 09:00 twice
                                                  // 18,446,744,073,709,551,615 max unsigned 64 bit int
     return (rsEntryR.bits, rsEntryR.addedT, rsEntryR.whiteT, rsEntryR.firstContribT, uint64(rsEntryR.refundT) * 2000000000 + uint64(rsEntryR.downT), rsEntryR.bonusCentiPc,
-            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.contributedWei, rsEntryR.refundedWei, rsEntryR.picosBought, rsEntryR.picosBalance);
+            rsEntryR.dbId, rsEntryR.contributions, rsEntryR.weiContributed, rsEntryR.weiRefunded, rsEntryR.picosBought, rsEntryR.picosBalance);
   }
+
+  // Events
+  // ======
+   event NewEntryV(address indexed Entry, uint32 Bits, uint32 DbId);
+  event WhitelistV(address indexed Entry, uint32 WhitelistT);
+  event DowngradeV(address indexed Entry, uint32 DowngradeT);
+   event SetBonusV(address indexed Entry, uint32 bonusCentiPc);
+   event SetProxyV(address indexed Entry, address Proxy);
+  event SetTransfersOkByDefaultV(bool On);
+  event SetTransferOkV(address indexed Entry, bool On);
+  event IssueV(address indexed To, uint256 Picos, uint256 Wei);
+  event RefundV(address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
+
+  event GreyDepositV(address indexed To, uint256 Wei);
+
+  // Initialisation/Setup Functions
+  // ==============================
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+  // Owners must first be set by deploy script calls:
+  //   List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
+  //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
+  //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
+  //   List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
+
+  // List.Initialise()
+  // -----------------
+  // To be called by the deploy script to set the contract address variables.
+  function Initialise() external IsInitialising {
+  //pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_X);
+    pSaleA = iOwnersYA[SALE_OWNER_X];
+    iInitialisingB = false;
+  }
+  // List.StartSale()
+  // -----------------
+  // Called only from Hub.StartSale()
+  function StartSale() external IsHubCaller {
+    pTransfersOkB = false; // Stop transfers by default
+  }
+
+  // List.SoftCapReached()
+  // ---------------------
+  // Is called from Hub.SoftCapReached() when soft cap is reached
+  function SoftCapReached() external IsHubCaller {
+    pSoftCapB = true;
+  }
+
+  // List.SetTransfersOkByDefault()
+  // ------------------------------
+  // Callable only from Hub to set/unset pTransfersOkB
+  function SetTransfersOkByDefault(bool B) external IsHubCaller returns (bool) {
+    if (B)
+      require(pSoftCapB, 'Requires Softcap');
+    pTransfersOkB = B;
+    emit SetTransfersOkByDefaultV(B);
+    return true;
+  }
+
+  // List.SetTransferOk()
+  // --------------------
+  // Callable only from Hub to set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
+  function SetTransferOk(address vEntryA, bool B) external IsHubCaller returns (bool) {
+    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
+    if (B) // Set
+      pListMR[vEntryA].bits |= TRANSFER_OK;
+    else   // Unset
+      pListMR[vEntryA].bits &= ~TRANSFER_OK;
+    emit SetTransferOkV(vEntryA, B);
+    return true;
+  }
+
 
   // Modifier functions
   // ==================
@@ -354,8 +355,8 @@ contract List is OwnedList, Math {
       0,            // uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
       vDbId,        // uint32  dbId;          //  4 2 Id in DB for name and KYC info
       0,            // uint32  contributions; //  4 2 Number of separate contributions made
-      0,            // uint256 contributedWei;// 32 3 wei contributed
-      0,            // uint256 refundedWei;   // 32 4 wei refunded
+      0,            // uint256 weiContributed;// 32 3 wei contributed
+      0,            // uint256 weiRefunded;   // 32 4 wei refunded
       0,            // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0);           // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
     // Update other state vars
@@ -471,14 +472,14 @@ contract List is OwnedList, Math {
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     R_List storage rsEntryR = pListMR[toA];
-    if (rsEntryR.contributedWei == 0) {
+    if (rsEntryR.weiContributed == 0) {
       rsEntryR.firstContribT = uint32(now);
       if (rsEntryR.whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
         pNumMembers++;
     }
     rsEntryR.picosBought    = safeAdd(rsEntryR.picosBought, vPicos);
     rsEntryR.picosBalance   = safeAdd(rsEntryR.picosBalance, vPicos);
-    rsEntryR.contributedWei = safeAdd(rsEntryR.contributedWei, vWei);
+    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
     pListMR[pSaleA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the pListMR[pSaleA].picosBalance >= vPicos check
     emit IssueV(toA, vPicos, vWei);
@@ -493,9 +494,9 @@ contract List is OwnedList, Math {
     uint8 typeN = EntryType(toA);
     require(typeN == ENTRY_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
-    if (rsEntryR.contributedWei == 0)
+    if (rsEntryR.weiContributed == 0)
       rsEntryR.firstContribT = uint32(now);
-    rsEntryR.contributedWei = safeAdd(rsEntryR.contributedWei, vWei);
+    rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
     emit GreyDepositV(toA, vWei);
     return true;
@@ -524,23 +525,31 @@ contract List is OwnedList, Math {
 
   // List.Refund()
   // -------------
-  // Called from Escrow.Refund() IsNotContractCaller
-  //          or   Grey.Refund() IsNotContractCaller
-  //  which are contributor called function to pull a refund, with this fn to process the list part of the refund.
-  // vSenderA is msg.sender of the call to Escrow.Refund()
-  // vRefundWei can be less than List.ContributedWei() for termination case where some of the contributed funds have been dispersed.
-  function Refund(address vSenderA, uint256 vRefundWei, uint32 vBit) external IsEscrowOrGreyCaller returns (bool)  {
-    R_List storage rsEntryR = pListMR[vSenderA];
+  // Called from Token.Refund() IsHubCaller which is called from Hub.Refund()     IsNotContractCaller
+  //                                                          or Hub.PushRefund() IsWebOrAdminCaller
+  // vRefundWei can be less than or greater than List.WeiContributed() for termination case where the wei is a proportional calc based on picos held re transfers, not wei contributed
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenCaller returns (uint256 refundPicos)  {
+    R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
-    require(vRefundWei <= rsEntryR.contributedWei);
+    uint8 typeN = EntryType(toA);
+    if (vRefundBit >= REFUND_GREY_SOFT_CAP_MISS) {
+      require(typeN == ENTRY_GREY, "Invalid list type for Grey Refund");
+      require(rsEntryR.weiContributed == vRefundWei, "Invalid List Grey refund call");
+    }else{
+      require(typeN == ENTRY_PRESALE || typeN >= ENTRY_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+      refundPicos = rsEntryR.picosBalance;
+      require(refundPicos > 0 && vRefundWei > 0, "Invalid List Escrow refund call");
+      pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos);
+      rsEntryR.picosBalance   = 0;
+    }
     rsEntryR.refundT = uint32(now);
-    rsEntryR.refundedWei = safeAdd(rsEntryR.refundedWei, vRefundWei); // could we ever have duplicate calls requiring add here? djh??
-    rsEntryR.bits |= vBit; // REFUND_SOFT_CAP_MISS Refund of all funds due to soft cap not being reached
-                           // REFUND_TERMINATION   Refund of remaining funds proportionately following a yes vote for project termination
-                           // REFUND_GREY          Refund of grey escrow funds that have not been white listed by the time that the sale closes
-    return true;
-  }
-
+    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> ENTRY_REFUNDED after this
+    rsEntryR.bits |= vRefundBit;                            // REFUND_ESCROW_SOFT_CAP_MISS Refund of all Escrow funds due to soft cap not being reached
+    emit RefundV(toA, refundPicos, vRefundWei, vRefundBit); // REFUND_ESCROW_TERMINATION   Refund of remaining Escrow funds proportionately following a yes vote for project termination
+  }                                                         // REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
+                                                            // REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
+                                                            // REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+                                                            // REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
   // List.Burn()
   // -----------
   // For use when transferring issued PIOEs to PIOs
@@ -558,7 +567,7 @@ contract List is OwnedList, Math {
 
   // List.Destroy()
   // --------------
-  // For use when transferring unissued PIOEs to PIOs
+  // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsTokenCaller {

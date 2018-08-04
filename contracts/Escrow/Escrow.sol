@@ -6,6 +6,7 @@ Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
 
 djh??
 • add the push refund function
+• destroy refunded PIOs
 
 View Methods
 ============
@@ -54,6 +55,7 @@ contract Escrow is OwnedEscrow, Math {
   address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for taps (withdrawals)
   uint256 private pTapRateEtherPm;    // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;     // Last withdrawal time, 0 before any withdrawals
+  uint256 private pRefundId;          // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
   bool    private pSoftCapB;          // Set to true when softcap is reached in Sale
   I_ListEscrow private pListC;        // the List contract. Escrow is one of List's owners to allow checking of the Escrow caller.
 
@@ -66,15 +68,6 @@ contract Escrow is OwnedEscrow, Math {
   // Escrow.EscrowWei() -- Echoed in Sale View Methods
   function EscrowWei() external view returns (uint256) {
     return address(this).balance;
-  }
-  // Escrow.RefundAvailableWei()
-  function RefundAvailableWei() public view returns (uint256 refundWei) {
-    if (pStateN == NEscrowState.SoftCapMissRefund)
-      refundWei = pListC.ContributedWei(msg.sender);
-    else if (pStateN == NEscrowState.TerminateRefund)
-    //refundWei =        pTotalDepositedWei * pListC.PicosBalance(msg.sender) / pTerminationPicosIssued;
-      refundWei = safeMul(pTotalDepositedWei, pListC.PicosBalance(msg.sender)) / pTerminationPicosIssued;
-    return Min(refundWei, address(this).balance);
   }
   // Escrow.State()
   function State() external view returns (uint8) {
@@ -116,10 +109,10 @@ contract Escrow is OwnedEscrow, Math {
   event SoftCapReachedV(NEscrowState State);
   event EndSaleV(NEscrowState State);
   event TerminateV(NEscrowState State, uint256 TerminationPicosIssued);
-  event RefundingCompleteV(NEscrowState State);
   event  DepositV(address indexed Account, uint256 Wei);
   event WithdrawV(address indexed Account, uint256 Wei);
-  event   RefundV(address indexed Account, uint256 Wei);
+  event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei);
+  event RefundingCompleteV(NEscrowState State);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -182,7 +175,7 @@ contract Escrow is OwnedEscrow, Math {
 
   // Escrow.EndSale()
   // ----------------
-  // Is called from Hub.EndSale() when hard cap is reached, time is up, or the sale is ended manually
+  // Is called from Hub.EndSaleMO() when hard cap is reached, time is up, or the sale is ended manually
   function EndSale() external IsHubCaller {
     pStateN = pSoftCapB ? NEscrowState.SaleClosed         // good end which permits withdrawals
                         : NEscrowState.SoftCapMissRefund; // bad end before soft cap -> refund state
@@ -245,18 +238,34 @@ contract Escrow is OwnedEscrow, Math {
     pWithdraw(withdrawWei);
   }
 
-  // State changing external methods callable by public
-  // ==================================================
+  // State changing external methods
+  // ===============================
+
+  // Escrow.RefundInfo()
+  // -------------------
+  function RefundInfo(address accountA, uint256 vRefundId) external IsHubCaller returns (uint256 refundWei, uint32 refundBit) {
+    pRefundId = vRefundId;
+    if (pStateN == NEscrowState.SoftCapMissRefund) {
+      refundWei = pListC.WeiContributed(accountA);
+      refundBit = REFUND_ESCROW_SOFT_CAP_MISS;
+    }else if (pStateN == NEscrowState.TerminateRefund) {
+    //refundWei =         pTotalDepositedWei * pListC.PicosBalance(accountA) / pTerminationPicosIssued;
+      refundWei = safeMul(pTotalDepositedWei, pListC.PicosBalance(accountA)) / pTerminationPicosIssued;
+      refundBit =  REFUND_ESCROW_TERMINATION;
+    }
+    if (refundBit > 0)
+      refundWei = Min(refundWei, address(this).balance);
+  }
 
   // Escrow.Refund()
   // ---------------
-  // Pull refund request from a contributor
-  function Refund() external IsNotContractCaller returns (bool) {
-    uint256 refundWei = RefundAvailableWei();
-    require(refundWei > 0, 'No refund available');
-    pListC.Refund(msg.sender, refundWei, pStateN == NEscrowState.SoftCapMissRefund ? REFUND_SOFT_CAP_MISS : REFUND_TERMINATION);
-    msg.sender.transfer(refundWei);
-    emit RefundV(msg.sender, refundWei);
+  // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
+  function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubCaller returns (bool) {
+    require(vRefundId == pRefundId   // same hub call check
+         && (pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund)); // expected to be true if Hub.pRefund() makes the call
+    require(vRefundWei <= address(this).balance, 'Refund not available');
+    toA.transfer(vRefundWei);
+    emit RefundV(pRefundId, toA, vRefundWei);
     if (address(this).balance == 0) { // refunding is complete
       pStateN == NEscrowState.EscrowClosed;
       emit RefundingCompleteV(pStateN);

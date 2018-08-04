@@ -95,7 +95,7 @@ contract Mvp is OwnedByOpManAndHub {
 
   // Mvp.Destroy()
   // -------------
-  // For use when transferring unissued PIOEs to PIOs
+  // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is to be called from Hub.Destroy()
   function Destroy(uint256 vPicos) external IsHubCaller {
     pTokenC.Destroy(vPicos);

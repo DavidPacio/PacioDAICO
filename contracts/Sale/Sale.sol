@@ -374,15 +374,15 @@ contract Sale is OwnedSale, Math {
     require(pSaleOpenB, "Sale has closed");
     (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
     // typeN could be:
-    // - ENTRY_NONE       0 An undefined entry with no add date
-    // - ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-    // - ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-    // - ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
-    // - ENTRY_REFUNDED   4 Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
-    // - ENTRY_DOWNGRADED 5 Has been downgraded from White or Member
-    // - ENTRY_BURNT      6 Has been burnt
-    // - ENTRY_WHITE      7 Whitelisted with no picosBalance
-    // - ENTRY_MEMBER     8 Whitelisted with a picosBalance
+    // ENTRY_NONE       0 An undefined entry with no add date
+    // ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+    // ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+    // ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
+    // ENTRY_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+    // ENTRY_DOWNGRADED 5 Has been downgraded from White or Member and refunded
+    // ENTRY_BURNT      6 Has been burnt
+    // ENTRY_WHITE      7 Whitelisted with no picosBalance
+    // ENTRY_MEMBER     8 Whitelisted with a picosBalance
     if (typeN == ENTRY_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
       pListC.GreyDeposit(msg.sender, msg.value);   // updates the list entry
       pGreyC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Grey escrow account
@@ -467,7 +467,7 @@ contract Sale is OwnedSale, Math {
   }
   // Sale.EndSale()
   // --------------
-  // Called from Hub.EndSale()
+  // Called from Hub.EndSaleMO()
   function EndSale() external IsHubCaller {
     pSaleOpenB = false;
     emit EndSaleV();

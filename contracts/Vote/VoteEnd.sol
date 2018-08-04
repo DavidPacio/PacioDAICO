@@ -6,6 +6,7 @@ Owned by Deployer, OpMan, Hub
 
 djh??
 
+• No vote allowed until sale has been closed
 • to call Hub.Terminate() on a Yes to end vote
 
 View Methods

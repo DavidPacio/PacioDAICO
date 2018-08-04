@@ -8,6 +8,7 @@ pragma solidity ^0.4.24;
 
 interface I_ListHub {
   function StartSale() external;
+  function EntryType(address accountA) external view returns (uint8 typeN);
   function BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN);
   function Browse(address currentA, uint8 vActionN) external view returns (address retA, uint8 typeN);
   function NextEntry(address accountA) external view returns (address);

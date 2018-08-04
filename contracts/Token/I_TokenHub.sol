@@ -10,6 +10,7 @@ interface I_TokenHub {
   function PicosIssued() external view returns (uint256);
   function StartSale() external;
   function EndSale() external;
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
 }
 // End I_TokenHub interface
 

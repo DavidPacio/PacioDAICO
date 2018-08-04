@@ -9,9 +9,10 @@ OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
-• PushRefund() for web calling re the 3 refund cases PLUS for manual once off admin refunding
 • fns for replacing contracts - all of them
 • add manual account creation
+• Hub.Destroy() ?
+’ Add REFUND_ESCROW_ONCE_OF refund call to Downgrade
 
 Initialisation/Setup Functions
 ==============================
@@ -58,7 +59,9 @@ contract Hub is OwnedHub, Math {
   I_TokenHub  private pTokenC;   // the Token contract
   I_ListHub   private pListC;    // the List contract
   I_EscrowHub private pEscrowC;  // the Escrow contract
-//I_GreyHub   private pGreyC;    // the Grey escrow contract
+  I_GreyHub   private pGreyC;    // the Grey escrow contract
+  bool        private pRefundInProgressB; // to prevent re-entrant refund calls lock
+  uint256     private pRefundId; // Refund Id
 
   // No Constructor
   // ==============
@@ -80,6 +83,7 @@ contract Hub is OwnedHub, Math {
   event StartSaleV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();
+  event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
 
   // Initialisation/Setup Methods
   // ============================
@@ -99,11 +103,11 @@ contract Hub is OwnedHub, Math {
   // The deploy script must make a call to EndInitialising() once other initialising calls have been completed.
   function Initialise() external IsInitialising {
     pOpManC  = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pSaleC   = I_Sale(iOwnersYA[SALE_OWNER_X]);
-    pTokenC  = I_TokenHub(pOpManC.ContractXA(TOKEN_X));
-    pListC   = I_ListHub(pOpManC.ContractXA(LIST_X));
+    pSaleC   =  I_Sale(iOwnersYA[SALE_OWNER_X]);
+    pTokenC  =  I_TokenHub(pOpManC.ContractXA(TOKEN_X));
+    pListC   =   I_ListHub(pOpManC.ContractXA(LIST_X));
     pEscrowC = I_EscrowHub(pOpManC.ContractXA(ESCROW_X));
-  //pGreyC   = I_GreyHub(pOpManC.ContractXA(GREY_X));
+    pGreyC   =   I_GreyHub(pOpManC.ContractXA(GREY_X));
     emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
     iPausedB       =        // make active
     iInitialisingB = false;
@@ -133,9 +137,6 @@ contract Hub is OwnedHub, Math {
     emit StartSaleV(vStartT, vEndT);
   }
 
-  // State changing external methods
-  // ===============================
-
   // Hub.SoftCapReachedMO()
   // ----------------------
   // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
@@ -159,7 +160,8 @@ contract Hub is OwnedHub, Math {
     pSaleC.EndSale();
     pTokenC.EndSale();
     pEscrowC.EndSale();
-    // No EndSale() for List, Grey, VoteTap, VoteEnd, Mvp
+    pGreyC.EndSale();
+    // No EndSale() for List, VoteTap, VoteEnd, Mvp
     emit EndSaleV();
   }
 
@@ -175,6 +177,57 @@ contract Hub is OwnedHub, Math {
     pOpManC.PauseContract(GREY_X);
     pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
+
+  // Hub.Refund()
+  // ------------
+  // Pull refund request from a contributor
+  function Refund() external IsNotContractCaller returns (bool) {
+    return pRefund(msg.sender, false);
+  }
+
+  // Hub.PushRefund()
+  // ----------------
+  // Push refund request from web or admin, not a contract
+  function PushRefund(address toA, bool vOnceOffB) external IsWebOrAdminCaller returns (bool) {
+    return pRefund(toA, vOnceOffB);
+  }
+
+  // Hub.pRefund()
+  // -------------
+  // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
+  // Cases: REFUND_ESCROW_SOFT_CAP_MISS Refund of all Escrow funds due to soft cap not being reached
+  //        REFUND_ESCROW_TERMINATION   Refund of remaining Escrow funds proportionately following a yes vote for project termination
+  //        REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
+  //        REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
+  //        REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+  //        REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
+  function pRefund(address toA, bool vOnceOffB) private returns (bool) {
+    require(!pRefundInProgressB, 'Refund in Progress'); // Prevent re-entrant calls
+    pRefundInProgressB = true;
+    uint256 refundWei;
+    uint32  refundBit;
+    uint8   typeN = pListC.EntryType(toA);
+    pRefundId++;
+    if (typeN == ENTRY_GREY) {
+      (refundWei, refundBit) = pGreyC.RefundInfo(toA, pRefundId);
+      if (vOnceOffB)
+        refundBit = REFUND_GREY_ONCE_OFF;
+    }else if (typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE) {
+      (refundWei, refundBit) = pEscrowC.RefundInfo(toA, pRefundId);
+      if (vOnceOffB)
+        refundBit = REFUND_ESCROW_ONCE_OFF;
+    }
+    require(refundWei > 0, 'No refund available');
+    pTokenC.Refund(toA, refundWei, refundBit); // IsHubCaller IsActive
+    if (typeN == ENTRY_GREY)
+      pGreyC.Refund(toA, refundWei, pRefundId);
+    else
+      pEscrowC.Refund(toA, refundWei, pRefundId);
+    emit RefundV(pRefundId, toA, refundWei, refundBit);
+    pRefundInProgressB = false;
+    return true;
+  }
+
 
 /*
 djh??

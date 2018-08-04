@@ -5,9 +5,8 @@ Escrow management of funds from grey listed participants in the Pacio DAICO
 Owned by Deployer, OpMan, Hub, Sale
 
 djh??
-Different owned wo Admin?
-•  uint32 internal constant REFUND_GREY          = 64; // 6 Refund of grey escrow funds that have not been white listed by the time that the sale closes
-
+• Different owned wo Admin?
+• Complete this
 
 View Methods
 ============
@@ -33,22 +32,37 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedEscrow.sol";
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
+import "../List/I_ListEscrow.sol";
 
 contract Grey is OwnedEscrow, Math {
   string  public name = "Pacio DAICO Grey List Escrow";
   enum NGreyState {
-    None,            // 0 Not started yet
-    SaleRefund,      // 1 Failed to reach soft cap, contributions being refunded
-    SaleClosed,      // 2 Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded
-    Open             // 3 Grey escrow is open for deposits
+    None,              // 0 Not started yet
+    SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
+    SaleClosed,        // 2 Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as REFUND_GREY_SALE_CLOSE refunds
+    Open,              // 3 Grey escrow is open for deposits
+    GreyClosed         // 4 Grey escrow is empty as s result of refunds or withdrawals emptying the pot
   }
   NGreyState private pStateN;
-  uint256 private pWeiBalance;     // wei in escrow
+  uint256 private pRefundId;      // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
+  uint256 private pWeiBalance;    // wei in escrow
+  I_ListEscrow private pListC;    // the List contract. Grey is one of List's owners to allow checking of the Escrow caller.
+
+  // View Methods
+  // ============
+  // Escrow.EscrowWei() -- Echoed in Sale View Methods
+  function EscrowWei() external view returns (uint256) {
+    return pWeiBalance;
+  }
 
   // Events
   // ======
   event InitialiseV();
+  event EndSaleV(NGreyState State);
   event DepositV(address indexed Account, uint256 Wei);
+  event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei);
+  event RefundingCompleteV(NGreyState State);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -64,6 +78,7 @@ contract Grey is OwnedEscrow, Math {
   function Initialise() external IsInitialising {
   //require(pEStateN == NGreyState.None); // can only be called before the sale starts
     pStateN = NGreyState.Open;
+    pListC  = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X));
     iPausedB       =        // make Grey Escrow active
     iInitialisingB = false;
     emit InitialiseV();
@@ -71,16 +86,14 @@ contract Grey is OwnedEscrow, Math {
 
   // No Escrow.StartSale() as grey escrow is not affected by the sale starting
 
-  // View Methods
-  // ============
-  // Escrow.EscrowWei() -- Echoed in Sale View Methods
-  function EscrowWei() external view returns (uint256) {
-    return pWeiBalance;
+
+  // Grey.EndSale()
+  // --------------
+  // Is called from Hub.EndSaleMO() when hard cap is reached, time is up, or the sale is ended manually
+  function EndSale() external IsHubCaller {
+    pStateN = NGreyState.SaleClosed; // Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as REFUND_GREY_SALE_CLOSE refunds
+    emit EndSaleV(pStateN);
   }
-
-
-  // Modifier functions
-  // ==================
 
   // State changing methods
   // ======================
@@ -93,6 +106,34 @@ contract Grey is OwnedEscrow, Math {
     require(pStateN == NGreyState.Open, "Deposit to Grey Escrow not allowed");
     emit DepositV(vSenderA, msg.value);
   }
+
+  // Grey.RefundInfo()
+  // -----------------
+  function RefundInfo(address accountA, uint256 vRefundId) external IsHubCaller returns (uint256 refundWei, uint32 refundBit) {
+    pRefundId = vRefundId;
+    if (pStateN == NGreyState.SoftCapMissRefund)
+      refundBit = REFUND_GREY_SOFT_CAP_MISS;
+    else if (pStateN == NGreyState.SaleClosed)
+      refundBit = REFUND_GREY_SALE_CLOSE;
+    if (refundBit > 0)
+      refundWei = Min(pListC.WeiContributed(accountA), address(this).balance);
+  }
+
+  // Grey.Refund()
+  // -------------
+  // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
+  function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubCaller returns (bool) {
+    require(vRefundId == pRefundId   // same hub call check
+         && (pStateN == NGreyState.SoftCapMissRefund || pStateN == NGreyState.SaleClosed)); // expected to be true if Hub.pRefund() makes the call
+    require(vRefundWei <= address(this).balance, 'Refund not available');
+    toA.transfer(vRefundWei);
+    emit RefundV(pRefundId, toA, vRefundWei);
+    if (address(this).balance == 0) { // refunding is complete
+      pStateN == NGreyState.GreyClosed;
+      emit RefundingCompleteV(pStateN);
+    }
+    return true;
+  } // End Refund()
 
   // Grey Fallback function
   // ======================

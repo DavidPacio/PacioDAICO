@@ -27,7 +27,7 @@ contract Constants {
   // Hub       Deployer, OpMan, Admin, Sale, VoteTap, VoteEnd, Web
   // Sale      Deployer, OpMan, Hub,   Admin
   // Token     Deployer, OpMan, Hub,   Sale, Mvp
-  // List      Deployer, OpMan, Hub,   Sale, Token,   Escrow,  Grey
+  // List      Deployer, OpMan, Hub,   Sale, Token
   // Escrow    Deployer, OpMan, Hub,   Sale, Admin
   // Grey      Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
@@ -44,8 +44,6 @@ contract Constants {
   uint256 internal constant VOTE_END_OWNER_X = 5;
   uint256 internal constant WEB_OWNER_X      = 6;
   uint256 internal constant TOKEN_OWNER_X    = 4;
-  uint256 internal constant ESCROW_OWNER_X   = 5;
-  uint256 internal constant GREY_OWNER_X     = 6;
   uint256 internal constant MVP_OWNER_X      = 4;
 
   // Managed Operation Indices
@@ -69,14 +67,17 @@ contract Constants {
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
-  // List Contract bits                                  /- bit and bit setting description
-  uint32 internal constant PRESALE              =  1; // 0 A Presale List entry - Pacio Seed Presale or Pacio internal Placement
-  uint32 internal constant TRANSFER_OK          =  2; // 1 Transfers allowed for this member even if pTransfersOkB is false
-  uint32 internal constant HAS_PROXY            =  4; // 2 This entry has a Proxy appointed
-  uint32 internal constant BURNT                =  8; // 3 This entry has had its PIOs burnt
-  uint32 internal constant REFUND_SOFT_CAP_MISS = 16; // 4 Refund of all funds due to soft cap not being reached
-  uint32 internal constant REFUND_TERMINATION   = 32; // 5 Refund of remaining funds proportionately following a yes vote for project termination
-  uint32 internal constant REFUND_GREY          = 64; // 6 Refund of grey escrow funds that have not been white listed by the time that the sale closes
+  // List Contract bits                                         /- bit and bit setting description
+  uint32 internal constant PRESALE                     =  1; // 0 A Presale List entry - Pacio Seed Presale or Pacio internal Placement
+  uint32 internal constant TRANSFER_OK                 =  2; // 1 Transfers allowed for this member even if pTransfersOkB is false
+  uint32 internal constant HAS_PROXY                   =  4; // 2 This entry has a Proxy appointed
+  uint32 internal constant BURNT                       =  8; // 3 This entry has had its PIOs burnt
+  uint32 internal constant REFUND_ESCROW_SOFT_CAP_MISS = 16; // 4 Refund of all Escrow funds due to soft cap not being reached
+  uint32 internal constant REFUND_ESCROW_TERMINATION  =  32; // 5 Refund of remaining Escrow funds proportionately following a yes vote for project termination
+  uint32 internal constant REFUND_ESCROW_ONCE_OFF     =  64; // 6 Once off Escrow refund for whatever reason including downgrade from whitelisted
+  uint32 internal constant REFUND_GREY_SOFT_CAP_MISS  = 128; // 7 Refund of Grey escrow funds due to soft cap not being reached
+  uint32 internal constant REFUND_GREY_SALE_CLOSE     = 256; // 8 Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+  uint32 internal constant REFUND_GREY_ONCE_OFF       = 512; // 9 Once off Admin/Manual Grey escrow refund for whatever reason
 
   // List Contract Browsing actions
   uint8 internal constant BROWSE_FIRST = 1;
@@ -90,8 +91,8 @@ contract Constants {
   uint8 internal constant ENTRY_CONTRACT   = 1; // Contract (Sale) list entry for Minted tokens. Has dbId == 1
   uint8 internal constant ENTRY_GREY       = 2; // Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
   uint8 internal constant ENTRY_PRESALE    = 3; // Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
-  uint8 internal constant ENTRY_REFUNDED   = 4; // Contributed funds have been refunded at refundedT. Must have been Presale or Member previously.
-  uint8 internal constant ENTRY_DOWNGRADED = 5; // Has been downgraded from White or Member
+  uint8 internal constant ENTRY_REFUNDED   = 4; // Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+  uint8 internal constant ENTRY_DOWNGRADED = 5; // Has been downgraded from White or Member and refunded
   uint8 internal constant ENTRY_BURNT      = 6; // Has been burnt
   uint8 internal constant ENTRY_WHITE      = 7; // Whitelisted with no picosBalance
   uint8 internal constant ENTRY_MEMBER     = 8; // Whitelisted with a picosBalance
