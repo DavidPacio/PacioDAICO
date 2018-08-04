@@ -6,7 +6,7 @@ Owned by Deployer, OpMan, Hub, Sale
 
 djh??
 • Different owned wo Admin?
-• Complete this
+• Do issue on white listing with transfer of Eth to Escrow
 
 View Methods
 ============
@@ -45,9 +45,10 @@ contract Grey is OwnedEscrow, Math {
     GreyClosed         // 4 Grey escrow is empty as s result of refunds or withdrawals emptying the pot
   }
   NGreyState private pStateN;
-  uint256 private pRefundId;      // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
-  uint256 private pWeiBalance;    // wei in escrow
-  I_ListEscrow private pListC;    // the List contract. Grey is one of List's owners to allow checking of the Escrow caller.
+  uint256 private pWeiBalance;     // wei in escrow
+  uint256 private pRefundId;       // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
+  bool private pRefundInProgressB; // to prevent re-entrant refund calls lock
+  I_ListEscrow private pListC;     // the List contract
 
   // View Methods
   // ============
@@ -109,7 +110,14 @@ contract Grey is OwnedEscrow, Math {
 
   // Grey.RefundInfo()
   // -----------------
+  // Called from Hub.pRefund() for info as part of a refund process:
+  // Hub.pRefund() calls: List.EntryTyoe()                - for type info
+  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit                    ********
+  //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
+  //                      Escrow/Grey.Refund()            - to do the actual refund
   function RefundInfo(address accountA, uint256 vRefundId) external IsHubCaller returns (uint256 refundWei, uint32 refundBit) {
+    require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
+    pRefundInProgressB = true;
     pRefundId = vRefundId;
     if (pStateN == NGreyState.SoftCapMissRefund)
       refundBit = REFUND_GREY_SOFT_CAP_MISS;
@@ -122,9 +130,14 @@ contract Grey is OwnedEscrow, Math {
   // Grey.Refund()
   // -------------
   // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
+  // Hub.pRefund() calls: List.EntryTyoe()                - for type info
+  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit
+  //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
+  //                      Escrow/Grey.Refund()            - to do the actual refund                                      ********
   function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubCaller returns (bool) {
-    require(vRefundId == pRefundId   // same hub call check
-         && (pStateN == NGreyState.SoftCapMissRefund || pStateN == NGreyState.SaleClosed)); // expected to be true if Hub.pRefund() makes the call
+    require(pRefundInProgressB                                                              // /- all expected to be true if called as intended
+         && vRefundId == pRefundId   // same hub call check                                 // |
+         && (pStateN == NGreyState.SoftCapMissRefund || pStateN == NGreyState.SaleClosed)); // |
     require(vRefundWei <= address(this).balance, 'Refund not available');
     toA.transfer(vRefundWei);
     emit RefundV(pRefundId, toA, vRefundWei);
@@ -132,6 +145,7 @@ contract Grey is OwnedEscrow, Math {
       pStateN == NGreyState.GreyClosed;
       emit RefundingCompleteV(pStateN);
     }
+    pRefundInProgressB = false;
     return true;
   } // End Refund()
 

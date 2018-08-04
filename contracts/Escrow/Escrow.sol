@@ -4,27 +4,10 @@ Escrow management of funds from whitelisted participants in the Pacio DAICO
 
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
 
-djh??
-• add the push refund function
-• destroy refunded PIOs
-
-View Methods
-============
-
-State changing methods
-======================
-
 Pause/Resume
 ============
 OpMan.PauseContract(ESCROW_X) IsHubCallerOrConfirmedSigner
 OpMan.ResumeContractMO(ESCROW_X) IsConfirmedSigner which is a managed op
-
-List.Fallback function
-======================
-No sending ether to this contract!
-
-Events
-======
 
 */
 
@@ -36,7 +19,6 @@ import "../OpMan/I_OpMan.sol";
 import "../List/I_ListEscrow.sol";
 
 contract Escrow is OwnedEscrow, Math {
-  // Data
   uint256 private constant INITIAL_TAP_RATE_ETH_PM = 100; // Initial Tap rate in Ether pm
   uint256 private constant SOFT_CAP_TAP_PC         = 50;  // % of escrow balance to be dispersed on soft cap being reached
   string  public name = "Pacio DAICO Escrow";
@@ -55,9 +37,12 @@ contract Escrow is OwnedEscrow, Math {
   address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for taps (withdrawals)
   uint256 private pTapRateEtherPm;    // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;     // Last withdrawal time, 0 before any withdrawals
+  uint256 private pDepositId;         // Deposit Id
+  uint256 private pWithdrawId;        // Withdrawal Id
   uint256 private pRefundId;          // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
+  bool    private pRefundInProgressB; // to prevent re-entrant refund calls
   bool    private pSoftCapB;          // Set to true when softcap is reached in Sale
-  I_ListEscrow private pListC;        // the List contract. Escrow is one of List's owners to allow checking of the Escrow caller.
+  I_ListEscrow private pListC;        // the List contract
 
   // View Methods
   // ============
@@ -109,9 +94,9 @@ contract Escrow is OwnedEscrow, Math {
   event SoftCapReachedV(NEscrowState State);
   event EndSaleV(NEscrowState State);
   event TerminateV(NEscrowState State, uint256 TerminationPicosIssued);
-  event  DepositV(address indexed Account, uint256 Wei);
-  event WithdrawV(address indexed Account, uint256 Wei);
-  event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei);
+  event  DepositV(uint256 indexed DepositId,  address indexed Account, uint256 Wei);
+  event WithdrawV(uint256 indexed WithdrawId, address Account, uint256 Wei);
+  event   RefundV(uint256 indexed RefundId,   address indexed Account, uint256 RefundWei);
   event RefundingCompleteV(NEscrowState State);
 
   // Initialisation/Setup Functions
@@ -203,7 +188,7 @@ contract Escrow is OwnedEscrow, Math {
     require(pPclAccountA != address(0), 'PCL account not set'); // must have set the PCL account
     pLastWithdrawT = now;
     pPclAccountA.transfer(vWithdrawWei);
-    emit WithdrawV(pPclAccountA, vWithdrawWei);
+    emit WithdrawV(++pWithdrawId, pPclAccountA, vWithdrawWei);
   }
 
   // Escrow.TapAmountWei()
@@ -224,7 +209,7 @@ contract Escrow is OwnedEscrow, Math {
   function Deposit(address vSenderA) external payable IsSaleCaller {
     require(pStateN >= NEscrowState.PreSoftCap, "Deposit to Escrow not allowed"); // PreSoftCap or SoftCapReached = Deposits ok
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
-    emit DepositV(vSenderA, msg.value);
+    emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
   // Escrow.WithdrawMO()
@@ -243,7 +228,14 @@ contract Escrow is OwnedEscrow, Math {
 
   // Escrow.RefundInfo()
   // -------------------
+  // Called from Hub.pRefund() for info as part of a refund process:
+  // Hub.pRefund() calls: List.EntryTyoe()                - for type info
+  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit                    ********
+  //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
+  //                      Escrow/Grey.Refund()            - to do the actual refund
   function RefundInfo(address accountA, uint256 vRefundId) external IsHubCaller returns (uint256 refundWei, uint32 refundBit) {
+    require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
+    pRefundInProgressB = true;
     pRefundId = vRefundId;
     if (pStateN == NEscrowState.SoftCapMissRefund) {
       refundWei = pListC.WeiContributed(accountA);
@@ -260,9 +252,14 @@ contract Escrow is OwnedEscrow, Math {
   // Escrow.Refund()
   // ---------------
   // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
+  // Hub.pRefund() calls: List.EntryTyoe()                - for type info
+  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit
+  //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
+  //                      Escrow/Grey.Refund()            - to do the actual refund                                      ********
   function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubCaller returns (bool) {
-    require(vRefundId == pRefundId   // same hub call check
-         && (pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund)); // expected to be true if Hub.pRefund() makes the call
+    require(pRefundInProgressB                                                                       // /- all expected to be true if called as intended
+         && vRefundId == pRefundId   // same hub call check                                          // |
+         && (pStateN == NEscrowState.SoftCapMissRefund || pStateN == NEscrowState.TerminateRefund)); // |
     require(vRefundWei <= address(this).balance, 'Refund not available');
     toA.transfer(vRefundWei);
     emit RefundV(pRefundId, toA, vRefundWei);
@@ -270,6 +267,7 @@ contract Escrow is OwnedEscrow, Math {
       pStateN == NEscrowState.EscrowClosed;
       emit RefundingCompleteV(pStateN);
     }
+    pRefundInProgressB = false;
     return true;
   } // End Refund()
 

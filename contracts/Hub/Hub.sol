@@ -12,7 +12,12 @@ djh??
 • fns for replacing contracts - all of them
 • add manual account creation
 • Hub.Destroy() ?
-’ Add REFUND_ESCROW_ONCE_OF refund call to Downgrade
+• Add REFUND_ESCROW_ONCE_OF refund call to Downgrade
+• Add Ids for Issues and Deposits as for Refunds and Burns
+  • Escrow
+  . Grey
+  . Token
+• Provide an emergency reset of the pRefundInProgressB bools
 
 Initialisation/Setup Functions
 ==============================
@@ -60,7 +65,7 @@ contract Hub is OwnedHub, Math {
   I_ListHub   private pListC;    // the List contract
   I_EscrowHub private pEscrowC;  // the Escrow contract
   I_GreyHub   private pGreyC;    // the Grey escrow contract
-  bool        private pRefundInProgressB; // to prevent re-entrant refund calls lock
+  bool        private pRefundInProgressB; // to prevent re-entrant refund calls
   uint256     private pRefundId; // Refund Id
 
   // No Constructor
@@ -180,7 +185,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.Refund()
   // ------------
-  // Pull refund request from a contributor
+  // Pull refund request from a contributor, not a contract
   function Refund() external IsNotContractCaller returns (bool) {
     return pRefund(msg.sender, false);
   }
@@ -201,8 +206,12 @@ contract Hub is OwnedHub, Math {
   //        REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
   //        REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
   //        REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
+  // Calls: List.EntryType()                - for type info
+  //        Escrow/Grey.RefundInfo()        - for refund info: amount and bit for one of the above cases
+  //        Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
+  //        Escrow/Grey.Refund()            - to do the actual refund
   function pRefund(address toA, bool vOnceOffB) private returns (bool) {
-    require(!pRefundInProgressB, 'Refund in Progress'); // Prevent re-entrant calls
+    require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
     uint256 refundWei;
     uint32  refundBit;
@@ -227,7 +236,6 @@ contract Hub is OwnedHub, Math {
     pRefundInProgressB = false;
     return true;
   }
-
 
 /*
 djh??
