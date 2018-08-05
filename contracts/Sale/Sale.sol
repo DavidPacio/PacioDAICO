@@ -51,8 +51,8 @@ Sale.HardCapReached() private
 
 Pause/Resume
 ============
-OpMan.PauseContract(SALE_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(SALE_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(SALE_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(SALE_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Sale Fallback function
 ======================
@@ -152,10 +152,10 @@ contract Sale is OwnedSale, Math {
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_X));
-    pListC   = I_ListSale(opManC.ContractXA(LIST_X));
-    pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_X));
-    pGreyC   = I_GreySale(opManC.ContractXA(GREY_X));
+    pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC   = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
+    pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
+    pGreyC   = I_GreySale(opManC.ContractXA(GREY_CONTRACT_X));
     emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
   //iInitialisingB = false; No. Leave in initialising state
   }
@@ -165,7 +165,7 @@ contract Sale is OwnedSale, Math {
   // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
   function SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
                                 uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
-    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_X)));
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
     // Caps stuff
     pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
     pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
@@ -374,23 +374,23 @@ contract Sale is OwnedSale, Math {
     require(pSaleOpenB, "Sale has closed");
     (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
     // typeN could be:
-    // ENTRY_NONE       0 An undefined entry with no add date
-    // ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-    // ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-    // ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
-    // ENTRY_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-    // ENTRY_DOWNGRADED 5 Has been downgraded from White or Member and refunded
-    // ENTRY_BURNT      6 Has been burnt
-    // ENTRY_WHITE      7 Whitelisted with no picosBalance
-    // ENTRY_MEMBER     8 Whitelisted with a picosBalance
-    if (typeN == ENTRY_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
+    // LE_TYPE_NONE       0 An undefined entry with no add date
+    // LE_TYPE_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+    // LE_TYPE_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+    // LE_TYPE_PRESALE    3 Seed presale or internal placement entry. Has LE_PRESALE_B bit set. whiteT is not set
+    // LE_TYPE_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+    // LE_TYPE_DOWNGRADED 5 Has been downgraded from White or Member and refunded
+    // LE_TYPE_BURNT      6 Has been burnt
+    // LE_TYPE_WHITE      7 Whitelisted with no picosBalance
+    // LE_TYPE_MEMBER     8 Whitelisted with a picosBalance
+    if (typeN == LE_TYPE_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
       pListC.GreyDeposit(msg.sender, msg.value);   // updates the list entry
       pGreyC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Grey escrow account
       emit GreyDepositV(msg.sender, msg.value);
       return true;
     }
-    require(typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
-    // Which tranche?                                                         // rejects ENTRY_NONE, ENTRY_CONTRACT, ENTRY_REFUNDED, ENTRY_DOWNGRADED, ENTRY_BURNT
+    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    // Which tranche?                                                         // rejects LE_TYPE_NONE, LE_TYPE_CONTRACT, LE_TYPE_REFUNDED, LE_TYPE_DOWNGRADED, LE_TYPE_BURNT
     uint32  tranche = 3;                 // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;
     if (msg.value >= pMinWeiT2) {

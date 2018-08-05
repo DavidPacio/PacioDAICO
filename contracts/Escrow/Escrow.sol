@@ -6,8 +6,8 @@ Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
 
 Pause/Resume
 ============
-OpMan.PauseContract(ESCROW_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(ESCROW_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(ESCROW_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(ESCROW_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 */
 
@@ -23,10 +23,10 @@ contract Escrow is OwnedEscrow, Math {
   uint256 private constant SOFT_CAP_TAP_PC         = 50;  // % of escrow balance to be dispersed on soft cap being reached
   string  public name = "Pacio DAICO Escrow";
   enum NEscrowState {
-    None,              // 0 Not started yet
+    None,              // 0 Sale not started yet
     SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
     TerminateRefund,   // 2 A VoteEnd vote has voted to end the project, contributions being refunded
-    EscrowClosed,      // 3 Escrow is empty as s result of refunds or withdrawals emptying the pot
+    EscrowClosed,      // 3 Escrow is empty as a result of refunds or withdrawals emptying the pot
     SaleClosed,        // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
     PreSoftCap,        // 5 Sale running prior to soft cap          /- deposits ok
     SoftCapReached     // 6 Soft cap reached, initial draw allowed  |
@@ -86,6 +86,18 @@ contract Escrow is OwnedEscrow, Math {
   function PclAccount() external view returns (address) {
     return pPclAccountA;
   }
+  // Escrow.DepositId()
+  function DepositId() external view returns (uint256) {
+    return pDepositId;
+  }
+  // Escrow.WithdrawId()
+  function WithdrawId() external view returns (uint256) {
+    return pWithdrawId;
+  }
+  // Escrow.RefundId()
+  function RefundId() external view returns (uint256) {
+    return pRefundId;
+  }
 
   // Events
   // ======
@@ -113,7 +125,7 @@ contract Escrow is OwnedEscrow, Math {
   // Called from the deploy script to initialise the Escrow contract
   function Initialise() external IsInitialising {
     pTapRateEtherPm = INITIAL_TAP_RATE_ETH_PM; // 100
-    pListC = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X));
+    pListC = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
   }
 
   // Escrow.SetPclAccountMO()
@@ -121,7 +133,7 @@ contract Escrow is OwnedEscrow, Math {
   // Called by the deploy script when initialising
   //  or manually as Admin as a managed op to set/update the Escrow PCL withdrawal account
   function SetPclAccountMO(address vPclAccountA) external {
-    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_SET_PCL_ACCOUNT_X)));
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_SET_PCL_ACCOUNT_MO_X)));
     require(vPclAccountA != address(0));
     pPclAccountA = vPclAccountA;
     emit SetPclAccountV(vPclAccountA);
@@ -217,7 +229,7 @@ contract Escrow is OwnedEscrow, Math {
   // Is called by Admin to withdraw the available tap as a managed operation
   function WithdrawMO() external IsAdminCaller {
     require(pStateN == NEscrowState.SaleClosed, "Sale not closed");
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_WITHDRAW_X));
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(ESCROW_WITHDRAW_MO_X));
     uint256 withdrawWei = TapAmountWei();
     require(withdrawWei > 0, 'Available withdrawal is 0');
     pWithdraw(withdrawWei);
@@ -239,11 +251,11 @@ contract Escrow is OwnedEscrow, Math {
     pRefundId = vRefundId;
     if (pStateN == NEscrowState.SoftCapMissRefund) {
       refundWei = pListC.WeiContributed(accountA);
-      refundBit = REFUND_ESCROW_SOFT_CAP_MISS;
+      refundBit = LE_REFUND_ESCROW_S_CAP_MISS_B;
     }else if (pStateN == NEscrowState.TerminateRefund) {
     //refundWei =         pTotalDepositedWei * pListC.PicosBalance(accountA) / pTerminationPicosIssued;
       refundWei = safeMul(pTotalDepositedWei, pListC.PicosBalance(accountA)) / pTerminationPicosIssued;
-      refundBit =  REFUND_ESCROW_TERMINATION;
+      refundBit =  LE_REFUND_ESCROW_TERMINATION_B;
     }
     if (refundBit > 0)
       refundWei = Min(refundWei, address(this).balance);

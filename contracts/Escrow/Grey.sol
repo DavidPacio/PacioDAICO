@@ -16,8 +16,8 @@ State changing methods
 
 Pause/Resume
 ============
-OpMan.PauseContract(GREY_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(GREY_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(GREY_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(GREY_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 List.Fallback function
 ======================
@@ -38,31 +38,62 @@ import "../List/I_ListEscrow.sol";
 contract Grey is OwnedEscrow, Math {
   string  public name = "Pacio DAICO Grey List Escrow";
   enum NGreyState {
-    None,              // 0 Not started yet
+    None,              // 0 Sale not started yet
     SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
-    SaleClosed,        // 2 Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as REFUND_GREY_SALE_CLOSE refunds
+    SaleClosed,        // 2 Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as LE_REFUND_GREY_SALE_CLOSE_B refunds
     Open,              // 3 Grey escrow is open for deposits
-    GreyClosed         // 4 Grey escrow is empty as s result of refunds or withdrawals emptying the pot
+    GreyClosed         // 4 Grey escrow is empty as a result of refunds or whitelisting transfers to Escrow emptying the pot
   }
   NGreyState private pStateN;
-  uint256 private pWeiBalance;     // wei in escrow
+
+  enum NEscrowState {
+    None,              // 0 Not started yet
+    SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
+    TerminateRefund,   // 2 A VoteEnd vote has voted to end the project, contributions being refunded
+    EscrowClosed,      // 3 Escrow is empty as s result of refunds or withdrawals emptying the pot
+    SaleClosed,        // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
+    PreSoftCap,        // 5 Sale running prior to soft cap          /- deposits ok
+    SoftCapReached     // 6 Soft cap reached, initial draw allowed  |
+  }
+  NEscrowState private pStateN;
+
+
+
+  uint256 private pDepositId;      // Deposit Id
+  uint256 private pWhitelistId;    // Whitelisting transfer Id
   uint256 private pRefundId;       // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
   bool private pRefundInProgressB; // to prevent re-entrant refund calls lock
   I_ListEscrow private pListC;     // the List contract
 
   // View Methods
   // ============
-  // Escrow.EscrowWei() -- Echoed in Sale View Methods
+  // Grey.EscrowWei() -- Echoed in Sale View Methods
   function EscrowWei() external view returns (uint256) {
-    return pWeiBalance;
+    return address(this).balance;
+  }
+  // Grey.State()
+  function State() external view returns (uint8) {
+    return uint8(pStateN);
+  }
+  // Grey.DepositId()
+  function DepositId() external view returns (uint256) {
+    return pDepositId;
+  }
+  // Grey.WhitelistId()
+  function WhitelistId() external view returns (uint256) {
+    return pWhitelistId;
+  }
+  // Grey.RefundId()
+  function RefundId() external view returns (uint256) {
+    return pRefundId;
   }
 
   // Events
   // ======
   event InitialiseV();
   event EndSaleV(NGreyState State);
-  event DepositV(address indexed Account, uint256 Wei);
-  event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei);
+  event DepositV(uint256 indexed DepositId, address indexed Account, uint256 Wei);
+  event  RefundV(uint256 indexed RefundId,  address indexed Account, uint256 RefundWei);
   event RefundingCompleteV(NGreyState State);
 
   // Initialisation/Setup Functions
@@ -79,20 +110,29 @@ contract Grey is OwnedEscrow, Math {
   function Initialise() external IsInitialising {
   //require(pEStateN == NGreyState.None); // can only be called before the sale starts
     pStateN = NGreyState.Open;
-    pListC  = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X));
+    pListC  = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
     iPausedB       =        // make Grey Escrow active
     iInitialisingB = false;
     emit InitialiseV();
   }
 
-  // No Escrow.StartSale() as grey escrow is not affected by the sale starting
+  // Grey.StartSale()
+  // ----------------
+  // Called from Hub.StartSale()
+  function StartSale() external IsHubCaller {
+    require(pStateN == NEscrowState.None        // initial start
+         || pStateN == NEscrowState.SaleClosed, // a restart
+            'Invalid state for Escrow StartSale call');
+    pStateN = pSoftCapB ? NEscrowState.SoftCapReached : NEscrowState.PreSoftCap;
+    emit StartSaleV(pStateN);
+  }
 
 
   // Grey.EndSale()
   // --------------
   // Is called from Hub.EndSaleMO() when hard cap is reached, time is up, or the sale is ended manually
   function EndSale() external IsHubCaller {
-    pStateN = NGreyState.SaleClosed; // Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as REFUND_GREY_SALE_CLOSE refunds
+    pStateN = NGreyState.SaleClosed; // Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as LE_REFUND_GREY_SALE_CLOSE_B refunds
     emit EndSaleV(pStateN);
   }
 
@@ -105,7 +145,7 @@ contract Grey is OwnedEscrow, Math {
   //                        after a List.GreyDeposit() call to update the list entry
   function Deposit(address vSenderA) external payable IsSaleCaller {
     require(pStateN == NGreyState.Open, "Deposit to Grey Escrow not allowed");
-    emit DepositV(vSenderA, msg.value);
+    emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
   // Grey.RefundInfo()
@@ -120,9 +160,9 @@ contract Grey is OwnedEscrow, Math {
     pRefundInProgressB = true;
     pRefundId = vRefundId;
     if (pStateN == NGreyState.SoftCapMissRefund)
-      refundBit = REFUND_GREY_SOFT_CAP_MISS;
+      refundBit = LE_REFUND_GREY_S_CAP_MISS_B;
     else if (pStateN == NGreyState.SaleClosed)
-      refundBit = REFUND_GREY_SALE_CLOSE;
+      refundBit = LE_REFUND_GREY_SALE_CLOSE_B;
     if (refundBit > 0)
       refundWei = Min(pListC.WeiContributed(accountA), address(this).balance);
   }

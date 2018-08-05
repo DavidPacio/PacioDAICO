@@ -124,7 +124,7 @@ contract OwnedHub is Constants {
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
   function ResumeMO() external IsOpManCaller {
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(RESUME_X));
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(RESUME_MO_X));
     iPausedB = false;
     emit ResumedV();
   }

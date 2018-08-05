@@ -15,7 +15,7 @@ Member types -  see Constants.sol
 None,       // 0 An undefined entry with no add date
 Contract,   // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
 Grey,       // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-Presale,    // 3 Seed presale or private placement entry. Has PRESALE bit set. whiteT is not set
+Presale,    // 3 Seed presale or private placement entry. Has LE_PRESALE_B bit set. whiteT is not set
 Refunded,   // 4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
 Downgraded, // 5 Has been downgraded from White or Member and refunded
 White,      // 6 Whitelisted with no picosBalance
@@ -120,7 +120,7 @@ contract List is OwnedList, Math {
   }
   function IsTransferAllowed(address frA) private view returns (bool) {
     return (pTransfersOkB                           // Transfers can be made
-         || (pListMR[frA].bits & TRANSFER_OK) > 0); // or they are allowed for this member
+         || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0); // or they are allowed for this member
   }
   function ListEntryExists(address accountA) external view returns (bool) {
     return pListMR[accountA].addedT > 0;
@@ -142,24 +142,24 @@ contract List is OwnedList, Math {
   }
   // List.EntryType()
   // ----------------
-  // Returns the entry type of the accountA list entry as one of the ENTRY_ constants:
-  // ENTRY_NONE       0 An undefined entry with no add date
-  // ENTRY_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-  // ENTRY_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-  // ENTRY_PRESALE    3 Seed presale or internal placement entry. Has PRESALE bit set. whiteT is not set
-  // ENTRY_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-  // ENTRY_DOWNGRADED 5 Has been downgraded from White or Member and refunded
-  // ENTRY_BURNT      6 Has been burnt
-  // ENTRY_WHITE      7 Whitelisted with no picosBalance
-  // ENTRY_MEMBER     8 Whitelisted with a picosBalance
+  // Returns the entry type of the accountA list entry as one of the LE_TYPE_ constants:
+  // LE_TYPE_NONE       0 An undefined entry with no add date
+  // LE_TYPE_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+  // LE_TYPE_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+  // LE_TYPE_PRESALE    3 Seed presale or internal placement entry. Has LE_PRESALE_B bit set. whiteT is not set
+  // LE_TYPE_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+  // LE_TYPE_DOWNGRADED 5 Has been downgraded from White or Member and refunded
+  // LE_TYPE_BURNT      6 Has been burnt
+  // LE_TYPE_WHITE      7 Whitelisted with no picosBalance
+  // LE_TYPE_MEMBER     8 Whitelisted with a picosBalance
   function EntryType(address accountA) public view returns (uint8 typeN) {
     R_List storage rsEntryR = pListMR[accountA];
-    return rsEntryR.addedT == 0 ? ENTRY_NONE :
-      (rsEntryR.bits & BURNT > 0 ? ENTRY_BURNT :
-        (rsEntryR.refundT > 0 ? ENTRY_REFUNDED :
-         (rsEntryR.downT > 0 ? ENTRY_DOWNGRADED :
-          (rsEntryR.whiteT > 0 ? (rsEntryR.picosBalance > 0 ? ENTRY_MEMBER : ENTRY_WHITE) :
-           (rsEntryR.bits & PRESALE > 0 ? ENTRY_PRESALE : (rsEntryR.dbId == 1 ? ENTRY_CONTRACT : ENTRY_GREY))))));
+    return rsEntryR.addedT == 0 ? LE_TYPE_NONE :
+      (rsEntryR.bits & LE_BURNT_B > 0 ? LE_TYPE_BURNT :
+        (rsEntryR.refundT > 0 ? LE_TYPE_REFUNDED :
+         (rsEntryR.downT > 0 ? LE_TYPE_DOWNGRADED :
+          (rsEntryR.whiteT > 0 ? (rsEntryR.picosBalance > 0 ? LE_TYPE_MEMBER : LE_TYPE_WHITE) :
+           (rsEntryR.bits & LE_PRESALE_B > 0 ? LE_TYPE_PRESALE : (rsEntryR.dbId == 1 ? LE_TYPE_CONTRACT : LE_TYPE_GREY))))));
   }
   // List.Browse()
   // -------------
@@ -254,7 +254,7 @@ contract List is OwnedList, Math {
   // -----------------
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
-  //pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_X);
+  //pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_CONTRACT_X);
     pSaleA = iOwnersYA[SALE_OWNER_X];
     iInitialisingB = false;
   }
@@ -285,13 +285,13 @@ contract List is OwnedList, Math {
 
   // List.SetTransferOk()
   // --------------------
-  // Callable only from Hub to set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
+  // Callable only from Hub to set LE_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
   function SetTransferOk(address vEntryA, bool B) external IsHubCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     if (B) // Set
-      pListMR[vEntryA].bits |= TRANSFER_OK;
+      pListMR[vEntryA].bits |= LE_TRANSFER_OK_B;
     else   // Unset
-      pListMR[vEntryA].bits &= ~TRANSFER_OK;
+      pListMR[vEntryA].bits &= ~LE_TRANSFER_OK_B;
     emit SetTransferOkV(vEntryA, B);
     return true;
   }
@@ -309,7 +309,7 @@ contract List is OwnedList, Math {
          && pListMR[frA].addedT > 0                 // frA exists
          && pListMR[toA].whiteT > 0                 // toA exists and is whitelisted
          && (pTransfersOkB                          // Transfers can be made                /- ok to transfer from frA
-          || (pListMR[frA].bits & TRANSFER_OK) > 0) // or they are allowed for this member  |
+          || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0) // or they are allowed for this member  |
          && pListMR[frA].picosBalance >= vPicos,    // frA has the picos available
             "Transfer not allowed");
     _;
@@ -377,7 +377,7 @@ contract List is OwnedList, Math {
   // Not whitelisted so that transfers from it cannot be done. Decrementing happens via Issue().
   // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract
   function CreateSaleContractEntry(uint256 vPicos) external IsTokenCaller returns (bool) {
-    require(pCreateEntry(pSaleA, TRANSFER_OK, 1)); // DbId of 1 assumed for Sale sale contract
+    require(pCreateEntry(pSaleA, LE_TRANSFER_OK_B, 1)); // DbId of 1 assumed for Sale sale contract
     pListMR[pSaleA].picosBalance = vPicos;
     pNumGrey--;  // No need for subMaxZero(pNumGrey, 1) here as the pCreateEntry() call has just incremented this
     return true;
@@ -387,7 +387,7 @@ contract List is OwnedList, Math {
   // -------------------------
   // Create a Seed Presale or Private Placement list entry, called from Hub.PresaleIssue()
   function CreatePresaleEntry(address vEntryA, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubCaller returns (bool) {
-    require(pCreateEntry(vEntryA, PRESALE, vDbId));
+    require(pCreateEntry(vEntryA, LE_PRESALE_B, vDbId));
     pListMR[vEntryA].addedT        =
     pListMR[vEntryA].firstContribT = vAddedT; // firstContribT assumed to be the same as addedT for presale entries
     if (vNumContribs > 1)
@@ -446,7 +446,7 @@ contract List is OwnedList, Math {
       // Unset or remove proxy
       if (pListMR[vEntryA].proxyA >= address(0)) {
         // Did have a proxy set
-        pListMR[vEntryA].bits &= ~HAS_PROXY; // rather than ^= HAS_PROXY in case the HAS_PROXY bit is wrongly not set
+        pListMR[vEntryA].bits &= ~LE_HAS_PROXY_B; // rather than ^= LE_HAS_PROXY_B in case the LE_HAS_PROXY_B bit is wrongly not set
         pNumProxies = subMaxZero(pNumProxies, 1);
       }
     }else{
@@ -455,7 +455,7 @@ contract List is OwnedList, Math {
         // Didn't previously have one set
         pNumProxies++;
       // else changing proxy
-      pListMR[vEntryA].bits |= HAS_PROXY;
+      pListMR[vEntryA].bits |= LE_HAS_PROXY_B;
     }
     pListMR[vEntryA].proxyA = vProxyA;
     emit SetProxyV(vEntryA, vProxyA);
@@ -468,7 +468,7 @@ contract List is OwnedList, Math {
   //                                                   Sale.Buy() also calls Escrow.Deposit()
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenCaller returns (bool) {
     uint8 typeN = EntryType(toA);
-    require(typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     R_List storage rsEntryR = pListMR[toA];
@@ -492,7 +492,7 @@ contract List is OwnedList, Math {
   //                Sale.Buy() also calls Grey.Deposit()
   function GreyDeposit(address toA, uint256 vWei) external IsSaleCaller returns (bool) {
     uint8 typeN = EntryType(toA);
-    require(typeN == ENTRY_GREY, 'Invalid list type for Grey deposit');
+    require(typeN == LE_TYPE_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
     if (rsEntryR.weiContributed == 0)
       rsEntryR.firstContribT = uint32(now);
@@ -532,24 +532,24 @@ contract List is OwnedList, Math {
     R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     uint8 typeN = EntryType(toA);
-    if (vRefundBit >= REFUND_GREY_SOFT_CAP_MISS) {
-      require(typeN == ENTRY_GREY, "Invalid list type for Grey Refund");
+    if (vRefundBit >= LE_REFUND_GREY_S_CAP_MISS_B) {
+      require(typeN == LE_TYPE_GREY, "Invalid list type for Grey Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Grey refund call");
     }else{
-      require(typeN == ENTRY_PRESALE || typeN >= ENTRY_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+      require(typeN == LE_TYPE_PRESALE || typeN >= LE_TYPE_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
       refundPicos = rsEntryR.picosBalance;
       require(refundPicos > 0 && vRefundWei > 0, "Invalid List Escrow refund call");
       pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos);
       rsEntryR.picosBalance   = 0;
     }
     rsEntryR.refundT = uint32(now);
-    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> ENTRY_REFUNDED after this
-    rsEntryR.bits |= vRefundBit;                            // REFUND_ESCROW_SOFT_CAP_MISS Refund of all Escrow funds due to soft cap not being reached
-    emit RefundV(toA, refundPicos, vRefundWei, vRefundBit); // REFUND_ESCROW_TERMINATION   Refund of remaining Escrow funds proportionately following a yes vote for project termination
-    pNumRefunded++;                                         // REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
-  }                                                         // REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
-                                                            // REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-                                                            // REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
+    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> LE_TYPE_REFUNDED after this
+    rsEntryR.bits |= vRefundBit;                            // LE_REFUND_ESCROW_S_CAP_MISS_B Refund of all Escrow funds due to soft cap not being reached
+    emit RefundV(toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B   Refund of remaining Escrow funds proportionately following a yes vote for project termination
+    pNumRefunded++;                                         // LE_REFUND_ESCROW_ONCE_OFF_B      Once off Escrow refund for whatever reason including downgrade from whitelisted
+  }                                                         // LE_REFUND_GREY_S_CAP_MISS_B   Refund of Grey escrow funds due to soft cap not being reached
+                                                            // LE_REFUND_GREY_SALE_CLOSE_B      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+                                                            // LE_REFUND_GREY_ONCE_OFF_B        Once off Admin/Manual Grey escrow refund for whatever reason
   // List.Burn()
   // -----------
   // For use when transferring issued PIOEs to PIOs
@@ -560,7 +560,7 @@ contract List is OwnedList, Math {
   function Burn() external IsTokenCaller {
     R_List storage rsEntryR = pListMR[tx.origin];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
-    rsEntryR.bits |= BURNT;
+    rsEntryR.bits |= LE_BURNT_B;
     rsEntryR.picosBalance = 0;
     pNumBurnt++;
   }
@@ -571,7 +571,7 @@ contract List is OwnedList, Math {
   // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsTokenCaller {
-    require(pListMR[pSaleA].bits & ENTRY_CONTRACT > 0, "Not a contract list entry");
+    require(pListMR[pSaleA].bits & LE_TYPE_CONTRACT > 0, "Not a contract list entry");
     pListMR[pSaleA].picosBalance = subMaxZero(pListMR[pSaleA].picosBalance, vPicos);
   }
 

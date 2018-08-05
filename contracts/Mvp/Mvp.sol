@@ -24,8 +24,8 @@ State changing external methods
 
 Pause/Resume
 ============
-OpMan.PauseContract(MVP_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(MVP_LAUNCH_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(MVP_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(MVP_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Mvp Fallback function
 =====================
@@ -61,8 +61,8 @@ contract Mvp is OwnedByOpManAndHub {
   // Called from the deploy script to initialise the Mvp contract
   function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pTokenC = I_TokenMvp(opManC.ContractXA(TOKEN_X));
-    pListC  =  I_ListMvp(opManC.ContractXA(LIST_X));
+    pTokenC = I_TokenMvp(opManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC  =  I_ListMvp(opManC.ContractXA(LIST_CONTRACT_X));
   //iPausedB       =         // leave inactive
     iInitialisingB = false;
   }

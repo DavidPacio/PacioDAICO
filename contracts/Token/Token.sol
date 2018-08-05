@@ -49,8 +49,8 @@ Token.Destroy(uint256 vPicos) external IsMvpCaller
 
 Pause/Resume
 ============
-OpMan.PauseContract(TOKEN_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(TOKEN_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(TOKEN_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(TOKEN_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Fallback function
 =================
@@ -138,7 +138,7 @@ contract Token is EIP20Token, Math {
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
   function Initialise() external IsInitialising {
     iPausedB = false; // make active
-    iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_X)); // The List contract
+    iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract
     pSaleA   = iOwnersYA[SALE_OWNER_X];
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted

@@ -12,38 +12,26 @@ djh??
 • fns for replacing contracts - all of them
 • add manual account creation
 • Hub.Destroy() ?
-• Add REFUND_ESCROW_ONCE_OF refund call to Downgrade
 • Add Ids for Issues and Deposits as for Refunds and Burns
   • Escrow
   . Grey
   . Token
 • Provide an emergency reset of the pRefundInProgressB bools
 
-Initialisation/Setup Functions
-==============================
-
-View Methods
-============
-
-State changing external methods
-===============================
-
 Pause/Resume
 ============
-OpMan.PauseContract(HUB_X) IsHubCallerOrConfirmedSigner
-OpMan.ResumeContractMO(HUB_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(HUB_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.ResumeContractMO(HUB_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Hub Fallback function
 =====================
 Sending Ether is not allowed
 
-Events
-======
 
 */
 
 pragma solidity ^0.4.24;
-pragma experimental "v0.5.0";
+//pragma experimental "v0.5.0";
 
 import "../lib/OwnedHub.sol";
 import "../lib/Math.sol";
@@ -58,6 +46,18 @@ import "../Escrow/I_GreyHub.sol";
 //import "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
+  enum NState {
+    None,              // 0 Nothing started yet
+    PriorToStart,      // 1 Open for registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
+    SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
+    TerminateRefund,   // 2 A VoteEnd vote has voted to end the project, contributions being refunded
+    EscrowClosed,      // 3 Escrow is empty as a result of refunds or withdrawals emptying the pot
+    SaleClosed,        // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
+    PreSoftCap,        // 5 Sale running prior to soft cap          /- deposits ok
+    SoftCapReached     // 6 Soft cap reached, initial draw allowed  |
+  }
+  NEscrowState private pStateN;
+
   string  public name = "Pacio DAICO Hub"; // contract name
   I_OpMan     private pOpManC;   // the OpMan contract
   I_Sale      private pSaleC;    // the Sale contract
@@ -109,10 +109,10 @@ contract Hub is OwnedHub, Math {
   function Initialise() external IsInitialising {
     pOpManC  = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pSaleC   =  I_Sale(iOwnersYA[SALE_OWNER_X]);
-    pTokenC  =  I_TokenHub(pOpManC.ContractXA(TOKEN_X));
-    pListC   =   I_ListHub(pOpManC.ContractXA(LIST_X));
-    pEscrowC = I_EscrowHub(pOpManC.ContractXA(ESCROW_X));
-    pGreyC   =   I_GreyHub(pOpManC.ContractXA(GREY_X));
+    pTokenC  =  I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC   =   I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
+    pEscrowC = I_EscrowHub(pOpManC.ContractXA(ESCROW_CONTRACT_X));
+    pGreyC   =   I_GreyHub(pOpManC.ContractXA(GREY_CONTRACT_X));
     emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
     iPausedB       =        // make active
     iInitialisingB = false;
@@ -147,7 +147,7 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
   // Can be called manually by Admin as a managed op if necessary.
   function SoftCapReachedMO() external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_X)));
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_MO_X)));
       pSaleC.SoftCapReached();
    //pTokenC.SoftCapReached();
     pEscrowC.SoftCapReached();
@@ -161,7 +161,7 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
   // Can be called manually by Admin to end the sale prematurely as a managed op if necessary.
   function EndSaleMO() external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_X)));
+    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X)));
     pSaleC.EndSale();
     pTokenC.EndSale();
     pEscrowC.EndSale();
@@ -176,10 +176,10 @@ contract Hub is OwnedHub, Math {
   // After this only refunds and view functions should work. No transfers. No Deposits.
   function Terminate() external IsVoteEndCaller {
     pEscrowC.Terminate(pTokenC.PicosIssued()); // Sets Escrow state to TerminateRefund and records pTokenC.PicosIssued() passed to it for use in the proportional refund calcs.
-    pOpManC.PauseContract(SALE_X); // IsHubCallerOrConfirmedSigner
-    pOpManC.PauseContract(TOKEN_X);
-    pOpManC.PauseContract(ESCROW_X);
-    pOpManC.PauseContract(GREY_X);
+    pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubCallerOrConfirmedSigner
+    pOpManC.PauseContract(TOKEN_CONTRACT_X);
+    pOpManC.PauseContract(ESCROW_CONTRACT_X);
+    pOpManC.PauseContract(GREY_CONTRACT_X);
     pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
 
@@ -200,12 +200,12 @@ contract Hub is OwnedHub, Math {
   // Hub.pRefund()
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
-  // Cases: REFUND_ESCROW_SOFT_CAP_MISS Refund of all Escrow funds due to soft cap not being reached
-  //        REFUND_ESCROW_TERMINATION   Refund of remaining Escrow funds proportionately following a yes vote for project termination
-  //        REFUND_ESCROW_ONCE_OFF      Once off Escrow refund for whatever reason including downgrade from whitelisted
-  //        REFUND_GREY_SOFT_CAP_MISS   Refund of Grey escrow funds due to soft cap not being reached
-  //        REFUND_GREY_SALE_CLOSE      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-  //        REFUND_GREY_ONCE_OFF        Once off Admin/Manual Grey escrow refund for whatever reason
+  // Cases: LE_REFUND_ESCROW_S_CAP_MISS_B Refund of all Escrow funds due to soft cap not being reached
+  //        LE_REFUND_ESCROW_TERMINATION_B   Refund of remaining Escrow funds proportionately following a yes vote for project termination
+  //        LE_REFUND_ESCROW_ONCE_OFF_B      Once off Escrow refund for whatever reason including downgrade from whitelisted
+  //        LE_REFUND_GREY_S_CAP_MISS_B   Refund of Grey escrow funds due to soft cap not being reached
+  //        LE_REFUND_GREY_SALE_CLOSE_B      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+  //        LE_REFUND_GREY_ONCE_OFF_B        Once off Admin/Manual Grey escrow refund for whatever reason
   // Calls: List.EntryType()                - for type info
   //        Escrow/Grey.RefundInfo()        - for refund info: amount and bit for one of the above cases
   //        Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
@@ -217,18 +217,18 @@ contract Hub is OwnedHub, Math {
     uint32  refundBit;
     uint8   typeN = pListC.EntryType(toA);
     pRefundId++;
-    if (typeN == ENTRY_GREY) {
+    if (typeN == LE_TYPE_GREY) {
       (refundWei, refundBit) = pGreyC.RefundInfo(toA, pRefundId);
       if (vOnceOffB)
-        refundBit = REFUND_GREY_ONCE_OFF;
-    }else if (typeN >= ENTRY_WHITE || typeN == ENTRY_PRESALE) {
+        refundBit = LE_REFUND_GREY_ONCE_OFF_B;
+    }else if (typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE) {
       (refundWei, refundBit) = pEscrowC.RefundInfo(toA, pRefundId);
       if (vOnceOffB)
-        refundBit = REFUND_ESCROW_ONCE_OFF;
+        refundBit = LE_REFUND_ESCROW_ONCE_OFF_B;
     }
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(toA, refundWei, refundBit); // IsHubCaller IsActive
-    if (typeN == ENTRY_GREY)
+    if (typeN == LE_TYPE_GREY)
       pGreyC.Refund(toA, refundWei, pRefundId);
     else
       pEscrowC.Refund(toA, refundWei, pRefundId);
@@ -353,7 +353,7 @@ djh??
 
   // Hub.SetTransferOk()
   // -------------------
-  // To set TRANSFER_OK bit of entry vEntryA on if B is true, or unset the bit if B is false
+  // To set LE_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
   function SetTransferOk(address vEntryA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetTransferOk(vEntryA, B);
   }
