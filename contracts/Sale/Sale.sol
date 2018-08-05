@@ -8,7 +8,7 @@ Owners:
 2 Hub
 3 Admin
 
-Calls: OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
+Calls: OpMan; Hub -> Token,List,Escrow,Pescrow,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Pescrow
 
 Pause/Resume
 ============
@@ -30,7 +30,7 @@ import "../Hub/I_Hub.sol";
 import "../List/I_ListSale.sol";
 import "../Token/I_TokenSale.sol";
 import "../Escrow/I_EscrowSale.sol";
-import "../Escrow/I_GreySale.sol";
+import "../Escrow/I_PescrowSale.sol";
 
 // Tranches
 // 1. 32 million PIOEs for >=  50 ETH             at 7.50 Cents
@@ -72,7 +72,7 @@ contract Sale is OwnedSale, Math {
   I_ListSale   private pListC;   // the List contract        -  read only use so List does not need to have Sale as an owner
   I_TokenSale  private pTokenC;  // the Token contract       /- make state changing calls so need to have Sale as an owner
   I_EscrowSale private pEscrowC; // the Escrow contract      |
-  I_GreySale   private pGreyC;   // the Grey escrow contract |
+  I_PescrowSale   private pPescrowC;   // the Prepurchase escrow contract |
                                  // Don't need I_Hub pHubC as iOwnersYA[HUB_OWNER_X] is the Hub contract
 
   // No constructor
@@ -173,9 +173,9 @@ contract Sale is OwnedSale, Math {
   function EscrowWei() external view returns (uint256) {
     return pEscrowC.EscrowWei();
   }
-  // Sale.GreyEscrowWei()
-  function GreyEscrowWei() external view returns (uint256) {
-    return pGreyC.EscrowWei();
+  // Sale.PrepurchaseEscrowWei()
+  function PrepurchaseEscrowWei() external view returns (uint256) {
+    return pPescrowC.EscrowWei();
   }
   // Sale.UsdEtherPrice()
   function UsdEtherPrice() external view returns (uint256) {
@@ -200,7 +200,7 @@ contract Sale is OwnedSale, Math {
 
   // Events
   // ======
-  event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address GreyContract);
+  event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address PescrowContract);
   event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
                             uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
   event SetUsdHardCapBV(bool HardCapMethodB);
@@ -208,7 +208,7 @@ contract Sale is OwnedSale, Math {
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event StartSaleV(uint32 StartTime, uint32 EndTime);
-  event GreyDepositV(address indexed Contributor, uint256 Wei);
+  event PrepurchaseDepositV(address indexed Contributor, uint256 Wei);
   event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
   event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
   event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice, bool UsdHardCapB);
@@ -230,8 +230,8 @@ contract Sale is OwnedSale, Math {
     pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
     pListC   = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
     pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
-    pGreyC   = I_GreySale(opManC.ContractXA(GREY_CONTRACT_X));
-    emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
+    pPescrowC   = I_PescrowSale(opManC.ContractXA(PESCROW_CONTRACT_X));
+    emit InitialiseV(pTokenC, pListC, pEscrowC, pPescrowC);
   //iInitialisingB = false; No. Leave in initialising state
   }
 
@@ -334,11 +334,10 @@ contract Sale is OwnedSale, Math {
   // Main function for funds being sent to the DAICO.
   // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
   // Cases:
-  // - sending when not yet white listed -> grey whether sale open or not
-  // - sending when white listed but sale is not yet open -> Grey
+  // - sending when not yet white listed -> prepurchase whether sale open or not
+  // - sending when white listed but sale is not yet open -> prepurchase
   // - sending when white listed but sale is open -> Escrow
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
-    require(now >= pStartT, "Sale not open yet");  // sale is running (in conjunction with the IsActive test) tho this call could trigger soft cap, hard cap, over time
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
     (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
@@ -353,9 +352,9 @@ contract Sale is OwnedSale, Math {
     // LE_TYPE_WHITE      7 Whitelisted with no picosBalance
     // LE_TYPE_MEMBER     8 Whitelisted with a picosBalance
     if (typeN == LE_TYPE_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
-      pListC.GreyDeposit(msg.sender, msg.value);   // updates the list entry
-      pGreyC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Grey escrow account
-      emit GreyDepositV(msg.sender, msg.value);
+      pListC.PrepurchaseDeposit(msg.sender, msg.value);   // updates the list entry
+      pPescrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Prepurchase escrow account
+      emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
     require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet white listed = ok to buy

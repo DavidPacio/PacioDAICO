@@ -5,19 +5,19 @@ The hub or management contract for the Pacio DAICO
 Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 
 Calls
-OpMan; Sale; Token; List; Escrow; Grey;
+OpMan; Sale; Token; List; Escrow; Pescrow;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
 • The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
 
 • fns for replacing contracts - all of them
-• Provide a way for grey -> escrow on whitelisting before sale opens and -> PIOs issued
+• Provide a way for Pescrow -> escrow on whitelisting before sale opens and -> PIOs issued
 • add manual account creation
 • Hub.Destroy() ?
 • Add Ids for Issues and Deposits as for Refunds and Burns
   • Escrow
-  . Grey
+  . Pescrow
   . Token
 • Provide an emergency reset of the pRefundInProgressB bools
 
@@ -43,22 +43,22 @@ import "../Sale/I_Sale.sol";
 import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
 import "../Escrow/I_EscrowHub.sol";
-import "../Escrow/I_GreyHub.sol";
+import "../Escrow/I_PescrowHub.sol";
 //import "../Vote/I_VoteTap.sol";
 //import "../Vote/I_VoteEnd.sol";
 //import "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
-  string  public name = "Pacio DAICO Hub"; // contract name
-  uint32      private pState;    // DAICO state using the STATE_ bits. Passed through to Sale, Token, Escrow, and Grey on change
-  I_OpMan     private pOpManC;   // the OpMan contract
-  I_Sale      private pSaleC;    // the Sale contract
-  I_TokenHub  private pTokenC;   // the Token contract
-  I_ListHub   private pListC;    // the List contract
-  I_EscrowHub private pEscrowC;  // the Escrow contract
-  I_GreyHub   private pGreyC;    // the Grey escrow contract
-  bool        private pRefundInProgressB; // to prevent re-entrant refund calls
-  uint256     private pRefundId; // Refund Id
+  string public name = "Pacio DAICO Hub"; // contract name
+  uint32       private pState;     // DAICO state using the STATE_ bits. Passed through to Sale, Token, Escrow, and Pescrow on change
+  I_OpMan      private pOpManC;    // the OpMan contract
+  I_Sale       private pSaleC;     // the Sale contract
+  I_TokenHub   private pTokenC;    // the Token contract
+  I_ListHub    private pListC;     // the List contract
+  I_EscrowHub  private pEscrowC;   // the Escrow contract
+  I_PescrowHub private pPescrowC;  // the Prepurchase escrow contract
+  bool private pRefundInProgressB; // to prevent re-entrant refund calls
+  uint256 private pRefundId;       // Refund Id
 
   // No Constructor
   // ==============
@@ -86,7 +86,7 @@ contract Hub is OwnedHub, Math {
   event SoftCapReachedV();
   event EndSaleV();
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
-  event GreyRefundingCompleteV();
+  event PescrowRefundingCompleteV();
   event EscrowRefundingCompleteV();
 
   // Initialisation/Setup Methods
@@ -105,12 +105,12 @@ contract Hub is OwnedHub, Math {
   // ----------------
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
-    pOpManC  = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pSaleC   =  I_Sale(iOwnersYA[SALE_OWNER_X]);
-    pTokenC  =  I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
-    pListC   =   I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
-    pEscrowC = I_EscrowHub(pOpManC.ContractXA(ESCROW_CONTRACT_X));
-    pGreyC   =   I_GreyHub(pOpManC.ContractXA(GREY_CONTRACT_X));
+    pOpManC   = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    pSaleC    =  I_Sale(iOwnersYA[SALE_OWNER_X]);
+    pTokenC   =  I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC    =   I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
+    pEscrowC  = I_EscrowHub(pOpManC.ContractXA(ESCROW_CONTRACT_X));
+    pPescrowC =   I_PescrowHub(pOpManC.ContractXA(PESCROW_CONTRACT_X));
     emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
     iPausedB       =        // make active
     iInitialisingB = false;
@@ -128,7 +128,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSale()
   // ---------------
-  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Grey escrow deposits, and white listing but wo PIOs being issued until tthat is done after the sale opens
+  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until tthat is done after the sale opens
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
@@ -150,7 +150,7 @@ contract Hub is OwnedHub, Math {
       pTokenC.StateChange(vState);
       pListC.StateChange(vState);
       pEscrowC.StateChange(vState);
-      pGreyC.StateChange(vState);
+      pPescrowC.StateChange(vState);
     //pVoteTapC.StateChange(vState); /- These can get state from Hub
     //pVoteEndC.StateChange(vState); |
       emit StateChangeV(pState, vState);
@@ -191,7 +191,7 @@ contract Hub is OwnedHub, Math {
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pOpManC.PauseContract(TOKEN_CONTRACT_X);
     pOpManC.PauseContract(ESCROW_CONTRACT_X);
-    pOpManC.PauseContract(GREY_CONTRACT_X);
+    pOpManC.PauseContract(PESCROW_CONTRACT_X);
     pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
 
@@ -213,9 +213,9 @@ contract Hub is OwnedHub, Math {
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
   // Calls: List.EntryType()                - for type info
-  //        Escrow/Grey.RefundInfo()        - for refund info: amount and bit for one of the above cases
+  //        Escrow/Pescrow.RefundInfo()        - for refund info: amount and bit for one of the above cases
   //        Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
-  //        Escrow/Grey.Refund()            - to do the actual refund
+  //        Escrow/Pescrow.Refund()            - to do the actual refund
   function pRefund(address toA, bool vOnceOffB) private returns (bool) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
@@ -225,15 +225,15 @@ contract Hub is OwnedHub, Math {
     uint8   typeN = pListC.EntryType(toA);
     pRefundId++;
     if (typeN == LE_TYPE_GREY) {
-      // Grey Refund
+      // Pescrow Refund
       if (vOnceOffB)
-        refundBit = LE_REFUND_GREY_ONCE_OFF_B;
+        refundBit = LE_REFUND_PESCROW_ONCE_OFF_B;
       else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
-        refundBit = LE_REFUND_GREY_S_CAP_MISS_B;
+        refundBit = LE_REFUND_PESCROW_S_CAP_MISS_B;
       else if (pState & STATE_CLOSED_COMBO_B > 0)
-        refundBit = LE_REFUND_GREY_SALE_CLOSE_B;
+        refundBit = LE_REFUND_PESCROW_SALE_CLOSE_B;
       if (refundBit > 0)
-        refundWei = Min(pListC.WeiContributed(toA), pGreyC.EscrowWei());
+        refundWei = Min(pListC.WeiContributed(toA), pPescrowC.EscrowWei());
     }else if (typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE) {
       // Escrow Refund
       (refundPicos, refundWei, refundBit) = pEscrowC.RefundInfo(pRefundId, toA);
@@ -243,10 +243,10 @@ contract Hub is OwnedHub, Math {
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
     if (typeN == LE_TYPE_GREY) {
-      if (!pGreyC.Refund(pRefundId, toA, refundWei, refundBit)) {
-        if (pGreyC.EscrowWei() == 0) {
-          pSetState(pState |= STATE_GREY_EMPTY_B);
-          emit GreyRefundingCompleteV();
+      if (!pPescrowC.Refund(pRefundId, toA, refundWei, refundBit)) {
+        if (pPescrowC.EscrowWei() == 0) {
+          pSetState(pState |= STATE_PESCROW_EMPTY_B);
+          emit PescrowRefundingCompleteV();
         }
       }
     }else{

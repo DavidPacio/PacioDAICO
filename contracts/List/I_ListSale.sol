@@ -8,6 +8,6 @@ pragma solidity ^0.4.24;
 
 interface I_ListSale {
   function BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN);
-  function GreyDeposit(address toA, uint256 vWei) external returns (bool);
+  function PrepurchaseDeposit(address toA, uint256 vWei) external returns (bool);
 }
 // End I_ListSale interface

@@ -28,7 +28,7 @@ address proxyA;        // Address of proxy for voting purposes
 uint32  bits;          // Bit settings
 uint32  addedT;        // Datetime when added
 uint32  whiteT;        // Datetime when whitelisted
-uint32  firstContribT; // Datetime when first contribution made. Can be a grey contribution
+uint32  firstContribT; // Datetime when first contribution made. Can be a prepurchase contribution
 uint32  refundT;       // Datetime when refunded
 uint32  downT;         // Datetime when downgraded
 uint32  bonusCentiPc,  // Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
@@ -72,7 +72,7 @@ contract List is OwnedList, Math {
     uint32  addedT;        //  4 0 Datetime when added
     uint32  whiteT;        //  4 0 Datetime when whitelisted
     address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
-    uint32  firstContribT; //  4 1 Datetime when first contribution made. Can be a grey contribution.
+    uint32  firstContribT; //  4 1 Datetime when first contribution made. Can be a prepurchase contribution.
     uint32  refundT;       //  4 1 Datetime when refunded
     uint32  downT;         //  4 1 Datetime when downgraded
     address proxyA;        // 20 2 Address of proxy for voting purposes
@@ -239,7 +239,7 @@ contract List is OwnedList, Math {
   event SetTransferOkV(address indexed Entry, bool On);
   event IssueV(address indexed To, uint256 Picos, uint256 Wei);
   event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
-  event GreyDepositV(address indexed To, uint256 Wei);
+  event PrepurchaseDepositV(address indexed To, uint256 Wei);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -480,11 +480,11 @@ contract List is OwnedList, Math {
     return true;
   }
 
-  // List.GreyDeposit()
-  // ------------------
-  // Is called from Sale.Buy() for grey funds being deposited
-  //                Sale.Buy() also calls Grey.Deposit()
-  function GreyDeposit(address toA, uint256 vWei) external IsSaleContractCaller returns (bool) {
+  // List.PrepurchaseDeposit()
+  // -------------------------
+  // Is called from Sale.Buy() for prepurchase funds being deposited
+  //                Sale.Buy() also calls Pescrow.Deposit()
+  function PrepurchaseDeposit(address toA, uint256 vWei) external IsSaleContractCaller returns (bool) {
     uint8 typeN = EntryType(toA);
     require(typeN == LE_TYPE_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
@@ -492,7 +492,7 @@ contract List is OwnedList, Math {
       rsEntryR.firstContribT = uint32(now);
     rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
-    emit GreyDepositV(toA, vWei);
+    emit PrepurchaseDepositV(toA, vWei);
     return true;
   }
 
@@ -526,7 +526,7 @@ contract List is OwnedList, Math {
     R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     uint8 typeN = EntryType(toA);
-    if (vRefundBit >= LE_REFUND_GREY_S_CAP_MISS_B) {
+    if (vRefundBit >= LE_REFUND_PESCROW_S_CAP_MISS_B) {
       require(typeN == LE_TYPE_GREY, "Invalid list type for Grey Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Grey refund call");
     }else{
@@ -541,9 +541,9 @@ contract List is OwnedList, Math {
     rsEntryR.bits |= vRefundBit;                                       // LE_REFUND_ESCROW_S_CAP_MISS_B  Refund of all Escrow funds due to soft cap not being reached
     emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B Refund of remaining Escrow funds proportionately following a yes vote for project termination
     pNumRefunded++;                                                    // LE_REFUND_ESCROW_ONCE_OFF_B    Once off Escrow refund for whatever reason including downgrade from whitelisted
-  }                                                                    // LE_REFUND_GREY_S_CAP_MISS_B    Refund of Grey escrow funds due to soft cap not being reached
-                                                                       // LE_REFUND_GREY_SALE_CLOSE_B    Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-                                                                       // LE_REFUND_GREY_ONCE_OFF_B      Once off Admin/Manual Grey escrow refund for whatever reason
+  }                                                                    // LE_REFUND_PESCROW_S_CAP_MISS_B Refund of Prepurchase escrow funds due to soft cap not being reached
+                                                                       // LE_REFUND_PESCROW_SALE_CLOSE_B Refund of Prepurchase escrow funds that have not been white listed by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
+                                                                       // LE_REFUND_PESCROW_ONCE_OFF_B   Once off Admin/Manual Prepurchase escrow refund for whatever reason
   // List.Burn()
   // -----------
   // For use when transferring issued PIOEs to PIOs

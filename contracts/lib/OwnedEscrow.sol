@@ -1,6 +1,6 @@
 // lib\OwnedEscrow.sol
 //
-// Version of Owned for Escrow and Grey which is owned by Deployer, OpMan, Hub, Sale, Admin
+// Version of Owned for Escrow and Pescrow which is owned by Deployer, OpMan, Hub, Sale, Admin
 // Is pausable
 
 pragma solidity ^0.4.24;

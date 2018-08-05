@@ -135,7 +135,7 @@ contract OpMan is OwnedOpMan {
   // Can only be called once.
   //
   // Arguments:
-  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Pescrow, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
   function Initialise(address[] vContractsYA, address[] vSignersYA) external IsInitialising {
     // Add initial contracts

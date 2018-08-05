@@ -1,30 +1,24 @@
-/*  \Escrow\Grey.sol started 2018.07.11
+/*  \Escrow\Pescrow.sol started 2018.07.11
 
-Escrow management of funds from grey listed participants in the Pacio DAICO
+Escrow management of prepurchase funds in the Pacio DAICO
+Cases:
+• sending when not yet white listed -> prepurchase whether sale open or not
+• sending when white listed but sale is not yet open -> prepurchase
 
 Owned by Deployer, OpMan, Hub, Sale
 
 djh??
 • Different owned wo Admin?
-• Do issue on white listing with transfer of Eth to Escrow
-
-View Methods
-============
-
-State changing methods
-======================
+• Do issue on white listing with transfer of Eth to Escrow when sale is open
 
 Pause/Resume
 ============
-OpMan.PauseContract(GREY_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
-OpMan.ResumeContractMO(GREY_CONTRACT_X) IsConfirmedSigner which is a managed op
+OpMan.PauseContract(PESCROW_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
+OpMan.ResumeContractMO(PESCROW_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 List.Fallback function
 ======================
 No sending ether to this contract!
-
-Events
-=====
 
 */
 
@@ -35,10 +29,10 @@ import "../lib/Math.sol";
 import "../OpMan/I_OpMan.sol";
 import "../List/I_ListEscrow.sol";
 
-contract Grey is OwnedEscrow, Math {
-  string  public name = "Pacio DAICO Grey List Escrow";
+contract Pescrow is OwnedEscrow, Math {
+  string  public name = "Pacio DAICO Prepurchase Escrow";
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint256 private pTotalDepositedWei; // Total wei deposited in Grey escrow before any white list transfers or refunds.
+  uint256 private pTotalDepositedWei; // Total wei deposited in Prepurchase escrow before any white list transfers or refunds.
   uint256 private pDepositId;    // Deposit Id
   uint256 private pWhitelistId;  // Whitelisting transfer Id
   uint256 private pRefundId;     // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
@@ -46,27 +40,27 @@ contract Grey is OwnedEscrow, Math {
 
   // View Methods
   // ============
-  // Grey.EscrowWei() -- Echoed in Sale View Methods
+  // Pescrow.EscrowWei() -- Echoed in Sale View Methods
   function EscrowWei() external view returns (uint256) {
     return address(this).balance;
   }
-  // Grey.TotalDepositedWei() Total wei deposited in Grey escrow before any white list transfers or refunds.
+  // Pescrow.TotalDepositedWei() Total wei deposited in Prepurchase escrow before any white list transfers or refunds.
   function TotalDepositedWei() external view returns (uint256) {
     return pTotalDepositedWei;
   }
-// Grey.State()  Should be the same as Hub.State()
+  // Pescrow.State()  Should be the same as Hub.State()
   function State() external view returns (uint32) {
     return pState;
   }
-  // Grey.DepositId()
+  // Pescrow.DepositId()
   function DepositId() external view returns (uint256) {
     return pDepositId;
   }
-  // Grey.WhitelistId()
+  // Pescrow.WhitelistId()
   function WhitelistId() external view returns (uint256) {
     return pWhitelistId;
   }
-  // Grey.RefundId()
+  // Pescrow.RefundId()
   function RefundId() external view returns (uint256) {
     return pRefundId;
   }
@@ -82,22 +76,22 @@ contract Grey is OwnedEscrow, Math {
   // ==============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
   // Owners must first be set by deploy script calls:
-  //   Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-  //   Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Pescrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+  //   Pescrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Pescrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 
-  // Grey.Initialise()
-  // -----------------
-  // Called from the deploy script to initialise the Grey contract
+  // Pescrow.Initialise()
+  // --------------------
+  // Called from the deploy script to initialise the Pescrow contract
   function Initialise() external IsInitialising {
     pListC  = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
-    iPausedB       =        // make Grey Escrow active
+    iPausedB       =        // make Prepurchase escrow active
     iInitialisingB = false;
     emit InitialiseV();
   }
 
-  // Grey.StateChange()
-  // ------------------
+  // Pescrow.StateChange()
+  // ---------------------
   // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
   function StateChange(uint32 vState) external IsHubContractCaller {
     emit StateChangeV(pState, vState);
@@ -107,26 +101,26 @@ contract Grey is OwnedEscrow, Math {
   // State changing methods
   // ======================
 
-  // Grey.Deposit()
-  // --------------
-  // Called from Sale.Buy() for a grey list case to transfer the contribution for escrow keeping here
-  //                        after a List.GreyDeposit() call to update the list entry
+  // Pescrow.Deposit()
+  // -----------------
+  // Called from Sale.Buy() for a prepurchase to transfer the contribution for escrow keeping here
+  //                        after a List.PrepurchaseDeposit() call to update the list entry
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
-    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit to Grey Escrow not allowed");
+    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit to Prepurchase escrow not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
-  // Grey.Refund()
-  // -------------
+  // Pescrow.Refund()
+  // ----------------
   // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
   // Hub.pRefund() calls: List.EntryTyoe()                - for type info
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
-  //                      Grey.Refund()                   - to do the actual refund                                      ********
+  //                      Pescrow.Refund()                - to do the actual refund                                      ********
   // Returns false refunding is complete
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
     require(vRefundId == pRefundId   // same hub call check                                                                           // /- expected to be true if called as intended
-         && (vRefundBit == LE_REFUND_GREY_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUND_B > 0 || pState & STATE_CLOSED_COMBO_B > 0)); // |
+         && (vRefundBit == LE_REFUND_PESCROW_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUND_B > 0 || pState & STATE_CLOSED_COMBO_B > 0)); // |
     uint256 refundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
     toA.transfer(refundWei);
     emit RefundV(pRefundId, toA, refundWei, vRefundBit);
@@ -134,11 +128,11 @@ contract Grey is OwnedEscrow, Math {
   } // End Refund()
 
 
-  // Grey Fallback function
-  // ======================
+  // Pescrow Fallback function
+  // =========================
   // Not payable so trying to send ether will throw
   function() external {
-    revert(); // reject any attempt to access the Grey contract other than via the defined methods with their testing for valid access
+    revert(); // reject any attempt to access the Pescrow contract other than via the defined methods with their testing for valid access
   }
 
-} // End Grey contract
+} // End Pescrow contract

@@ -10,7 +10,7 @@ pragma solidity ^0.4.24;
 contract Constants {
   // State Bits for use with pState                            /- Bit and description
   // All zero                                        =           Nothing started yet
-  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =   1; // 0 Open for registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
+  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =   1; // 0 Open for registration, Prepurchase escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
   uint32 internal constant STATE_OPEN_B              =   2; // 1 Sale is open. Is unset on any of the closes
   uint32 internal constant STATE_S_CAP_REACHED_B     =   4; // 2 Soft cap reached -> initial draw
   uint32 internal constant STATE_CLOSED_H_CAP_B      =   8; // 3 Sale closed due to hitting hard cap
@@ -20,7 +20,7 @@ contract Constants {
   uint32 internal constant STATE_S_CAP_MISS_REFUND_B = 128; // 7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
   uint32 internal constant STATE_TERMINATE_REFUND_B  = 256; // 8 A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
   uint32 internal constant STATE_ESCROW_EMPTY_B      = 512; // 9 Escrow is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_GREY_EMPTY_B       = 1024; // A Grey escrow is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_PESCROW_EMPTY_B    = 1024; // A Prepurchase escrow is empty as a result of refunds or withdrawals emptying the pot
   // Combos for anding checks
   uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
   uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
@@ -33,7 +33,7 @@ contract Constants {
   uint256 internal constant TOKEN_CONTRACT_X    = 3;
   uint256 internal constant LIST_CONTRACT_X     = 4;
   uint256 internal constant ESCROW_CONTRACT_X   = 5;
-  uint256 internal constant GREY_CONTRACT_X     = 6;
+  uint256 internal constant PESCROW_CONTRACT_X  = 6;
   uint256 internal constant VOTE_TAP_CONTRACT_X = 7;
   uint256 internal constant VOTE_END_CONTRACT_X = 8;
   uint256 internal constant MVP_CONTRACT_X      = 9;
@@ -47,7 +47,7 @@ contract Constants {
   // Token     Deployer, OpMan, Hub,   Sale, Mvp
   // List      Deployer, OpMan, Hub,   Sale, Token
   // Escrow    Deployer, OpMan, Hub,   Sale, Admin
-  // Grey      Deployer, OpMan, Hub,   Sale
+  // Pescrow   Deployer, OpMan, Hub,   Sale
   // VoteTap   Deployer, OpMan, Hub
   // VoteEnd   Deployer, OpMan, Hub
   // Mvp       Deployer, OpMan, Hub
@@ -93,9 +93,9 @@ contract Constants {
   uint32 internal constant LE_REFUND_ESCROW_S_CAP_MISS_B  =  16; // 4 Refund of all Escrow funds due to soft cap not being reached
   uint32 internal constant LE_REFUND_ESCROW_TERMINATION_B =  32; // 5 Refund of remaining Escrow funds proportionately following a yes vote for project termination
   uint32 internal constant LE_REFUND_ESCROW_ONCE_OFF_B    =  64; // 6 Once off Escrow refund for whatever reason including downgrade from whitelisted
-  uint32 internal constant LE_REFUND_GREY_S_CAP_MISS_B    = 128; // 7 Refund of Grey escrow funds due to soft cap not being reached
-  uint32 internal constant LE_REFUND_GREY_SALE_CLOSE_B    = 256; // 8 Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-  uint32 internal constant LE_REFUND_GREY_ONCE_OFF_B      = 512; // 9 Once off Admin/Manual Grey escrow refund for whatever reason
+  uint32 internal constant LE_REFUND_PESCROW_S_CAP_MISS_B = 128; // 7 Refund of Prepurchase escrow funds due to soft cap not being reached
+  uint32 internal constant LE_REFUND_PESCROW_SALE_CLOSE_B = 256; // 8 Refund of Prepurchase escrow funds that have not been white listed by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
+  uint32 internal constant LE_REFUND_PESCROW_ONCE_OFF_B   = 512; // 9 Once off Admin/Manual Prepurchase escrow refund for whatever reason
 
   // List Browsing actions
   uint8 internal constant BROWSE_FIRST = 1;
