@@ -8,8 +8,8 @@ pragma solidity ^0.4.24;
 
 interface I_GreyHub {
   function EscrowWei() external view returns (uint256);
-  function EndSale() external;
-  function RefundInfo(address accountA, uint256 vRefundId) external returns (uint256 refundWei, uint32 refundBit);
-  function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external returns (bool);
+  function StateChange(uint32 vState) external;
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei) external returns (bool);
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
 }
 // End I_GreyHub interface

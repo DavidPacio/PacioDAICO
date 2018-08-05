@@ -8,7 +8,8 @@ pragma solidity ^0.4.24;
 
 interface I_EscrowHub {
   function EscrowWei() external view returns (uint256);
-  function RefundInfo(address accountA, uint256 vRefundId) external returns (uint256 refundPicos, uint256 refundWei, uint32 refundBit);
-  function Refund(address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 refundBit, uint256 vRefundId) external returns (bool);
+  function StateChange(uint32 vState) external;
+  function RefundInfo(uint256 vRefundId, address accountA) external returns (uint256 refundPicos, uint256 refundWei, uint32 refundBit);
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 refundBit) external returns (bool);
 }
 // End I_EscrowHub interface

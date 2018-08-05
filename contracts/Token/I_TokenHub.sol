@@ -9,7 +9,7 @@ pragma solidity ^0.4.24;
 interface I_TokenHub {
   function StartSale() external;
   function EndSale() external;
-  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
 }
 // End I_TokenHub interface
 

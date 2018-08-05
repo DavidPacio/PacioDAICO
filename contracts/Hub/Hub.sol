@@ -10,6 +10,7 @@ VoteTap; VoteEnd; Mvp djh??
 
 djh??
 • fns for replacing contracts - all of them
+• Provide a way for grey -> escrow on whitelisting before sale opens and -> PIOs issued
 • add manual account creation
 • Hub.Destroy() ?
 • Add Ids for Issues and Deposits as for Refunds and Burns
@@ -83,6 +84,8 @@ contract Hub is OwnedHub, Math {
   event SoftCapReachedV();
   event EndSaleV();
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
+  event GreyRefundingCompleteV();
+  event EscrowRefundingCompleteV();
 
   // Initialisation/Setup Methods
   // ============================
@@ -123,19 +126,14 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSale()
   // ---------------
-  // To be called manually by Admin to start the sale going. Can be called well before start time.
+  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
-    if (pState == 0)
-      pSetState(STATE_PRIOR_TO_OPEN_B);      // Open for registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
-    if (pState & STATE_CLOSED_COMBO_B > 0) { // Sale was closed
-      uint32 state = pState &= ~STATE_CLOSED_COMBO_B;
-      if (uint32(now) >= vStartT)
-        state |= STATE_OPEN_B;
-      pSetState(state);
-    }
+    // Could Have previous state settings = a restart
+    // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
+    pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) + (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
     pSaleC.StartSale(vStartT, vEndT);
     pTokenC.StartSale();
     pListC.StartSale();
@@ -150,8 +148,8 @@ contract Hub is OwnedHub, Math {
   function pSetState(uint32 vState) private {
     if (vState != pState) {
       pSaleC.StateChange(vState);
-      pTokenC.StateChange(vState);
-    //pListC.StateChange(vState);
+    //pTokenC.StateChange(vState);   djh??
+    //pListC.StateChange(vState);    djh??
       pEscrowC.StateChange(vState);
       pGreyC.StateChange(vState);
     //pVoteTapC.StateChange(vState); /- These can get state from Hub
@@ -163,15 +161,11 @@ contract Hub is OwnedHub, Math {
 
   // Hub.SoftCapReachedMO()
   // ----------------------
-  // Is called from Sale.SoftCapReachedLocal() on soft cap being reached
+  // Is called from Sale.pSoftCapReached() on soft cap being reached
   // Can be called manually by Admin as a managed op if necessary.
   function SoftCapReachedMO() external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_MO_X)));
-      pSaleC.SoftCapReached();
-   //pTokenC.SoftCapReached();
-   //pEscrowC.SoftCapReached(); No. Done via the StateChange() call
-      pListC.SoftCapReached();
-    // No SoftCapReached() for Grey, VoteTap, VoteEnd, Mvp
+    require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_MO_X)));
+    pSetState(pState |= STATE_S_CAP_REACHED_B);
     emit SoftCapReachedV();
   }
 
@@ -179,13 +173,12 @@ contract Hub is OwnedHub, Math {
   // ---------------
   // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
   // Can be called manually by Admin to end the sale prematurely as a managed op if necessary.
-  function EndSaleMO() external {
+  // djh?? state change and set manual bit
+  function EndSaleMO(uint32 vBit) external {
     require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X)));
-    pSaleC.EndSale();
-    pTokenC.EndSale();
-  //pEscrowC.EndSale(); Not needed with StateChange() call
-    pGreyC.EndSale();
-    // No EndSale() for List, VoteTap, VoteEnd, Mvp
+  //pSaleC.EndSale();
+    pTokenC.EndSale(); // djh?? Remove this
+    // No EndSale() for List, Escrow, Grey, VoteTap, VoteEnd, Mvp
     emit EndSaleV();
   }
 
@@ -219,12 +212,6 @@ contract Hub is OwnedHub, Math {
   // Hub.pRefund()
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
-  // Cases: LE_REFUND_ESCROW_S_CAP_MISS_B Refund of all Escrow funds due to soft cap not being reached
-  //        LE_REFUND_ESCROW_TERMINATION_B   Refund of remaining Escrow funds proportionately following a yes vote for project termination
-  //        LE_REFUND_ESCROW_ONCE_OFF_B      Once off Escrow refund for whatever reason including downgrade from whitelisted
-  //        LE_REFUND_GREY_S_CAP_MISS_B   Refund of Grey escrow funds due to soft cap not being reached
-  //        LE_REFUND_GREY_SALE_CLOSE_B      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-  //        LE_REFUND_GREY_ONCE_OFF_B        Once off Admin/Manual Grey escrow refund for whatever reason
   // Calls: List.EntryType()                - for type info
   //        Escrow/Grey.RefundInfo()        - for refund info: amount and bit for one of the above cases
   //        Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
@@ -232,40 +219,47 @@ contract Hub is OwnedHub, Math {
   function pRefund(address toA, bool vOnceOffB) private returns (bool) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
+    uint256 refundPicos;
     uint256 refundWei;
     uint32  refundBit;
     uint8   typeN = pListC.EntryType(toA);
     pRefundId++;
     if (typeN == LE_TYPE_GREY) {
-      (refundWei, refundBit) = pGreyC.RefundInfo(toA, pRefundId);
+      // Grey Refund
       if (vOnceOffB)
         refundBit = LE_REFUND_GREY_ONCE_OFF_B;
+      else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
+        refundBit = LE_REFUND_GREY_S_CAP_MISS_B;
+      else if (pState & STATE_CLOSED_COMBO_B > 0)
+        refundBit = LE_REFUND_GREY_SALE_CLOSE_B;
+      if (refundBit > 0)
+        refundWei = Min(pListC.WeiContributed(toA), pGreyC.EscrowWei());
     }else if (typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE) {
-      (refundWei, refundBit) = pEscrowC.RefundInfo(toA, pRefundId);
+      // Escrow Refund
+      (refundPicos, refundWei, refundBit) = pEscrowC.RefundInfo(pRefundId, toA);
       if (vOnceOffB)
         refundBit = LE_REFUND_ESCROW_ONCE_OFF_B;
     }
     require(refundWei > 0, 'No refund available');
-    pTokenC.Refund(toA, refundWei, refundBit); // IsHubContractCaller IsActive
-    if (typeN == LE_TYPE_GREY)
-      pGreyC.Refund(toA, refundWei, refundBit, pRefundId);
-    else
-      pEscrowC.Refund(toA, refundWei, refundBit, pRefundId);
+    pTokenC.Refund(pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
+    if (typeN == LE_TYPE_GREY) {
+      if (!pGreyC.Refund(pRefundId, toA, refundWei, refundBit)) {
+        if (pGreyC.EscrowWei() == 0) {
+          pSetState(pState |= STATE_GREY_EMPTY_B);
+          emit GreyRefundingCompleteV();
+        }
+      }
+    }else{
+      if (!pEscrowC.Refund(pRefundId, toA, refundPicos, refundWei, refundBit)) {
+        if (pEscrowC.EscrowWei() == 0) {
+          pSetState(pState |= STATE_ESCROW_EMPTY_B);
+          emit EscrowRefundingCompleteV();
+        }
+      }
+    }
     emit RefundV(pRefundId, toA, refundWei, refundBit);
     pRefundInProgressB = false;
     return true;
-
-
-re false returns from Refund
-    if (address(this).balance == 0) { // refunding is complete
-
-      pStateN == NEscrowState.EscrowClosed;
-      emit RefundingCompleteV(pStateN);
-
-
-
-
-
   }
 
 /*

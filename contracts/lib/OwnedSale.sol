@@ -35,10 +35,10 @@ contract OwnedSale is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[SALE_ADMIN_OWNER_X];
+    return msg.sender == iOwnersYA[SALE_ADMIN_OWNER_X] && !pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
@@ -54,7 +54,7 @@ contract OwnedSale is Constants {
     _;
   }
   modifier IsOpManContractCaller {
-    require(pIsOpManContractCallerB() && pIsContractCallerB(), "Not required OpMan caller");
+    require(pIsOpManContractCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsHubContractCaller {
@@ -62,7 +62,7 @@ contract OwnedSale is Constants {
     _;
   }
   modifier IsAdminCaller {
-    require(iIsAdminCallerB() && !pIsContractCallerB(), "Not required Admin caller");
+    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsActive {

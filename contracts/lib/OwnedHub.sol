@@ -38,13 +38,13 @@ contract OwnedHub is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[ADMIN_OWNER_X];
+    return msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB();
   }
-  function pIsWebOrAdminCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[WEB_OWNER_X] || iIsAdminCallerB();
+  function iIsSaleContractCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
@@ -60,15 +60,15 @@ contract OwnedHub is Constants {
     _;
   }
   modifier IsOpManContractCaller {
-    require(pIsOpManContractCallerB() && pIsContractCallerB(), "Not required OpMan caller");
+    require(pIsOpManContractCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsAdminCaller {
-    require(iIsAdminCallerB() && !pIsContractCallerB(), "Not required Admin caller");
+    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsSaleContractCaller {
-    require(msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB(), "Not required Sale caller");
+    require(iIsSaleContractCallerB(), "Not required Sale caller");
     _;
   }
   modifier IsVoteTapContractCaller {
@@ -80,7 +80,7 @@ contract OwnedHub is Constants {
     _;
   }
   modifier IsWebOrAdminCaller {
-    require(pIsWebOrAdminCallerB() && !pIsContractCallerB(), "Not required Web or Admin caller");
+    require((msg.sender == iOwnersYA[WEB_OWNER_X] || msg.sender == iOwnersYA[ADMIN_OWNER_X]) && !pIsContractCallerB(), "Not required Web or Admin caller");
     _;
   }
   modifier IsNotContractCaller {

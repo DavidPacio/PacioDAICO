@@ -10,45 +10,6 @@ Owners:
 
 Calls: OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
 
-View Methods
-============
-Sale.Name() external view returns (string)
-Sale.StartTime() external view returns (uint32)
-Sale.UsdSoftCap) external view returns (uint256)
-Sale.UsdHardCap) external view returns (uint256)
-Sale.PicosCapTranche1() external view returns (uint256)
-Sale.PicosCapTranche2() external view returns (uint256)
-Sale.PicosCapTranche3() external view returns (uint256)
-Sale.MinWeiTranche1() external view returns (uint256)
-Sale.MinWeiTranche2() external view returns (uint256)
-Sale.MinWeiTranche3() external view returns (uint256)
-Sale.PioePriceCentiCentsTranche1() external view returns (uint256)
-Sale.PioePriceCentiCentsTranche2() external view returns (uint256)
-Sale.PioePriceCentiCentsTranche3() external view returns (uint256)
-Sale.PicosPerEtherTranch1() external view returns (uint256)
-Sale.PicosPerEtherTranch2() external view returns (uint256)
-Sale.PicosPerEtherTranch3() external view returns (uint256)
-Sale.PicosSoldPresale()  external view returns (uint256)
-Sale.PicosSoldTranche1() external view returns (uint256)
-Sale.PicosSoldTranche2() external view returns (uint256)
-Sale.PicosSoldTranche3() external view returns (uint256)
-Sale.WeiRaised() external view returns (uint256)
-Sale.EscrowWei() external view returns (uint256)
-Sale.GreyEscrowWei() external view returns (uint256)
-Sale.UsdEtherPrice() external view returns (uint256)
-Sale.HardCapByUsd() external view returns (bool)
-Sale.IsSoftCapReached() external view returns (bool)
-Sale.IsHardCapReached() external view returns (bool)
-Sale.IsSaleOpen() external view returns (bool)
-
-Initialisation/Setup Functions
-==============================
-
-State changing external methods
-===============================
-Sale.Buy() payable public IsActive
-Sale.HardCapReached() private
-
 Pause/Resume
 ============
 OpMan.PauseContract(SALE_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
@@ -57,9 +18,6 @@ OpMan.ResumeContractMO(SALE_CONTRACT_X) IsConfirmedSigner which is a managed op
 Sale Fallback function
 ======================
 Sending Ether is allowed - calls Buy()
-
-Events
-======
 
 */
 
@@ -81,6 +39,7 @@ import "../Escrow/I_GreySale.sol";
 
 contract Sale is OwnedSale, Math {
   string  public  name = "Pacio DAICO Sale";
+  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pStartT;        // i Sale start time
   uint256 private pEndT;          // i Sale end time
   uint256 private pPicosCapT1;    // i Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
@@ -104,9 +63,9 @@ contract Sale is OwnedSale, Math {
   uint256 private pWeiRaised;     // s cumulative wei raised  USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
   bool    private pUsdHardCapB;   // t True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  bool    private pSoftCapB;      // f Set to true when softcap is reached based on USD @ current pUsdEtherPrice vs pUsdSoftCap
-  bool    private pHardCapB;      // f Set to true when hardcap is reached by either method
-  bool    private pSaleOpenB;     // f Set to true when the sale is started and bacl to false when the sate is closed
+//bool    private pSoftCapB;      // f Set to true when softcap is reached based on USD @ current pUsdEtherPrice vs pUsdSoftCap
+//bool    private pHardCapB;      // f Set to true when hardcap is reached by either method
+//bool    private pSaleOpenB;     // f Set to true when the sale is started and bacl to false when the sate is closed
                                   // |- i  initialised via setup fn calls
                                   // |- c calculated when pUsdEtherPrice is set/updated
                                   // |- s summed
@@ -122,125 +81,6 @@ contract Sale is OwnedSale, Math {
   // No constructor
   // ==============
   // Just the Owned constructor applies to set iOwnerA. iPausedB in Pausable is not set so the contract starts active but owned.
-
-  // Events
-  // ======
-  event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address GreyContract);
-  event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
-                            uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
-  event SetUsdHardCapBV(bool HardCapMethodB);
-  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
-  event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
-  event StartSaleV(uint32 StartTime, uint32 EndTime);
-  event GreyDepositV(address indexed Contributor, uint256 Wei);
-  event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
-  event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
-  event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice, bool UsdHardCapB);
-  event TimeUpV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised);
-  event EndSaleV();
-
-  // Initialisation/Setup Methods
-  // ============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
-  // Owners must first be set by deploy script calls:
-  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
-  //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Sale.ChangeOwnerMO(SALE_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-
-  // Sale.Initialise()
-  // -----------------
-  // To be called by the deploy script to set the contract address variables.
-  function Initialise() external IsInitialising {
-    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
-    pListC   = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
-    pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
-    pGreyC   = I_GreySale(opManC.ContractXA(GREY_CONTRACT_X));
-    emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
-  //iInitialisingB = false; No. Leave in initialising state
-  }
-
-  // Sale.SetCapsAndTranchesMO()
-  // ---------------------------
-  // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
-  function SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
-                                uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
-    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
-    // Caps stuff
-    pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
-    pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
-    pPicosCapT3  = vPicosCapT3;  // Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
-    pUsdSoftCap  = vUsdSoftCap; // USD soft cap $8,000,000
-    pUsdHardCap  = vUsdHardCap; // USD soft cap $42,300,000
-    pUsdHardCapB = true;        // True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  //pSoftCapB    = false;       // Set to true when softcap is reached based on USD @ current pUsdEtherPrice vs pUsdSoftCap
-  //pHardCapB    = false;       // Set to true when hardcap is reached by either method
-    // Tranches
-    pMinWeiT1      = vMinWeiT1;      // Minimum wei contribution for tranche 1  50 Ether = 50,000,000,000,000,000,000 wei
-    pMinWeiT2      = vMinWeiT2;      // Minimum wei contribution for tranche 2   5 Ether =  5,000,000,000,000,000,000 wei
-    pMinWeiT3      = vMinWeiT3;      // Minimum wei contribution for tranche 3 0.1 Ether =    100,000,000,000,000,000 wei
-    pPriceCCentsT1 = vPriceCCentsT1; // PIOE price for tranche 1 in centi-cents i.e.  750 for 7.50
-    pPriceCCentsT2 = vPriceCCentsT2; // PIOE price for tranche 2 in centi-cents i.e.  875 for 8.75
-    pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
-    emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
-    emit SetUsdHardCapBV(true);
-  }
-
-  // Sale.SetUsdEtherPrice()
-  // -----------------------
-  // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
-  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
-    require(iIsInitialisingB() || iIsAdminCallerB());
-    pUsdEtherPrice = vUsdEtherPrice; // 500
-    pPicosPerEthT1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1   16 = 12 (picos per Pioe) + 4 from pPriceCCentsT1 -> $s = 6,666,666,666,666,666
-    pPicosPerEthT2 = pUsdEtherPrice * 10**16 / pPriceCCentsT2; // Picos per Ether for tranche 2
-    pPicosPerEthT3 = pUsdEtherPrice * 10**16 / pPriceCCentsT3; // Picos per Ether for tranche 3  // 5,000,000,000,000,000 for ETH = $500 and target PIOE price = $0.10
-    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthT1, pPicosPerEthT2, pPicosPerEthT3);
-  }
-
-  // Sale.EndInitialise()
-  // --------------------
-  // To be called by the deploy script to end initialising
-  function EndInitialising() external IsInitialising {
-    iPausedB       =        // make active
-    iInitialisingB = false;
-  }
-
-  // Sale.PresaleIssue()
-  // -------------------
-  // To be called repeatedly from Hub.PresaleIssue() for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
-  // no pPicosCap check
-  // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
-  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
-    require(pStartT == 0); // sale hasn't started yet
-    pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
-    pWeiRaised = safeAdd(pWeiRaised, vWei);
-    pPicosPresale += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
-    emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
-    // No event emit as List.Issue() does it
-  }
-
-  // Sale.StartSale()
-  // ----------------
-  // Called from Hub.StartSale() to start the sale going
-  // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
-  function StartSale(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
-    pStartT  = vStartT;
-    pEndT    = vEndT;
-    iPausedB = false;
-    pSaleOpenB = true; // Set to false when the sale is closed by any method
-    emit StartSaleV(vStartT, vEndT);
-  }
-
-  // Sale.SetUsdHardCapB()
-  // ---------------------
-  // Called by Admin to set/unset Sale.pUsdHardCapB:
-  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
-  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  function SetUsdHardCapB(bool B) external IsAdminCaller {
-    pUsdHardCapB = B;
-    emit SetUsdHardCapBV(B);
-  }
 
   // View Methods
   // ============
@@ -344,34 +184,172 @@ contract Sale is OwnedSale, Math {
   function UsdEtherPrice() external view returns (uint256) {
     return pUsdEtherPrice; // Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
   }
+  // Sale.IsSaleOpen()
+  function IsSaleOpen() external view returns (bool) {
+    return pState & STATE_OPEN_B > 0;
+  }
+  // Sale.IsSoftCapReached()
+  function IsSoftCapReached() external view returns (bool) {
+    return pState & STATE_S_CAP_REACHED_B > 0;
+  }
+  // Sale.IsHardCapReached()
+  function IsHardCapReached() external view returns (bool) {
+    return pState & STATE_CLOSED_H_CAP_B > 0;
+  }
   // Sale.HardCapByUsd()
   function HardCapByUsd() external view returns (bool) {
     return pUsdHardCapB; // Hard cap check method
   }
-  // Sale.IsSoftCapReached()
-  function IsSoftCapReached() external view returns (bool) {
-    return pSoftCapB;
+
+  // Events
+  // ======
+  event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address GreyContract);
+  event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
+                            uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
+  event SetUsdHardCapBV(bool HardCapMethodB);
+  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
+  event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
+  event StateChangeV(uint32 PrevState, uint32 NewState);
+  event StartSaleV(uint32 StartTime, uint32 EndTime);
+  event GreyDepositV(address indexed Contributor, uint256 Wei);
+  event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
+  event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
+  event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice, bool UsdHardCapB);
+  event TimeUpV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised);
+
+  // Initialisation/Setup Methods
+  // ============================
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
+  // Owners must first be set by deploy script calls:
+  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+  //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Sale.ChangeOwnerMO(SALE_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+
+  // Sale.Initialise()
+  // -----------------
+  // To be called by the deploy script to set the contract address variables.
+  function Initialise() external IsInitialising {
+    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC   = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
+    pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
+    pGreyC   = I_GreySale(opManC.ContractXA(GREY_CONTRACT_X));
+    emit InitialiseV(pTokenC, pListC, pEscrowC, pGreyC);
+  //iInitialisingB = false; No. Leave in initialising state
   }
-  // Sale.IsHardCapReached()
-  function IsHardCapReached() external view returns (bool) {
-    return pHardCapB;
+
+  // Sale.SetCapsAndTranchesMO()
+  // ---------------------------
+  // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
+  function SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPicosCapT3, uint256 vUsdSoftCap, uint256 vUsdHardCap,
+                                uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
+    // Caps stuff
+    pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
+    pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
+    pPicosCapT3  = vPicosCapT3;  // Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
+    pUsdSoftCap  = vUsdSoftCap; // USD soft cap $8,000,000
+    pUsdHardCap  = vUsdHardCap; // USD soft cap $42,300,000
+    pUsdHardCapB = true;        // True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
+    // Tranches
+    pMinWeiT1      = vMinWeiT1;      // Minimum wei contribution for tranche 1  50 Ether = 50,000,000,000,000,000,000 wei
+    pMinWeiT2      = vMinWeiT2;      // Minimum wei contribution for tranche 2   5 Ether =  5,000,000,000,000,000,000 wei
+    pMinWeiT3      = vMinWeiT3;      // Minimum wei contribution for tranche 3 0.1 Ether =    100,000,000,000,000,000 wei
+    pPriceCCentsT1 = vPriceCCentsT1; // PIOE price for tranche 1 in centi-cents i.e.  750 for 7.50
+    pPriceCCentsT2 = vPriceCCentsT2; // PIOE price for tranche 2 in centi-cents i.e.  875 for 8.75
+    pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
+    emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
+    emit SetUsdHardCapBV(true);
   }
-  // Sale.IsSaleOpen()
-  function IsSaleOpen() external view returns (bool) {
-    return pSaleOpenB;
+
+  // Sale.SetUsdEtherPrice()
+  // -----------------------
+  // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
+  function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
+    require(iIsInitialisingB() || iIsAdminCallerB());
+    pUsdEtherPrice = vUsdEtherPrice; // 500
+    pPicosPerEthT1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1   16 = 12 (picos per Pioe) + 4 from pPriceCCentsT1 -> $s = 6,666,666,666,666,666
+    pPicosPerEthT2 = pUsdEtherPrice * 10**16 / pPriceCCentsT2; // Picos per Ether for tranche 2
+    pPicosPerEthT3 = pUsdEtherPrice * 10**16 / pPriceCCentsT3; // Picos per Ether for tranche 3  // 5,000,000,000,000,000 for ETH = $500 and target PIOE price = $0.10
+    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthT1, pPicosPerEthT2, pPicosPerEthT3);
   }
+
+  // Sale.EndInitialise()
+  // --------------------
+  // To be called by the deploy script to end initialising
+  function EndInitialising() external IsInitialising {
+    iPausedB       =        // make active
+    iInitialisingB = false;
+  }
+
+  // Sale.PresaleIssue()
+  // -------------------
+  // To be called repeatedly from Hub.PresaleIssue() for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
+  // no pPicosCap check
+  // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
+  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
+    require(pStartT == 0); // sale hasn't started yet
+    pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
+    pWeiRaised = safeAdd(pWeiRaised, vWei);
+    pPicosPresale += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
+    emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
+    // No event emit as List.Issue() does it
+  }
+
+  // Sale.StartSale()
+  // ----------------
+  // Called from Hub.StartSale() to start the sale going
+  // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
+  // Hub.StartSale() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
+  function StartSale(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
+    pStartT = vStartT;
+    pEndT   = vEndT;
+    emit StartSaleV(vStartT, vEndT);
+  }
+
+  // Sale.SetUsdHardCapB()
+  // ---------------------
+  // Called by Admin to set/unset Sale.pUsdHardCapB:
+  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
+  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
+  function SetUsdHardCapB(bool B) external IsAdminCaller {
+    pUsdHardCapB = B;
+    emit SetUsdHardCapBV(B);
+  }
+
 
   // State changing external methods
   // ===============================
 
+  // Sale.StateChange()
+  // --------------------
+  // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
+  function StateChange(uint32 vState) external IsHubContractCaller {
+    if ((vState & STATE_S_CAP_REACHED_B) > 0 && (pState & STATE_S_CAP_REACHED_B) == 0)
+      // Change of state for Soft Cap being reached
+      emit SoftCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
+//  }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
+    //   // Change of state for STATE_TERMINATE_REFUND_B = A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
+    //   pTerminationPicosIssued = I_TokenEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
+    //   emit TerminateV(pTerminationPicosIssued);
+    // }
+
+    emit StateChangeV(pState, vState);
+    pState = vState;
+  }
+
   // Sale.Buy()
   // ----------
   // Main function for funds being sent to the sale contract.
-  // A list entry for msg.sender is expected to exist for msg.sende rcreated via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
+  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
+  // Cases:
+  // - sending when not yet white listed -> grey whether sale open or not
+  // - sending when white listed but sale is not yet open -> Grey
+  // - sending when white listed but sale is open -> Escrow
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(now >= pStartT, "Sale not open yet");  // sale is running (in conjunction with the IsActive test) tho this call could trigger soft cap, hard cap, over time
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
-    require(pSaleOpenB, "Sale has closed");
+    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
     (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
     // typeN could be:
     // LE_TYPE_NONE       0 An undefined entry with no add date
@@ -412,8 +390,8 @@ contract Sale is OwnedSale, Math {
     pEscrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Escrow account
     uint256 usdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     emit SaleV(msg.sender, picos, msg.value, tranche, pUsdEtherPrice, picosPerEth, bonusCentiPc);
-    if (!pSoftCapB && usdRaised >= pUsdSoftCap)
-      SoftCapReachedLocal();
+    if (pState & STATE_S_CAP_REACHED_B == 0 && usdRaised >= pUsdSoftCap)
+      pSoftCapReached();
     if (tranche == 3)
       pPicosSoldT3 += picos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
     else if (tranche == 2)
@@ -423,54 +401,38 @@ contract Sale is OwnedSale, Math {
     if (pUsdHardCapB) {
       // Test for reaching hard cap on basis of USD raised at current Ether price
       if (usdRaised >= pUsdHardCap)
-        HardCapReached();
+        pHardCapReached();
     }else{
       // Test for reaching hard cap on basis of tranche pico caps
       if (pPicosSoldT3 >= pPicosCapT3 && pPicosSoldT2 >= pPicosCapT2 && pPicosSoldT1 >= pPicosCapT1)
-        HardCapReached();
+        pHardCapReached();
     }
-    if (now >= pEndT && !pHardCapB) {
-      // Time is up. Do this check after processing rather than doing an initial revert on the condition being met as then EndSale() wouldn't be run. Does allow one tran over time.
-      EndSaleLocal();
+    if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
+      // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then EndSale() wouldn't be run. Does allow one tran over time.
+      pEndSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
     }
     return true;
   }
 
-  // Sale.SoftCapReachedLocal()
-  // --------------------------
-  function SoftCapReachedLocal() private {
-    pSoftCapB = true;
-    I_Hub(iOwnersYA[HUB_OWNER_X]).SoftCapReachedMO();
-  }
-  // Sale.SoftCapReached()
-  // ---------------------
-  // Called from Hub.SoftCapReached()
-  function SoftCapReached() external IsHubContractCaller {
-    pSoftCapB = true;
-    emit SoftCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
+  // Sale.pSoftCapReached()
+  // ----------------------
+  function pSoftCapReached() private {
+    I_Hub(iOwnersYA[HUB_OWNER_X]).SoftCapReachedMO(); // This will cause a StateChange() callback
   }
 
-  // Sale.HardCapReached()
-  // ---------------------
-  function HardCapReached() private {
+  // Sale.pHardCapReached()
+  // ----------------------
+  function pHardCapReached() private {
     // Cap reached so end the sale
-    pHardCapB = true;
-    EndSaleLocal();
+    pEndSale(STATE_CLOSED_H_CAP_B);
     emit HardCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice, pUsdHardCapB);
   }
-  // Sale.EndSaleLocal()
-  // -------------------
-  function EndSaleLocal() private {
-    pSaleOpenB = false;
-    I_Hub(iOwnersYA[HUB_OWNER_X]).EndSaleMO();
-  }
-  // Sale.EndSale()
-  // --------------
-  // Called from Hub.EndSaleMO()
-  function EndSale() external IsHubContractCaller {
-    pSaleOpenB = false;
-    emit EndSaleV();
+  // Sale.pEndSale()
+  // ---------------
+  // Called from Buy() for time up and pHardCapReached() for hard cap reached
+  function pEndSale(uint32 vBit) private {
+    I_Hub(iOwnersYA[HUB_OWNER_X]).EndSaleMO(vBit);
   }
 
   // Sale Fallback function

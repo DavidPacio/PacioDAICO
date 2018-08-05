@@ -36,7 +36,7 @@ contract OwnedToken is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
@@ -52,7 +52,7 @@ contract OwnedToken is Constants {
     _;
   }
   modifier IsOpManContractCaller {
-    require(pIsOpManContractCallerB() && pIsContractCallerB(), "Not required OpMan caller");
+    require(pIsOpManContractCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsHubContractCaller {

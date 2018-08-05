@@ -17,7 +17,7 @@ import "../lib/OwnedEscrow.sol";
 import "../lib/Math.sol";
 import "../OpMan/I_OpMan.sol";
 import "../List/I_ListEscrow.sol";
-import "../List/I_TokenEscrow.sol";
+import "../Token/I_TokenEscrow.sol";
 
 contract Escrow is OwnedEscrow, Math {
   uint256 private constant INITIAL_TAP_RATE_ETH_PM = 100; // Initial Tap rate in Ether pm
@@ -139,13 +139,13 @@ contract Escrow is OwnedEscrow, Math {
   // Escrow.StateChange()
   // --------------------
   // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
-  function StateChange(vState) external IsHubContractCaller {
+  function StateChange(uint32 vState) external IsHubContractCaller {
     if ((vState & STATE_S_CAP_REACHED_B) > 0 && (pState & STATE_S_CAP_REACHED_B) == 0) {
       // Change of state for Soft Cap being reached
       // Make the soft cap withdrawal
       pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);
       emit SoftCapReachedV();
-    }else ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
+    }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
       // Change of state for STATE_TERMINATE_REFUND_B = A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
       pTerminationPicosIssued = I_TokenEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
       emit TerminateV(pTerminationPicosIssued);
@@ -206,10 +206,10 @@ contract Escrow is OwnedEscrow, Math {
   // -------------------
   // Called from Hub.pRefund() for info as part of a refund process:
   // Hub.pRefund() calls: List.EntryTyoe()                - for type info
-  //                      Escrow/Grey.RefundInfo()        - for refund info: picos, wei and refund bit                    ********
+  //                      Escrow.RefundInfo()             - for refund info: picos, wei and refund bit                    ********
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
-  //                      Escrow/Grey.Refund()            - to do the actual refund
-  function RefundInfo(address accountA, uint256 vRefundId) external IsHubContractCaller returns (uint256 refundPicos, uint256 refundWei, uint32 refundBit) {
+  //                      Escrow.Refund()                 - to do the actual refund
+  function RefundInfo(uint256 vRefundId, address accountA) external IsHubContractCaller returns (uint256 refundPicos, uint256 refundWei, uint32 refundBit) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
     pRefundId   = vRefundId;
@@ -232,17 +232,17 @@ contract Escrow is OwnedEscrow, Math {
   // ---------------
   // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
   // Hub.pRefund() calls: List.EntryTyoe()                - for type info
-  //                      Escrow/Grey.RefundInfo()        - for refund info: picos, wei and refund bit
+  //                      Escrow.RefundInfo()             - for refund info: picos, wei and refund bit
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
-  //                      Escrow/Grey.Refund()            - to do the actual refund                                      ********
+  //                      Escrow.Refund()                 - to do the actual refund                                      ********
   // Returns false refunding is complete
-  function Refund(address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 refundBit, uint256 vRefundId) external IsHubContractCaller returns (bool) {
-    require(pRefundInProgressB                                                             // /- all expected to be true if called as intended
-         && vRefundId == pRefundId   // same hub call check                                // |
-         && (refundBit == LE_REFUND_ESCROW_ONCE_OFF_B || pState & STATE_REFUNDING_COMBO_B > 0)); // |
-    vRefundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
-    toA.transfer(vRefundWei);
-    emit RefundV(pRefundId, toA, refundPicos, vRefundWei, vRefundBit);
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
+    require(pRefundInProgressB                                                                    // /- all expected to be true if called as intended
+         && vRefundId == pRefundId   // same hub call check                                       // |
+         && (vRefundBit == LE_REFUND_ESCROW_ONCE_OFF_B || pState & STATE_REFUNDING_COMBO_B > 0)); // |
+    uint256 refundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
+    toA.transfer(refundWei);
+    emit RefundV(pRefundId, toA, vRefundPicos, refundWei, vRefundBit);
     pRefundInProgressB = false;
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()

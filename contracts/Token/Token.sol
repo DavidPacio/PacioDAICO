@@ -195,14 +195,14 @@ contract Token is EIP20Token, Math {
   // Called by:
   // . Hub.Refund()     IsNotContractCaller
   //   Hub.PushRefund() IsWebOrAdminCaller
-  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller IsActive returns (bool) {
-    uint256 refundPicos = iListC.Refund(toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller IsActive returns (bool) {
+    uint256 refundPicos = iListC.Refund(vRefundId, toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
     pPicosIssued    = safeSub(pPicosIssued,    refundPicos);
     pPicosAvailable = safeAdd(pPicosAvailable, refundPicos);
     pWeiRefunded    = safeAdd(pWeiRefunded, vRefundWei);
     if (refundPicos > 0)
       emit Transfer(toA, pSaleA, refundPicos);
-    // iListC.Refund() makes a RefundV(toA, refundPicos, vRefundWei, vRefundBit) event call
+    // iListC.Refund() makes a RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit) event call
     return true;
   }
 

@@ -49,6 +49,7 @@ import "../OpMan/I_OpMan.sol";
 
 contract List is OwnedList, Math {
   string  public  name = "Pacio DAICO Participants List";
+  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   address private pFirstEntryA;   // Address of first entry
   address private pLastEntryA;    // Address of last entry
   uint256 private pNumEntries;    // Number of list entries
@@ -62,7 +63,7 @@ contract List is OwnedList, Math {
   uint256 private pNumDowngraded; // Number downgraded (from white list)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
-  bool    private pSoftCapB;      // Set to true when softcap is reached in Sale
+//bool    private pSoftCapB;      // Set to true when softcap is reached in Sale
 
   // Struct to hold member data, with a doubly linked list of List to permit traversing List
   // Each member requires 6 storage slots.
@@ -229,6 +230,7 @@ contract List is OwnedList, Math {
 
   // Events
   // ======
+  event StateChangeV(uint32 PrevState, uint32 NewState);
    event NewEntryV(address indexed Entry, uint32 Bits, uint32 DbId);
   event WhitelistV(address indexed Entry, uint32 WhitelistT);
   event DowngradeV(address indexed Entry, uint32 DowngradeT);
@@ -237,8 +239,7 @@ contract List is OwnedList, Math {
   event SetTransfersOkByDefaultV(bool On);
   event SetTransferOkV(address indexed Entry, bool On);
   event IssueV(address indexed To, uint256 Picos, uint256 Wei);
-  event RefundV(address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
-
+  event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
   event GreyDepositV(address indexed To, uint256 Wei);
 
   // Initialisation/Setup Functions
@@ -258,6 +259,15 @@ contract List is OwnedList, Math {
     pSaleA = iOwnersYA[SALE_OWNER_X];
     iInitialisingB = false;
   }
+
+  // List.StateChange()
+  // ------------------
+  // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
+  function StateChange(uint32 vState) external IsHubContractCaller {
+    emit StateChangeV(pState, vState);
+    pState = vState;
+  }
+
   // List.StartSale()
   // -----------------
   // Called only from Hub.StartSale()
@@ -265,19 +275,12 @@ contract List is OwnedList, Math {
     pTransfersOkB = false; // Stop transfers by default
   }
 
-  // List.SoftCapReached()
-  // ---------------------
-  // Is called from Hub.SoftCapReached() when soft cap is reached
-  function SoftCapReached() external IsHubContractCaller {
-    pSoftCapB = true;
-  }
-
   // List.SetTransfersOkByDefault()
   // ------------------------------
   // Callable only from Hub to set/unset pTransfersOkB
   function SetTransfersOkByDefault(bool B) external IsHubContractCaller returns (bool) {
     if (B)
-      require(pSoftCapB, 'Requires Softcap');
+      require(pState & STATE_S_CAP_REACHED_B > 0, 'Requires Softcap');
     pTransfersOkB = B;
     emit SetTransfersOkByDefaultV(B);
     return true;
@@ -295,7 +298,6 @@ contract List is OwnedList, Math {
     emit SetTransferOkV(vEntryA, B);
     return true;
   }
-
 
   // Modifier functions
   // ==================
@@ -525,10 +527,10 @@ contract List is OwnedList, Math {
 
   // List.Refund()
   // -------------
-  // Called from Token.Refund() IsHubContractCaller which is called from Hub.Refund()     IsNotContractCaller
-  //                                                          or Hub.PushRefund() IsWebOrAdminCaller
+  // Called from Token.Refund() IsHubContractCaller which is called from Hub.Refund()     IsNotContractCaller via Hub.pRefund()
+  //                                                                  or Hub.PushRefund() IsWebOrAdminCaller  via Hub.pRefund()
   // vRefundWei can be less than or greater than List.WeiContributed() for termination case where the wei is a proportional calc based on picos held re transfers, not wei contributed
-  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     uint8 typeN = EntryType(toA);
@@ -544,12 +546,12 @@ contract List is OwnedList, Math {
     }
     rsEntryR.refundT = uint32(now);
     rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> LE_TYPE_REFUNDED after this
-    rsEntryR.bits |= vRefundBit;                            // LE_REFUND_ESCROW_S_CAP_MISS_B Refund of all Escrow funds due to soft cap not being reached
-    emit RefundV(toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B   Refund of remaining Escrow funds proportionately following a yes vote for project termination
-    pNumRefunded++;                                         // LE_REFUND_ESCROW_ONCE_OFF_B      Once off Escrow refund for whatever reason including downgrade from whitelisted
-  }                                                         // LE_REFUND_GREY_S_CAP_MISS_B   Refund of Grey escrow funds due to soft cap not being reached
-                                                            // LE_REFUND_GREY_SALE_CLOSE_B      Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
-                                                            // LE_REFUND_GREY_ONCE_OFF_B        Once off Admin/Manual Grey escrow refund for whatever reason
+    rsEntryR.bits |= vRefundBit;                                       // LE_REFUND_ESCROW_S_CAP_MISS_B  Refund of all Escrow funds due to soft cap not being reached
+    emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B Refund of remaining Escrow funds proportionately following a yes vote for project termination
+    pNumRefunded++;                                                    // LE_REFUND_ESCROW_ONCE_OFF_B    Once off Escrow refund for whatever reason including downgrade from whitelisted
+  }                                                                    // LE_REFUND_GREY_S_CAP_MISS_B    Refund of Grey escrow funds due to soft cap not being reached
+                                                                       // LE_REFUND_GREY_SALE_CLOSE_B    Refund of Grey escrow funds that have not been white listed by the time that the sale closes. No need for a Grey termination case as sale must be closed before atermination vote can occur
+                                                                       // LE_REFUND_GREY_ONCE_OFF_B      Once off Admin/Manual Grey escrow refund for whatever reason
   // List.Burn()
   // -----------
   // For use when transferring issued PIOEs to PIOs
