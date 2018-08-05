@@ -16,37 +16,6 @@ List   as the contract for the list of participants
 To Do djh??
 - Add functions for changing contracts
 
-
-No Constructor
---------------
-
-View Methods
-============
-Token.PicosIssued() external view returns (uint256)
-Token.WeiRaised() external view returns (uint256)
-Token.PicosAvailable() external view returns (uint256)
-Token.Contributors() external view returns (uint256)
-Token.PclPicosAllocated() external view returns (uint256)
-Token.IsSaleOpen() external view returns (bool)
-Token.IsTransferAllowedByDefault() external view returns (bool)
-Token.BurnId() external view returns (int32)
-
-Initialisation/Settings Methods
-===============================
-Token.Initialise() external IsHubContractCaller
-
-State changing external methods
-===============================
-Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleContractCaller IsActive returns (bool)
-
-Functions for calling via same name function in Hub
-===================================================
-
-Functions for calling via same name function in Mvp
-===================================================
-Token.Burn() external IsMvpContractCaller
-Token.Destroy(uint256 vPicos) external IsMvpContractCaller
-
 Pause/Resume
 ============
 OpMan.PauseContract(TOKEN_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
@@ -56,10 +25,6 @@ Fallback function
 =================
 No sending ether to this contract
 
-Events
-======
-Token.StartSaleV();
-Token.EndSaleV();
 
 */
 
@@ -71,6 +36,7 @@ import "../List/I_ListToken.sol";
 import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
 contract Token is EIP20Token, Math {
+  uint32  private pState;            // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.PicosSold() unless refunding/burning/destroying happens
   uint256 private pWeiRaised;        // cumulative wei raised. Should == Sale.pWeiRaised
   uint256 private pWeiRefunded;      // cumulative wei refunded. No Sale equivalent
@@ -78,13 +44,15 @@ contract Token is EIP20Token, Math {
   uint256 private pContributors;     // Number of contributors
   uint256 private pPclPicosAllocated;// PCL Picos allocated
   address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
-  bool    private pSaleOpenB;        // Is set to false when DAICO is complete or at least closed. Required for transfer of PIOEs to PIOs
+
+  // No Constructor
+  // --------------
 
   // View Methods
   // ============
   // Token.IsSaleOpen()
   function IsSaleOpen() external view returns (bool) {
-    return pSaleOpenB;
+    return pState & STATE_OPEN_B > 0;
   }
   // Token.PicosIssued()
   function PicosIssued() external view returns (uint256) {
@@ -117,11 +85,9 @@ contract Token is EIP20Token, Math {
 
   // Events
   // ------
-  event StartSaleV();
-  event EndSaleV();
-
-  // No Constructor
-  // --------------
+  event StateChangeV(uint32 PrevState, uint32 NewState);
+//event Transfer(address indexed From, address indexed To, uint256 Value);          /- In EIP20Token
+//event Approval(address indexed Account, address indexed Spender, uint256 Value);  |
 
   // Initialisation/Settings Methods
   // ===============================
@@ -154,23 +120,17 @@ contract Token is EIP20Token, Math {
     emit Transfer(0x0, pSaleA, 10**21); // log event 0x0 from == minting. pSaleA is the Sale contract
     iInitialisingB = false;
   }
-  // Token.StartSale()
-  // ---------------
-  // Is called from Hub.StartSale()
-  function StartSale() external IsHubContractCaller IsActive {
-    pSaleOpenB = true;
-    emit StartSaleV();
-  }
-  // Token.EndSale()
-  // ---------------
-  // Is called from HUb.EndSale() after after hard cap is reached in Sale, time has expired in Sale, or the sale is ended manually
-  function EndSale() external IsHubContractCaller IsActive {
-    pSaleOpenB = false;
-    emit EndSaleV();
-  }
 
   // State changing external methods
   // ===============================
+
+  // Token.StateChange()
+  // -------------------
+  // Called from Hub.pSetState() on a change of state to replicate the new state setting
+  function StateChange(uint32 vState) external IsHubContractCaller {
+    emit StateChangeV(pState, vState);
+    pState = vState;
+  }
 
   // Token.Issue()
   // -------------
@@ -218,7 +178,7 @@ contract Token is EIP20Token, Math {
   // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
   // The event call is made by Mvp.Burn()
   function Burn() external IsMvpContractCaller {
-    require(!pSaleOpenB, "Sale not closed");
+    require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
     uint256 picos = iListC.PicosBalance(tx.origin);
   //require(picos > 0, "No PIOEs to burn"); Not needed here as already done by Mvp.Burn()
     iListC.Burn(); // reverts if a tx.origin list entry doesn't exist
@@ -233,7 +193,7 @@ contract Token is EIP20Token, Math {
   // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsMvpContractCaller {
-    require(!pSaleOpenB);
+    require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
     iListC.Destroy(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);
     pPicosAvailable = subMaxZero(pPicosAvailable, vPicos);

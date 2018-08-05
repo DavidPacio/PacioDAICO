@@ -63,9 +63,6 @@ contract Sale is OwnedSale, Math {
   uint256 private pWeiRaised;     // s cumulative wei raised  USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
   bool    private pUsdHardCapB;   // t True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-//bool    private pSoftCapB;      // f Set to true when softcap is reached based on USD @ current pUsdEtherPrice vs pUsdSoftCap
-//bool    private pHardCapB;      // f Set to true when hardcap is reached by either method
-//bool    private pSaleOpenB;     // f Set to true when the sale is started and bacl to false when the sate is closed
                                   // |- i  initialised via setup fn calls
                                   // |- c calculated when pUsdEtherPrice is set/updated
                                   // |- s summed
@@ -317,30 +314,24 @@ contract Sale is OwnedSale, Math {
     emit SetUsdHardCapBV(B);
   }
 
-
   // State changing external methods
   // ===============================
 
   // Sale.StateChange()
-  // --------------------
+  // ------------------
   // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
   function StateChange(uint32 vState) external IsHubContractCaller {
     if ((vState & STATE_S_CAP_REACHED_B) > 0 && (pState & STATE_S_CAP_REACHED_B) == 0)
-      // Change of state for Soft Cap being reached
+      // Change of state for Soft Cap being reached.
+      // Can be as a call back from Hub via pSoftCapReached() here -> Hub.SoftCapReachedMO() or manually by Admin as a managed op via Hub.SoftCapReachedMO()
       emit SoftCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
-//  }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
-    //   // Change of state for STATE_TERMINATE_REFUND_B = A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
-    //   pTerminationPicosIssued = I_TokenEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
-    //   emit TerminateV(pTerminationPicosIssued);
-    // }
-
     emit StateChangeV(pState, vState);
     pState = vState;
   }
 
   // Sale.Buy()
   // ----------
-  // Main function for funds being sent to the sale contract.
+  // Main function for funds being sent to the DAICO.
   // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
   // Cases:
   // - sending when not yet white listed -> grey whether sale open or not
@@ -408,7 +399,7 @@ contract Sale is OwnedSale, Math {
         pHardCapReached();
     }
     if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
-      // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then EndSale() wouldn't be run. Does allow one tran over time.
+      // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then pEndSale() wouldn't be run. Does allow one tran over time.
       pEndSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
     }

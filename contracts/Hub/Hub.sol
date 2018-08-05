@@ -9,6 +9,8 @@ OpMan; Sale; Token; List; Escrow; Grey;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
+• The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
+
 • fns for replacing contracts - all of them
 • Provide a way for grey -> escrow on whitelisting before sale opens and -> PIOs issued
 • add manual account creation
@@ -126,7 +128,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSale()
   // ---------------
-  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
+  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Grey escrow deposits, and white listing but wo PIOs being issued until tthat is done after the sale opens
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
@@ -135,9 +137,6 @@ contract Hub is OwnedHub, Math {
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
     pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) + (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
     pSaleC.StartSale(vStartT, vEndT);
-    pTokenC.StartSale();
-    pListC.StartSale();
-    // No StartSale() for Grey, VoteTap, VoteEnd, Mvp
     emit StartSaleV(vStartT, vEndT);
   }
 
@@ -148,8 +147,8 @@ contract Hub is OwnedHub, Math {
   function pSetState(uint32 vState) private {
     if (vState != pState) {
       pSaleC.StateChange(vState);
-    //pTokenC.StateChange(vState);   djh??
-    //pListC.StateChange(vState);    djh??
+      pTokenC.StateChange(vState);
+      pListC.StateChange(vState);
       pEscrowC.StateChange(vState);
       pGreyC.StateChange(vState);
     //pVoteTapC.StateChange(vState); /- These can get state from Hub
@@ -171,14 +170,15 @@ contract Hub is OwnedHub, Math {
 
   // Hub.EndSaleMO()
   // ---------------
-  // Is called from Sale.EndSaleLocal() to end the sale on hard cap being reached, or time up
-  // Can be called manually by Admin to end the sale prematurely as a managed op if necessary.
-  // djh?? state change and set manual bit
+  // Is called from Sale.pEndSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
+  // Can be called manually by Admin to end the sale prematurely as a managed op if necessary. In that case vBit is not used and the STATE_CLOSED_MANUAL_B state bit is used
   function EndSaleMO(uint32 vBit) external {
-    require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X)));
-  //pSaleC.EndSale();
-    pTokenC.EndSale(); // djh?? Remove this
-    // No EndSale() for List, Escrow, Grey, VoteTap, VoteEnd, Mvp
+    if (iIsSaleContractCallerB())
+      pSetState(vBit);
+    else if (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X))
+      pSetState(STATE_CLOSED_MANUAL_B);
+    else
+      revert();
     emit EndSaleV();
   }
 

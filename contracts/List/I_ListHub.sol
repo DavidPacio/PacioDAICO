@@ -17,7 +17,6 @@ interface I_ListHub {
   function WeiContributed(address accountA) external view returns (uint256);
   function IsTransferAllowedByDefault() external view returns (bool);
   // State changing
-  function StartSale() external;
   function StateChange(uint32 vState) external;
   function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external returns (bool);
   function CreatePresaleEntry(address vEntryA, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external returns (bool);

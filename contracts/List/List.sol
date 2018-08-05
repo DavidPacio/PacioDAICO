@@ -63,7 +63,6 @@ contract List is OwnedList, Math {
   uint256 private pNumDowngraded; // Number downgraded (from white list)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
-//bool    private pSoftCapB;      // Set to true when softcap is reached in Sale
 
   // Struct to hold member data, with a doubly linked list of List to permit traversing List
   // Each member requires 6 storage slots.
@@ -266,13 +265,6 @@ contract List is OwnedList, Math {
   function StateChange(uint32 vState) external IsHubContractCaller {
     emit StateChangeV(pState, vState);
     pState = vState;
-  }
-
-  // List.StartSale()
-  // -----------------
-  // Called only from Hub.StartSale()
-  function StartSale() external IsHubContractCaller {
-    pTransfersOkB = false; // Stop transfers by default
   }
 
   // List.SetTransfersOkByDefault()
