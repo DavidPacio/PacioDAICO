@@ -248,12 +248,24 @@ contract Hub is OwnedHub, Math {
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(toA, refundWei, refundBit); // IsHubContractCaller IsActive
     if (typeN == LE_TYPE_GREY)
-      pGreyC.Refund(toA, refundWei, pRefundId);
+      pGreyC.Refund(toA, refundWei, refundBit, pRefundId);
     else
-      pEscrowC.Refund(toA, refundWei, pRefundId);
+      pEscrowC.Refund(toA, refundWei, refundBit, pRefundId);
     emit RefundV(pRefundId, toA, refundWei, refundBit);
     pRefundInProgressB = false;
     return true;
+
+
+re false returns from Refund
+    if (address(this).balance == 0) { // refunding is complete
+
+      pStateN == NEscrowState.EscrowClosed;
+      emit RefundingCompleteV(pStateN);
+
+
+
+
+
   }
 
 /*

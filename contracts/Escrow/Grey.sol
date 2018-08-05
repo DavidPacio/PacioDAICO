@@ -152,7 +152,7 @@ contract Grey is OwnedEscrow, Math {
   // -----------------
   // Called from Hub.pRefund() for info as part of a refund process:
   // Hub.pRefund() calls: List.EntryTyoe()                - for type info
-  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit                    ********
+  //                      Escrow/Grey.RefundInfo()        - for refund info: picos, wei and refund bit                    ********
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
   //                      Escrow/Grey.Refund()            - to do the actual refund
   function RefundInfo(address accountA, uint256 vRefundId) external IsHubContractCaller returns (uint256 refundWei, uint32 refundBit) {
@@ -171,7 +171,7 @@ contract Grey is OwnedEscrow, Math {
   // -------------
   // Called from Hub.pRefund() to perform the actual refund from Escrow after Token.Refund() -> List.Refund() calls
   // Hub.pRefund() calls: List.EntryTyoe()                - for type info
-  //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit
+  //                      Escrow/Grey.RefundInfo()        - for refund info: picos, wei and refund bit
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
   //                      Escrow/Grey.Refund()            - to do the actual refund                                      ********
   function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubContractCaller returns (bool) {

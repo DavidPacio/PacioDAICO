@@ -22,7 +22,9 @@ contract Constants {
   uint32 internal constant STATE_ESCROW_EMPTY_B      = 512; // 9 Escrow is empty as a result of refunds or withdrawals emptying the pot
   uint32 internal constant STATE_GREY_EMPTY_B       = 1024; // A Grey escrow is empty as a result of refunds or withdrawals emptying the pot
   // Combos for anding checks
+  uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
   uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
+  uint32 internal constant STATE_REFUNDING_COMBO_B  =  384; // STATE_S_CAP_MISS_REFUND_B | STATE_TERMINATE_REFUND_B
 
   // Contract Indices
   uint256 internal constant OP_MAN_CONTRACT_X   = 0;
