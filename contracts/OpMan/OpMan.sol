@@ -41,7 +41,7 @@ B. Admin signer to change a contract owner as a managed op
 
 Pause/Resume
 ============
-OpMan.PauseContract(OP_MAN_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(OP_MAN_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(OP_MAN_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 */
@@ -128,9 +128,9 @@ contract OpMan is OwnedOpMan {
   // ------------
   // To be called by deploy script to:
   // 1. Add initial contracts, signers, and manOps
-  // Admin owner is set this way because that can't be be done from the deploy script as ChangeOwnerMO() requires IsOpManCaller.
+  // Admin owner is set this way because that can't be be done from the deploy script as ChangeOwnerMO() requires IsOpManContractCaller.
   // (Other contracts can have all their owners set via the deploy script because their constructor set OpMan owner to msg.sender (deployment account) initially,
-  //  so 'ChangeOwnerMO() IsOpManCaller' calls can be made by the deploy script, provided that OpMan owner is set last.)
+  //  so 'ChangeOwnerMO() IsOpManContractCaller' calls can be made by the deploy script, provided that OpMan owner is set last.)
   // After this call all of OpMan's owners are set.
   // Can only be called once.
   //
@@ -234,7 +234,7 @@ contract OpMan is OwnedOpMan {
     require(pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a confirmed signer');
     _;
   }
-  modifier IsHubCallerOrConfirmedSigner {
+  modifier IsHubContractCallerOrConfirmedSigner {
     require(pContractsYR[HUB_CONTRACT_X].contractA == msg.sender || pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a Hub or confirmed signer');
     _;
   }
@@ -499,7 +499,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.PauseContract()
   // ---------------------
   // 9.1 Hub call or Signer to pause a contract, with a call to the contract's Pause() fn if the contract has one. Not a managed op.
-  function PauseContract(uint256 vContractX) external IsHubCallerOrConfirmedSigner returns (bool) {
+  function PauseContract(uint256 vContractX) external IsHubContractCallerOrConfirmedSigner returns (bool) {
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
     srContractR.pausedB = true;

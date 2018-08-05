@@ -173,7 +173,7 @@ contract List is OwnedList, Math {
   // - typeN  type of the entry { None, Contract, Grey, Presale, Refunded, Downgraded, White, Member }
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
   //       The calling app will need to do the looping if necessary, thus the return of typeN.
-  function Browse(address currentA, uint8 vActionN) external view IsHubCaller returns (address retA, uint8 typeN) {
+  function Browse(address currentA, uint8 vActionN) external view IsHubContractCaller returns (address retA, uint8 typeN) {
     if (vActionN == BROWSE_FIRST) {
       retA = pFirstEntryA;
     }else if (vActionN == BROWSE_LAST) {
@@ -188,19 +188,19 @@ contract List is OwnedList, Math {
   // List.NextEntry()
   // ----------------
   // Requires Sender to be Hub
-  function NextEntry(address accountA) external view IsHubCaller returns (address) {
+  function NextEntry(address accountA) external view IsHubContractCaller returns (address) {
     return pListMR[accountA].nextEntryA;
   }
   // List.PrevEntry()
   // ----------------
   // Requires Sender to be Hub
-  function PrevEntry(address accountA) external view IsHubCaller returns (address) {
+  function PrevEntry(address accountA) external view IsHubContractCaller returns (address) {
     return pListMR[accountA].prevEntryA;
   }
   // List.Proxy()
   // ------------
   // Requires Sender to be Hub
-  function Proxy(address accountA) external view IsHubCaller returns (address) {
+  function Proxy(address accountA) external view IsHubContractCaller returns (address) {
     return pListMR[accountA].proxyA;
   }
   // List.Lookup()
@@ -261,21 +261,21 @@ contract List is OwnedList, Math {
   // List.StartSale()
   // -----------------
   // Called only from Hub.StartSale()
-  function StartSale() external IsHubCaller {
+  function StartSale() external IsHubContractCaller {
     pTransfersOkB = false; // Stop transfers by default
   }
 
   // List.SoftCapReached()
   // ---------------------
   // Is called from Hub.SoftCapReached() when soft cap is reached
-  function SoftCapReached() external IsHubCaller {
+  function SoftCapReached() external IsHubContractCaller {
     pSoftCapB = true;
   }
 
   // List.SetTransfersOkByDefault()
   // ------------------------------
   // Callable only from Hub to set/unset pTransfersOkB
-  function SetTransfersOkByDefault(bool B) external IsHubCaller returns (bool) {
+  function SetTransfersOkByDefault(bool B) external IsHubContractCaller returns (bool) {
     if (B)
       require(pSoftCapB, 'Requires Softcap');
     pTransfersOkB = B;
@@ -286,7 +286,7 @@ contract List is OwnedList, Math {
   // List.SetTransferOk()
   // --------------------
   // Callable only from Hub to set LE_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsHubCaller returns (bool) {
+  function SetTransferOk(address vEntryA, bool B) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     if (B) // Set
       pListMR[vEntryA].bits |= LE_TRANSFER_OK_B;
@@ -323,7 +323,7 @@ contract List is OwnedList, Math {
   // Create a new list entry, and add it into the doubly linked list
   // Is called from Hub
   // 0 OpMan, 1 Hub, 2 Sale, 3 Token
-  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsHubCaller returns (bool) {
+  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsHubContractCaller returns (bool) {
     return pCreateEntry(vEntryA, vBits, vDbId);
   }
 
@@ -376,7 +376,7 @@ contract List is OwnedList, Math {
   // Called from Token.NewSaleContract() to create the new Sale contract list entry
   // Not whitelisted so that transfers from it cannot be done. Decrementing happens via Issue().
   // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract
-  function CreateSaleContractEntry(uint256 vPicos) external IsTokenCaller returns (bool) {
+  function CreateSaleContractEntry(uint256 vPicos) external IsTokenContractCaller returns (bool) {
     require(pCreateEntry(pSaleA, LE_TRANSFER_OK_B, 1)); // DbId of 1 assumed for Sale sale contract
     pListMR[pSaleA].picosBalance = vPicos;
     pNumGrey--;  // No need for subMaxZero(pNumGrey, 1) here as the pCreateEntry() call has just incremented this
@@ -386,7 +386,7 @@ contract List is OwnedList, Math {
   // List.CreatePresaleEntry()
   // -------------------------
   // Create a Seed Presale or Private Placement list entry, called from Hub.PresaleIssue()
-  function CreatePresaleEntry(address vEntryA, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubCaller returns (bool) {
+  function CreatePresaleEntry(address vEntryA, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller returns (bool) {
     require(pCreateEntry(vEntryA, LE_PRESALE_B, vDbId));
     pListMR[vEntryA].addedT        =
     pListMR[vEntryA].firstContribT = vAddedT; // firstContribT assumed to be the same as addedT for presale entries
@@ -399,7 +399,7 @@ contract List is OwnedList, Math {
   // List.Whitelist()
   // ----------------
   // Whitelist an entry
-  function Whitelist(address vEntryA, uint32 vWhiteT) external IsHubCaller returns (bool) {
+  function Whitelist(address vEntryA, uint32 vWhiteT) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     if (pListMR[vEntryA].whiteT == 0) { // if not just changing the white list date then decrement grey and incr white
       pNumGrey = subMaxZero(pNumGrey, 1);
@@ -415,7 +415,7 @@ contract List is OwnedList, Math {
   // List.Downgrade()
   // ----------------
   // Downgrades an entry from whitelisted
-  function Downgrade(address vEntryA, uint32 vDownT) external IsHubCaller returns (bool) {
+  function Downgrade(address vEntryA, uint32 vDownT) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     if (pListMR[vEntryA].downT == 0) { // if not just changing the downgrade date then decrement grey and incr white
       pNumWhite = subMaxZero(pNumWhite, 1);
@@ -429,7 +429,7 @@ contract List is OwnedList, Math {
   // List.SetBonus()
   // ---------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-  function SetBonus(address vEntryA, uint32 vBonusPc) external IsHubCaller returns (bool) {
+  function SetBonus(address vEntryA, uint32 vBonusPc) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     pListMR[vEntryA].bonusCentiPc = vBonusPc;
     emit SetBonusV(vEntryA, vBonusPc);
@@ -440,7 +440,7 @@ contract List is OwnedList, Math {
   // ---------------
   // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address vEntryA, address vProxyA) external IsHubCaller returns (bool) {
+  function SetProxy(address vEntryA, address vProxyA) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
     if (vProxyA == address(0)) {
       // Unset or remove proxy
@@ -466,7 +466,7 @@ contract List is OwnedList, Math {
   // ------------
   // Is called from Token.Issue() which is called from Sale.Buy() or Sale.PresaleIssue()
   //                                                   Sale.Buy() also calls Escrow.Deposit()
-  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenCaller returns (bool) {
+  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller returns (bool) {
     uint8 typeN = EntryType(toA);
     require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
@@ -490,7 +490,7 @@ contract List is OwnedList, Math {
   // ------------------
   // Is called from Sale.Buy() for grey funds being deposited
   //                Sale.Buy() also calls Grey.Deposit()
-  function GreyDeposit(address toA, uint256 vWei) external IsSaleCaller returns (bool) {
+  function GreyDeposit(address toA, uint256 vWei) external IsSaleContractCaller returns (bool) {
     uint8 typeN = EntryType(toA);
     require(typeN == LE_TYPE_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
@@ -505,7 +505,7 @@ contract List is OwnedList, Math {
   // List.Transfer()
   // ---------------
   // Is called for EIP20 transfers from EIP20Token.transfer() and EIP20Token.transferFrom()
-  function Transfer(address frA, address toA, uint256 vPicos) external IsTransferOK(frA, toA, vPicos) IsTokenCaller returns (bool success) {
+  function Transfer(address frA, address toA, uint256 vPicos) external IsTransferOK(frA, toA, vPicos) IsTokenContractCaller returns (bool success) {
     pListMR[frA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= vPicos check
     pListMR[toA].picosBalance = safeAdd(pListMR[toA].picosBalance, vPicos);
     if (vPicos > 0 && pListMR[frA].picosBalance == 0) // vPicos > 0 check because EIP-20 allows transfers of 0
@@ -517,7 +517,7 @@ contract List is OwnedList, Math {
   // ----------------------------------------
   // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
   // pSaleA is still the old Sale when this is called
-  function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenCaller returns (bool success) {
+  function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenContractCaller returns (bool success) {
     pListMR[vNewSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
     pListMR[pSaleA].picosBalance = 0;
     return true;
@@ -525,10 +525,10 @@ contract List is OwnedList, Math {
 
   // List.Refund()
   // -------------
-  // Called from Token.Refund() IsHubCaller which is called from Hub.Refund()     IsNotContractCaller
+  // Called from Token.Refund() IsHubContractCaller which is called from Hub.Refund()     IsNotContractCaller
   //                                                          or Hub.PushRefund() IsWebOrAdminCaller
   // vRefundWei can be less than or greater than List.WeiContributed() for termination case where the wei is a proportional calc based on picos held re transfers, not wei contributed
-  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenCaller returns (uint256 refundPicos)  {
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     uint8 typeN = EntryType(toA);
@@ -557,7 +557,7 @@ contract List is OwnedList, Math {
   // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
   // The event call is made by Mvp.Burn() where a Burn Id is updated and logged
   // Deployment Gas usage: 3142286. When done using pListMR[tx.origin] throughtout rather than the rsEntryR pointer, the deployment gas usage was more at 3143422. Presumably the gas usage would be less at run time too.
-  function Burn() external IsTokenCaller {
+  function Burn() external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[tx.origin];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     rsEntryR.bits |= LE_BURNT_B;
@@ -570,7 +570,7 @@ contract List is OwnedList, Math {
   // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
-  function Destroy(uint256 vPicos) external IsTokenCaller {
+  function Destroy(uint256 vPicos) external IsTokenContractCaller {
     require(pListMR[pSaleA].bits & LE_TYPE_CONTRACT > 0, "Not a contract list entry");
     pListMR[pSaleA].picosBalance = subMaxZero(pListMR[pSaleA].picosBalance, vPicos);
   }

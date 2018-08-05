@@ -33,23 +33,23 @@ Token.BurnId() external view returns (int32)
 
 Initialisation/Settings Methods
 ===============================
-Token.Initialise() external IsHubCaller
+Token.Initialise() external IsHubContractCaller
 
 State changing external methods
 ===============================
-Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleCaller IsActive returns (bool)
+Token.Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleContractCaller IsActive returns (bool)
 
 Functions for calling via same name function in Hub
 ===================================================
 
 Functions for calling via same name function in Mvp
 ===================================================
-Token.Burn() external IsMvpCaller
-Token.Destroy(uint256 vPicos) external IsMvpCaller
+Token.Burn() external IsMvpContractCaller
+Token.Destroy(uint256 vPicos) external IsMvpContractCaller
 
 Pause/Resume
 ============
-OpMan.PauseContract(TOKEN_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(TOKEN_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(TOKEN_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Fallback function
@@ -157,14 +157,14 @@ contract Token is EIP20Token, Math {
   // Token.StartSale()
   // ---------------
   // Is called from Hub.StartSale()
-  function StartSale() external IsHubCaller IsActive {
+  function StartSale() external IsHubContractCaller IsActive {
     pSaleOpenB = true;
     emit StartSaleV();
   }
   // Token.EndSale()
   // ---------------
   // Is called from HUb.EndSale() after after hard cap is reached in Sale, time has expired in Sale, or the sale is ended manually
-  function EndSale() external IsHubCaller IsActive {
+  function EndSale() external IsHubContractCaller IsActive {
     pSaleOpenB = false;
     emit EndSaleV();
   }
@@ -178,7 +178,7 @@ contract Token is EIP20Token, Math {
   // . Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   //   List entry is created by Hub.Presale.Issue() which checks toA
   // . Sale.Buy() which checks toA
-  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleCaller IsActive returns (bool) {
+  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleContractCaller IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)
       pContributors++;
     iListC.Issue(toA, vPicos, vWei); // Transfers from Sale as the minted tokens owner
@@ -195,7 +195,7 @@ contract Token is EIP20Token, Math {
   // Called by:
   // . Hub.Refund()     IsNotContractCaller
   //   Hub.PushRefund() IsWebOrAdminCaller
-  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubCaller IsActive returns (bool) {
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller IsActive returns (bool) {
     uint256 refundPicos = iListC.Refund(toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
     pPicosIssued    = safeSub(pPicosIssued,    refundPicos);
     pPicosAvailable = safeAdd(pPicosAvailable, refundPicos);
@@ -217,7 +217,7 @@ contract Token is EIP20Token, Math {
   // Is called by Mvp.Burn() -> here thus use of tx.origin rather than msg.sender
   // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
   // The event call is made by Mvp.Burn()
-  function Burn() external IsMvpCaller {
+  function Burn() external IsMvpContractCaller {
     require(!pSaleOpenB, "Sale not closed");
     uint256 picos = iListC.PicosBalance(tx.origin);
   //require(picos > 0, "No PIOEs to burn"); Not needed here as already done by Mvp.Burn()
@@ -232,7 +232,7 @@ contract Token is EIP20Token, Math {
   // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
-  function Destroy(uint256 vPicos) external IsMvpCaller {
+  function Destroy(uint256 vPicos) external IsMvpContractCaller {
     require(!pSaleOpenB);
     iListC.Destroy(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);

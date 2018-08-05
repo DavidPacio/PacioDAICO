@@ -24,7 +24,7 @@ State changing external methods
 
 Pause/Resume
 ============
-OpMan.PauseContract(MVP_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(MVP_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(MVP_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Mvp Fallback function
@@ -97,7 +97,7 @@ contract Mvp is OwnedByOpManAndHub {
   // -------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is to be called from Hub.Destroy()
-  function Destroy(uint256 vPicos) external IsHubCaller {
+  function Destroy(uint256 vPicos) external IsHubContractCaller {
     pTokenC.Destroy(vPicos);
     emit DestroyV(vPicos);
   }

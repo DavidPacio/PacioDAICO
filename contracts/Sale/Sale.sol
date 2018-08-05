@@ -51,7 +51,7 @@ Sale.HardCapReached() private
 
 Pause/Resume
 ============
-OpMan.PauseContract(SALE_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(SALE_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(SALE_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Sale Fallback function
@@ -211,7 +211,7 @@ contract Sale is OwnedSale, Math {
   // To be called repeatedly from Hub.PresaleIssue() for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
-  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubCaller IsActive {
+  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
     require(pStartT == 0); // sale hasn't started yet
     pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
     pWeiRaised = safeAdd(pWeiRaised, vWei);
@@ -224,7 +224,7 @@ contract Sale is OwnedSale, Math {
   // ----------------
   // Called from Hub.StartSale() to start the sale going
   // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
-  function StartSale(uint32 vStartT, uint32 vEndT) external IsHubCaller {
+  function StartSale(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
     pStartT  = vStartT;
     pEndT    = vEndT;
     iPausedB = false;
@@ -446,7 +446,7 @@ contract Sale is OwnedSale, Math {
   // Sale.SoftCapReached()
   // ---------------------
   // Called from Hub.SoftCapReached()
-  function SoftCapReached() external IsHubCaller {
+  function SoftCapReached() external IsHubContractCaller {
     pSoftCapB = true;
     emit SoftCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
   }
@@ -468,7 +468,7 @@ contract Sale is OwnedSale, Math {
   // Sale.EndSale()
   // --------------
   // Called from Hub.EndSaleMO()
-  function EndSale() external IsHubCaller {
+  function EndSale() external IsHubContractCaller {
     pSaleOpenB = false;
     emit EndSaleV();
   }

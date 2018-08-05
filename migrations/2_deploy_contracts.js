@@ -44,7 +44,7 @@ Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(VOTE_TAP_OWNER_X , VoteTap address);
 Hub.ChangeOwnerMO(VOTE_END_OWNER_X , VoteEnd address);
 Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
-Hub.Initialise() to set the contract address variables.
+Hub.Initialise() to set the contract address variables and the initial STATE_PRIOR_TO_OPEN_B state
 
 Sale owned by 0 Deployer, 1 OpMan, 2 Hub
 ----

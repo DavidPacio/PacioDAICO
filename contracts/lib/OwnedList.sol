@@ -31,7 +31,7 @@ contract OwnedList is Constants {
   function iIsInitialisingB() internal view returns (bool) {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
-  function pIsOpManCallerB() private view returns (bool) {
+  function pIsOpManContractCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X];
   }
   function pIsContractCallerB() private view returns (bool) {
@@ -47,19 +47,19 @@ contract OwnedList is Constants {
     require(iIsInitialisingB(), "Not initialising");
     _;
   }
-  modifier IsOpManCaller {
-    require(pIsOpManCallerB() && pIsContractCallerB(), "Not required OpMan caller");
+  modifier IsOpManContractCaller {
+    require(pIsOpManContractCallerB() && pIsContractCallerB(), "Not required OpMan caller");
     _;
   }
-  modifier IsHubCaller {
+  modifier IsHubContractCaller {
     require(msg.sender == iOwnersYA[HUB_OWNER_X] && pIsContractCallerB(), "Not required Hub caller");
     _;
   }
-  modifier IsSaleCaller {
+  modifier IsSaleContractCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB(), "Not required Sale caller");
     _;
   }
-  modifier IsTokenCaller {
+  modifier IsTokenContractCaller {
     require(msg.sender == iOwnersYA[TOKEN_OWNER_X] && pIsContractCallerB(), "Not required Token caller");
     _;
   }
@@ -75,7 +75,7 @@ contract OwnedList is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require(iIsInitialisingB() || (pIsOpManCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)));
+    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)));
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);

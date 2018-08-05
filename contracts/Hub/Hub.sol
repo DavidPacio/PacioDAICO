@@ -20,7 +20,7 @@ djh??
 
 Pause/Resume
 ============
-OpMan.PauseContract(HUB_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(HUB_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(HUB_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Hub Fallback function
@@ -46,19 +46,8 @@ import "../Escrow/I_GreyHub.sol";
 //import "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
-  enum NState {
-    None,              // 0 Nothing started yet
-    PriorToStart,      // 1 Open for registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
-    SoftCapMissRefund, // 1 Failed to reach soft cap, contributions being refunded
-    TerminateRefund,   // 2 A VoteEnd vote has voted to end the project, contributions being refunded
-    EscrowClosed,      // 3 Escrow is empty as a result of refunds or withdrawals emptying the pot
-    SaleClosed,        // 4 Sale is closed whether by hitting hard cap, out of time, or manually = normal tap operations ok
-    PreSoftCap,        // 5 Sale running prior to soft cap          /- deposits ok
-    SoftCapReached     // 6 Soft cap reached, initial draw allowed  |
-  }
-  NEscrowState private pStateN;
-
   string  public name = "Pacio DAICO Hub"; // contract name
+  uint32      private pState;    // DAICO state using the STATE_ bits. Passed through to Sale, Token, Escrow, and Grey on change
   I_OpMan     private pOpManC;   // the OpMan contract
   I_Sale      private pSaleC;    // the Sale contract
   I_TokenHub  private pTokenC;   // the Token contract
@@ -73,18 +62,23 @@ contract Hub is OwnedHub, Math {
 
   // View Methods
   // ============
-  // Hub.IsSaleOpen()
-  function IsSaleOpen() external view returns (bool) {
-    return pSaleC.IsSaleOpen();
+  // Hub.State()
+  function State() external view returns (uint32) {
+    return pState;
   }
   // Hub.IsTransferAllowedByDefault()
   function IsTransferAllowedByDefault() external view returns (bool) {
     return pListC.IsTransferAllowedByDefault();
   }
+  // Hub.RefundId()
+  function RefundId() external view returns (uint256) {
+    return pRefundId;
+  }
 
   // Events
   // ======
   event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address EscrowContract);
+  event StateChangeV(uint32 PrevState, uint32 NewState);
   event StartSaleV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();
@@ -105,7 +99,6 @@ contract Hub is OwnedHub, Math {
   // Hub.Initialise()
   // ----------------
   // To be called by the deploy script to set the contract address variables.
-  // The deploy script must make a call to EndInitialising() once other initialising calls have been completed.
   function Initialise() external IsInitialising {
     pOpManC  = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pSaleC   =  I_Sale(iOwnersYA[SALE_OWNER_X]);
@@ -130,16 +123,42 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSale()
   // ---------------
-  // To be called manually by Admin to start the sale going
+  // To be called manually by Admin to start the sale going. Can be called well before start time.
   // Can also be called to adjust settings.
+  // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
+    if (pState == 0)
+      pSetState(STATE_PRIOR_TO_OPEN_B);      // Open for registration, Grey escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
+    if (pState & STATE_CLOSED_COMBO_B > 0) { // Sale was closed
+      uint32 state = pState &= ~STATE_CLOSED_COMBO_B;
+      if (uint32(now) >= vStartT)
+        state |= STATE_OPEN_B;
+      pSetState(state);
+    }
     pSaleC.StartSale(vStartT, vEndT);
     pTokenC.StartSale();
     pListC.StartSale();
-    pEscrowC.StartSale();
     // No StartSale() for Grey, VoteTap, VoteEnd, Mvp
     emit StartSaleV(vStartT, vEndT);
+  }
+
+  // Hub.pSetState()
+  // ---------------
+  // Called to change state and to replicate the change.
+  // Any setting/unsetting must be done by the calling function. This does =
+  function pSetState(uint32 vState) private {
+    if (vState != pState) {
+      pSaleC.StateChange(vState);
+      pTokenC.StateChange(vState);
+    //pListC.StateChange(vState);
+      pEscrowC.StateChange(vState);
+      pGreyC.StateChange(vState);
+    //pVoteTapC.StateChange(vState); /- These can get state from Hub
+    //pVoteEndC.StateChange(vState); |
+      emit StateChangeV(pState, vState);
+      pState = vState;
+    }
   }
 
   // Hub.SoftCapReachedMO()
@@ -150,7 +169,7 @@ contract Hub is OwnedHub, Math {
     require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_SOFT_CAP_REACHED_MO_X)));
       pSaleC.SoftCapReached();
    //pTokenC.SoftCapReached();
-    pEscrowC.SoftCapReached();
+   //pEscrowC.SoftCapReached(); No. Done via the StateChange() call
       pListC.SoftCapReached();
     // No SoftCapReached() for Grey, VoteTap, VoteEnd, Mvp
     emit SoftCapReachedV();
@@ -164,7 +183,7 @@ contract Hub is OwnedHub, Math {
     require(msg.sender == address(pSaleC) || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X)));
     pSaleC.EndSale();
     pTokenC.EndSale();
-    pEscrowC.EndSale();
+  //pEscrowC.EndSale(); Not needed with StateChange() call
     pGreyC.EndSale();
     // No EndSale() for List, VoteTap, VoteEnd, Mvp
     emit EndSaleV();
@@ -174,9 +193,9 @@ contract Hub is OwnedHub, Math {
   // ---------------
   // Called when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
-  function Terminate() external IsVoteEndCaller {
-    pEscrowC.Terminate(pTokenC.PicosIssued()); // Sets Escrow state to TerminateRefund and records pTokenC.PicosIssued() passed to it for use in the proportional refund calcs.
-    pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubCallerOrConfirmedSigner
+  function Terminate() external IsVoteEndContractCaller {
+  //pEscrowC.Terminate(pTokenC.PicosIssued()); No. Done via StateChange() call
+    pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pOpManC.PauseContract(TOKEN_CONTRACT_X);
     pOpManC.PauseContract(ESCROW_CONTRACT_X);
     pOpManC.PauseContract(GREY_CONTRACT_X);
@@ -227,7 +246,7 @@ contract Hub is OwnedHub, Math {
         refundBit = LE_REFUND_ESCROW_ONCE_OFF_B;
     }
     require(refundWei > 0, 'No refund available');
-    pTokenC.Refund(toA, refundWei, refundBit); // IsHubCaller IsActive
+    pTokenC.Refund(toA, refundWei, refundBit); // IsHubContractCaller IsActive
     if (typeN == LE_TYPE_GREY)
       pGreyC.Refund(toA, refundWei, pRefundId);
     else
@@ -261,7 +280,7 @@ djh??
   // ---------------------
   // To be called manually via the old Sale to change to the new Sale.
   // Expects the old Sale contract to have been paused
-  // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsSaleCaller functions from working
+  // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsSaleContractCaller functions from working
   function NewSaleContract(address vNewSaleContractA) external IsAdminCaller {
     require(iPausedB);
     pTokenC.NewSaleContract(vNewSaleContractA); // which creates a new Sale list entry and transfers the old Sale picos to the new entry
@@ -269,7 +288,7 @@ djh??
   }
 
   // If a New Token contract is deployed
-  // ***************************************
+  // ***********************************
   // Hub.NewTokenContract()
   // ----------------------
   // To be called manually. Token needs to be initialised after this.
@@ -279,7 +298,7 @@ djh??
   }
 */
 
-  // Functions for Calling List IsHubCaller Functions
+  // Functions for Calling List IsHubContractCaller Functions
   // ================================================
   // Hub.Browse()
   // ------------

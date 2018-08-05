@@ -16,7 +16,7 @@ State changing methods
 
 Pause/Resume
 ============
-OpMan.PauseContract(GREY_CONTRACT_X) IsHubCallerOrConfirmedSigner
+OpMan.PauseContract(GREY_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(GREY_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 List.Fallback function
@@ -119,7 +119,7 @@ contract Grey is OwnedEscrow, Math {
   // Grey.StartSale()
   // ----------------
   // Called from Hub.StartSale()
-  function StartSale() external IsHubCaller {
+  function StartSale() external IsHubContractCaller {
     require(pStateN == NEscrowState.None        // initial start
          || pStateN == NEscrowState.SaleClosed, // a restart
             'Invalid state for Escrow StartSale call');
@@ -131,7 +131,7 @@ contract Grey is OwnedEscrow, Math {
   // Grey.EndSale()
   // --------------
   // Is called from Hub.EndSaleMO() when hard cap is reached, time is up, or the sale is ended manually
-  function EndSale() external IsHubCaller {
+  function EndSale() external IsHubContractCaller {
     pStateN = NGreyState.SaleClosed; // Sale is closed whether by hitting hard cap, out of time, or manually -> contributions being refunded as LE_REFUND_GREY_SALE_CLOSE_B refunds
     emit EndSaleV(pStateN);
   }
@@ -143,7 +143,7 @@ contract Grey is OwnedEscrow, Math {
   // --------------
   // Called from Sale.Buy() for a grey list case to transfer the contribution for escrow keeping here
   //                        after a List.GreyDeposit() call to update the list entry
-  function Deposit(address vSenderA) external payable IsSaleCaller {
+  function Deposit(address vSenderA) external payable IsSaleContractCaller {
     require(pStateN == NGreyState.Open, "Deposit to Grey Escrow not allowed");
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
@@ -155,7 +155,7 @@ contract Grey is OwnedEscrow, Math {
   //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit                    ********
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
   //                      Escrow/Grey.Refund()            - to do the actual refund
-  function RefundInfo(address accountA, uint256 vRefundId) external IsHubCaller returns (uint256 refundWei, uint32 refundBit) {
+  function RefundInfo(address accountA, uint256 vRefundId) external IsHubContractCaller returns (uint256 refundWei, uint32 refundBit) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
     pRefundId = vRefundId;
@@ -174,7 +174,7 @@ contract Grey is OwnedEscrow, Math {
   //                      Escrow/Grey.RefundInfo()        - for refund info: amount and refund bit
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
   //                      Escrow/Grey.Refund()            - to do the actual refund                                      ********
-  function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubCaller returns (bool) {
+  function Refund(address toA, uint256 vRefundWei, uint256 vRefundId) external IsHubContractCaller returns (bool) {
     require(pRefundInProgressB                                                              // /- all expected to be true if called as intended
          && vRefundId == pRefundId   // same hub call check                                 // |
          && (pStateN == NGreyState.SoftCapMissRefund || pStateN == NGreyState.SaleClosed)); // |
