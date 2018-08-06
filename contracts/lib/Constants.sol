@@ -10,7 +10,7 @@ pragma solidity ^0.4.24;
 contract Constants {
   // State Bits for use with pState                            /- Bit and description
   // All zero                                        =           Nothing started yet
-  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =   1; // 0 Open for registration, Prepurchase escrow deposits, and white listing which causes Grey -> Escrow transfer but wo PIOs being issued
+  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =   1; // 0 Open for registration, Prepurchase escrow deposits, and white listing
   uint32 internal constant STATE_OPEN_B              =   2; // 1 Sale is open. Is unset on any of the closes
   uint32 internal constant STATE_S_CAP_REACHED_B     =   4; // 2 Soft cap reached -> initial draw
   uint32 internal constant STATE_CLOSED_H_CAP_B      =   8; // 3 Sale closed due to hitting hard cap
@@ -74,8 +74,9 @@ contract Constants {
   uint256 internal constant OP_MAN_CHANGE_SIGNER_MO_X   =  8; // ChangeSignerMO()
   uint256 internal constant OP_MAN_UPDATE_CONTRACT_MO_X =  9; // UpdateContractMO()
   uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X   = 10; // UpdateManOpMO()
-  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X   =  5; // Hub.SoftCapReachedMO()
-  uint256 internal constant HUB_END_SALE_MO_X           =  6; // Hub.EndSaleMO()
+  uint256 internal constant HUB_START_SALE_X            =  5; // Hub.StartSaleMO();
+  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X   =  6; // Hub.SoftCapReachedMO()
+  uint256 internal constant HUB_END_SALE_MO_X           =  7; // Hub.EndSaleMO()
   uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X =  5; // Sale.SetCapsAndTranchesMO()
   uint256 internal constant ESCROW_SET_PCL_ACCOUNT_MO_X =  5; // Escrow.SetPclAccountMO()
   uint256 internal constant ESCROW_WITHDRAW_MO_X        =  6; // Escrow.WithdrawMO()

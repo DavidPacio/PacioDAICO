@@ -32,7 +32,7 @@ import "../List/I_ListEscrow.sol";
 contract Pescrow is OwnedEscrow, Math {
   string  public name = "Pacio DAICO Prepurchase Escrow";
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint256 private pTotalDepositedWei; // Total wei deposited in Prepurchase escrow before any white list transfers or refunds.
+  uint256 private pTotalDepositedWei; // Total wei deposited in Prepurchase escrow before any whitelist transfers or refunds.
   uint256 private pDepositId;    // Deposit Id
   uint256 private pWhitelistId;  // Whitelisting transfer Id
   uint256 private pRefundId;     // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
@@ -44,7 +44,7 @@ contract Pescrow is OwnedEscrow, Math {
   function EscrowWei() external view returns (uint256) {
     return address(this).balance;
   }
-  // Pescrow.TotalDepositedWei() Total wei deposited in Prepurchase escrow before any white list transfers or refunds.
+  // Pescrow.TotalDepositedWei() Total wei deposited in Prepurchase escrow before any whitelist transfers or refunds.
   function TotalDepositedWei() external view returns (uint256) {
     return pTotalDepositedWei;
   }

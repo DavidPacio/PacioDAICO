@@ -153,14 +153,20 @@ contract OpMan is OwnedOpMan {
     pAddManOp(OP_MAN_CONTRACT_X, RESUME_MO_X,                 3, HOUR); //  0 ResumeMO()
   //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+1,    3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
   //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+2,    3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
-    pAddManOp(OP_MAN_CONTRACT_X, 1,                        3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
-    pAddManOp(OP_MAN_CONTRACT_X, 2,                        3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
+    pAddManOp(OP_MAN_CONTRACT_X, 1,                           3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
+    pAddManOp(OP_MAN_CONTRACT_X, 2,                           3, HOUR); //  2 ChangeOwnerMO() 2 Admin owner
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_CONTRACT_MO_X,    3, HOUR); //  5 AddContractMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_SIGNER_MO_X,      3, HOUR); //  6 AddSignerMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_MAN_OP_MO_X,      3, HOUR); //  7 AddManOp()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_SIGNER_MO_X,   3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_CONTRACT_MO_X, 3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,   3, HOUR); // 10 UpdateManOpMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,            3, HOUR); //  5 Hub.StartSaleMO();
+    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,   3, HOUR); //  6 Hub.SoftCapReachedMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_END_SALE_MO_X,           3, HOUR); //  7 Hub.EndSaleMO()
+    pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X, 3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
+    pAddManOp(ESCROW_CONTRACT_X, ESCROW_SET_PCL_ACCOUNT_MO_X, 3, HOUR); //  5 Escrow.SetPclAccountMO()
+    pAddManOp(ESCROW_CONTRACT_X, ESCROW_WITHDRAW_MO_X,        3, HOUR); //  6 Escrow.WithdrawMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }

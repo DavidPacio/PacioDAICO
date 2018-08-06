@@ -3,22 +3,22 @@ var OpMan = artifacts.require("./OpMan/OpMan.sol");
 /* djh??
 // To be changed to deploy all the contracts, recording their addresses, then to call the Initialise() functions.
 
-Contracts
-=========
-Contract  Description                                                Owned By                         External Calls
---------  -----------                                                --------                         --------------
-OpMan     Operations management - multisig approval of critical ops  Deployer, Self,  Admin           All including self
-Hub       Hub or management contract                                 Deployer, OpMan, Admin, Sale     OpMan; Sale; Token; List; Escrow; Grey; VoteTap; VoteEnd; Mvp
-Sale      Sale                                                       Deployer, OpMan, Hub             OpMan; Hub -> Token,List,Escrow,Grey,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Grey
-Token     Token contract with EIP-20 functions                       Deployer, OpMan, Hub, Sale, Mvp  OpMan; List
-List      List of participants                                       Deployer, OpMan, Hub, Token      OpMan
-Escrow    Escrow management of funds from whitelisted participants   Deployer, OpMan, Hub, Sale       OpMan
-Grey      Escrow management of funds from grey list participants     Deployer, OpMan, Hub, Sale       OpMan
-VoteTap   For a tap vote                                             Deployer, OpMan, Hub             OpMan; Hub -> Escrow, List
-VoteEnd   For a terminate and refund vote                            Deployer, OpMan, Hub             OpMan; Hub -> Escrow, List
-Mvp       Re MVP launch and transferring PIOEs to PIOs               Deployer, OpMan, Hub             OpMan; List; Token -> List
+Contract Description                                      Owned By                                            External Calls
+-------- -----------                                      --------                                            --------------
+OpMan    Operations management: multisig for critical ops Deployer, Self,  Admin                              All including self
+Hub      Hub or management contract                       Deployer, OpMan, Admin, Sale, VoteTap, VoteEnd, Web OpMan; Sale; Token; List; Escrow; Pescrow; VoteTap; VoteEnd; Mvp
+Sale     Sale                                             Deployer, OpMan, Hub, Admin                         OpMan; Hub -> Token,List,Escrow,Pescrow,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Pescrow
+Token    Token contract with EIP-20 functions             Deployer, OpMan, Hub, Sale, Mvp                     OpMan; List
+List     List of participants                             Deployer, OpMan, Hub, Sale, Token                   OpMan
+Escrow   Escrow management of purchase PIOs issued funds  Deployer, OpMan, Hub, Sale, Admin                   OpMan
+Pescrow  Escrow management of prepurchase funds           Deployer, OpMan, Hub, Sale                          OpMan
+VoteTap  For a tap vote                                   Deployer, OpMan, Hub                                OpMan; Hub -> Escrow, List
+VoteEnd  For a terminate and refund vote                  Deployer, OpMan, Hub                                OpMan; Hub -> Escrow, List
+Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer, OpMan, Hub                                OpMan; List; Token -> List
 
+where Deployer is the PCL account used to deploy the contracts = ms.sender in the constructors and Truffle deploy script
 where Admin is a PCL hardware wallet
+      Web is a PCL wallet being used for Pacio DAICO web site access to Hub re white listing etc
 
 Initialisation and Deployment
 #############################
@@ -33,7 +33,7 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.
   Arguments:
-  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Grey, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Pescrow, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
 
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
@@ -57,14 +57,12 @@ Sale.SetCapsAndTranchesMO(uint256 vPicosCapT1, uint256 vPicosCapT2, uint256 vPic
 Sale.SetUsdEtherPrice(uint256 vUsdEtherPrice)
 Sale.EndInitialise() to end initialising
 
-List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token, 5 Escrow, 6 Grey
+List owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 ----
 List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
 List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
 List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
 List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
-List.ChangeOwnerMO(ESCROW_OWNER_X, Escrow address)
-List.ChangeOwnerMO(GREY_OWNER_X,   Grey address)
 List.Initialise()  to set the contract address variables.
 
 Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
@@ -85,30 +83,30 @@ Escrow.Initialise() to initialise the Escrow contract
 Escrow.SetPclAccountMO(address vPclAccountA) external
 Escrow.EndInitialise() to end initialising
 
-Grey owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+Pescrow owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
 ----
-Grey.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-Grey.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Grey.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Grey.Initialise() to initialise the Grey contract
+Pescrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Pescrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Pescrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Pescrow.Initialise()
 
 VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
 VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-VoteTap.Initialise() to initialise the VoteTap contract
+VoteTap.Initialise()
 
 VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub
 -------
 VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-VoteEnd.Initialise() to initialise the VoteEnd contract
+VoteEnd.Initialise()
 
 Mvp owned by 0 Deployer, 1 OpMan, 2 Hub
 ---
 Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Mvp.Initialise() to initialise the Mvp contract
+Mvp.Initialise()
 
 Then Manually by Admin
 ----------------------

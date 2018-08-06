@@ -7,6 +7,7 @@ Interface for the Hub contract for the external functions called from the Sale c
 pragma solidity ^0.4.24;
 
 interface I_Hub {
+  function StartSaleMO() external;
   function SoftCapReachedMO() external;
   function EndSaleMO(uint32 vBit) external;
 }

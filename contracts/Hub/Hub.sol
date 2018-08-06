@@ -82,7 +82,7 @@ contract Hub is OwnedHub, Math {
   // ======
   event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address EscrowContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
-  event StartSaleV(uint32 StartTime, uint32 EndTime);
+  event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
@@ -126,18 +126,18 @@ contract Hub is OwnedHub, Math {
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
 
-  // Hub.StartSale()
-  // ---------------
-  // To be called manually by Admin to start the sale going. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until tthat is done after the sale opens
+  // Hub.SetSaleDates()
+  // ------------------
+  // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
-  function StartSale(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
+  function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
     pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) + (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
-    pSaleC.StartSale(vStartT, vEndT);
-    emit StartSaleV(vStartT, vEndT);
+    pSaleC.SetSaleDates(vStartT, vEndT);
+    emit SetSaleDatesV(vStartT, vEndT);
   }
 
   // Hub.pSetState()
@@ -156,6 +156,16 @@ contract Hub is OwnedHub, Math {
       emit StateChangeV(pState, vState);
       pState = vState;
     }
+  }
+
+  // Hub.StartSaleMO()
+  // -----------------
+  // Is called from Sale.Buy() when the first buy arrives after the sale pStartT
+  // Can be called manually by Admin as a managed op if necessary.
+  function StartSaleMO() external {
+    require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
+    pSetState(STATE_OPEN_B);
+    emit SoftCapReachedV();
   }
 
   // Hub.SoftCapReachedMO()
@@ -212,10 +222,10 @@ contract Hub is OwnedHub, Math {
   // Hub.pRefund()
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
-  // Calls: List.EntryType()                - for type info
-  //        Escrow/Pescrow.RefundInfo()        - for refund info: amount and bit for one of the above cases
-  //        Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
-  //        Escrow/Pescrow.Refund()            - to do the actual refund
+  // Calls: List.EntryBits()                        - for type info
+  //        here for Pescrow or Escrow.RefundInfo() - for refund info: picos, amount and bit
+  //        Token.Refund() -> List.Refund()         - to update Token and List data, in the reverse of an Issue
+  //        Pescrow/Eescrow.Refund()                - to do the actual refund
   function pRefund(address toA, bool vOnceOffB) private returns (bool) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
@@ -224,9 +234,9 @@ contract Hub is OwnedHub, Math {
     uint32  refundBit;
     uint32  bits = pListC.EntryBits(toA);
     bool pescrowB;
-    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0);        // LE_NO_REFUND_COMBO_B is not a complete check
+    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0          // LE_NO_REFUND_COMBO_B is not a complete check
          && (vOnceOffB || pState & STATE_REFUNDING_COMBO_B > 0));
-    if (bits & LE_PREPURCHASE_B) {
+    if (bits & LE_PREPURCHASE_B > 0) {
       // Pescrow Refund
       pescrowB = true;
       if (vOnceOffB)
@@ -316,11 +326,11 @@ djh??
   // - currentA  Address of the current entry, ignored for vActionN == First | Last
   // - vActionN  BROWSE_FIRST, BROWSE_LAST, BROWSE_NEXT, BROWSE_PREV  Browse action to be performed
   // Returns:
-  // - retA   address and type of the list entry found, 0x0 if none
-  // - typeN  type of the entry { None, Contract, Grey, White, Presale, Member, Refunded, White, Downgraded }
+  // - retA   address of the list entry found, 0x0 if none
+  // - bits   of the entry
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
   //       The calling app will need to do the looping if necessary, thus the return of typeN.
-  function Browse(address currentA, uint8 vActionN) external view IsWebOrAdminCaller returns (address retA, uint8 typeN) {
+  function Browse(address currentA, uint8 vActionN) external view IsWebOrAdminCaller returns (address retA, uint32 bits) {
     return pListC.Browse(currentA, vActionN);
   }
   // Hub.NextEntry()

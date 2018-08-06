@@ -5,27 +5,11 @@ List of people/addresses to do with Pacio
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
+• set LE bits
+• check counts
+• update set whitelisted re ...
 - other owners e.g. voting contract?
 - add vote count data
-
-  // - sending when not yet whitelisted -> prepurchase whether sale open or not
-  // - sending when whitelisted but sale is not yet open -> prepurchase
-  // - sending when whitelisted but sale is open -> Escrow
-
-
-Member types -  see Constants.sol
-None        // 0 An undefined entry with no add date
-Contract    // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-PGrey       //   Prepurchase funds sent, not whitelisted, sale not open
-PGrey       //   Prepurchase funds sent, not whitelisted, sale open
-PGrey       //   Prepurchase funds sent, whitelisted, sale not open
-PGrey       //   Prepurchase funds sent, whitelisted, sale open - should be temporary. To be transferred to Escrow with PIOs issued via Admin or Web op immediately after sale opens
-Grey        // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-Presale     // 3 Seed presale or private placement entry. Has LE_PRESALE_B bit set. whiteT is not set
-Refunded    // 4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-Downgraded  // 5 Has been downgraded from White or Member and refunded
-White       // 6 Whitelisted with no picosBalance
-Member      // 7 Whitelisted with a picosBalance
 
 Member info [Struct order is different to minimise slots used]
 address nextEntryA;    // Address of the next entry     - 0 for the last  one
@@ -58,15 +42,13 @@ contract List is OwnedList, Math {
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   address private pFirstEntryA;   // Address of first entry
   address private pLastEntryA;    // Address of last entry
-  uint256 private pNumEntries;    // Number of list entries
-  uint256 private pNumGrey;       // Number of grey list entries
-  uint256 private pNumWhite;      // Number of white list entries - includes pNumMembers + pNumDowngraded + (those pNumRefunded ones that were not refunded from the Presale state)
+  uint256 private pNumEntries;    // Number of list entries              /- counts don't include those effectively counted by Id i.e. RefundId, BurnId
+  uint256 private pNumPrepurchase;// Number of prepurchase list entries  V
+  uint256 private pNumWhite;      // Number of whitelist entries
   uint256 private pNumMembers;    // Number of Pacio members
   uint256 private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
   uint256 private pNumProxies;    // Number of entries with a Proxy set
-  uint256 private pNumRefunded;   // Number refunded
-  uint256 private pNumBurnt;      // Number burnt
-  uint256 private pNumDowngraded; // Number downgraded (from white list)
+  uint256 private pNumDowngraded; // Number downgraded (from whitelist)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
@@ -97,10 +79,10 @@ contract List is OwnedList, Math {
   function NumberOfListEntries() external view returns (uint256) {
     return pNumEntries;
   }
-  function NumberOfGreyListEntries() external view returns (uint256) {
-    return pNumGrey;
+  function NumberOfPrepurchaseListEntries() external view returns (uint256) {
+    return pNumPrepurchase;
   }
-  function NumberOfWhiteListEntries() external view returns (uint256) {
+  function NumberOfWhitelistEntries() external view returns (uint256) {
     return pNumWhite;
   }
   function NumberOfPacioMembers() external view returns (uint256) {
@@ -112,17 +94,11 @@ contract List is OwnedList, Math {
   function NumberOfMembersWithProxy() external view returns (uint256) {
     return pNumProxies;
   }
-  function NumberOfRefunds() external view returns (uint256) {
-    return pNumRefunded;
-  }
-  function NumberOfBurns() external view returns (uint256) {
-    return pNumBurnt;
-  }
   function NumberOfDowngrades() external view returns (uint256) {
     return pNumDowngraded;
   }
-  function ListEntryExists(address accountA) external view returns (bool) {
-    return pListMR[accountA].addedT > 0;
+  function EntryBits(address accountA) external view returns (uint32) {
+    return pListMR[accountA].bits;
   }
   function IsPrepurchase(address accountA) external view returns (bool) {
     return pListMR[accountA].bits & LE_PREPURCHASE_B > 0;
@@ -139,26 +115,15 @@ contract List is OwnedList, Math {
   function PicosBought(address accountA) external view returns (uint256) {
     return pListMR[accountA].picosBought;
   }
-  function BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN) {
-    return (pListMR[accountA].bonusCentiPc, EntryType(accountA));
+  function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
+    return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
   }
   function IsTransferAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
   }
-  function IsTransferAllowed(address frA) private view returns (bool) {
+  function IsTransferAllowed(address frA) external view returns (bool) {
     return (pTransfersOkB                           // Transfers can be made
          || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0); // or they are allowed for this member
-  }
-  // List.EntryType()
-  // ----------------
-
-    R_List storage rsEntryR = pListMR[accountA];
-    return rsEntryR.addedT == 0 ? LE_TYPE_NONE :
-      (rsEntryR.bits & LE_BURNT_B > 0 ? LE_TYPE_BURNT :
-        (rsEntryR.refundT > 0 ? LE_TYPE_REFUNDED :
-         (rsEntryR.downT > 0 ? LE_TYPE_DOWNGRADED :
-          (rsEntryR.whiteT > 0 ? (rsEntryR.picosBalance > 0 ? LE_TYPE_MEMBER : LE_TYPE_WHITE) :
-           (rsEntryR.bits & LE_PRESALE_B > 0 ? LE_TYPE_PRESALE : (rsEntryR.dbId == 1 ? LE_TYPE_CONTRACT : LE_TYPE_GREY))))));
   }
   // List.Browse()
   // -------------
@@ -168,11 +133,11 @@ contract List is OwnedList, Math {
   // - currentA  Address of the current entry, ignored for vActionN == First | Last
   // - vActionN { First, Last, Next, Prev} Browse action to be performed
   // Returns:
-  // - retA   address and type of the list entry found, 0x0 if none
-  // - typeN  type of the entry { None, Contract, Grey, Presale, Refunded, Downgraded, White, Member }
+  // - retA   address of the list entry found, 0x0 if none
+  // - bits   bits of the entry
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
-  //       The calling app will need to do the looping if necessary, thus the return of typeN.
-  function Browse(address currentA, uint8 vActionN) external view IsHubContractCaller returns (address retA, uint8 typeN) {
+  //       The calling app will need to do the looping if necessary, thus the return of bits.
+  function Browse(address currentA, uint8 vActionN) external view IsHubContractCaller returns (address retA, uint32 bits) {
     if (vActionN == BROWSE_FIRST) {
       retA = pFirstEntryA;
     }else if (vActionN == BROWSE_LAST) {
@@ -182,7 +147,7 @@ contract List is OwnedList, Math {
     }else{ // Prev
       retA = pListMR[currentA].prevEntryA;
     }
-    return (retA, EntryType(retA));
+    return (retA, pListMR[retA].bits);
   }
   // List.NextEntry()
   // ----------------
@@ -353,7 +318,6 @@ contract List is OwnedList, Math {
       0,            // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0);           // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
     // Update other state vars
-    pNumGrey++;     // Assumed grey initially
     if (++pNumEntries == 1) // Number of list entries
       pFirstEntryA = vEntryA;
     else
@@ -372,7 +336,6 @@ contract List is OwnedList, Math {
   function CreateSaleContractEntry(uint256 vPicos) external IsTokenContractCaller returns (bool) {
     require(pCreateEntry(pSaleA, LE_TRANSFER_OK_B, 1)); // DbId of 1 assumed for Sale sale contract
     pListMR[pSaleA].picosBalance = vPicos;
-    pNumGrey--;  // No need for subMaxZero(pNumGrey, 1) here as the pCreateEntry() call has just incremented this
     return true;
   }
 
@@ -392,10 +355,12 @@ contract List is OwnedList, Math {
   // List.Whitelist()
   // ----------------
   // Whitelist an entry
+  // djh?? Add Issue of PIOs
+  //       Add Presale handling
   function Whitelist(address vEntryA, uint32 vWhiteT) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (pListMR[vEntryA].whiteT == 0) { // if not just changing the white list date then decrement grey and incr white
-      pNumGrey = subMaxZero(pNumGrey, 1);
+    if (pListMR[vEntryA].whiteT == 0) { // if not just changing the whitelist date then decrement prepurchases and incr white
+      pNumPrepurchase = subMaxZero(pNumPrepurchase, 1);
       pNumWhite++;
       if (pListMR[vEntryA].picosBalance > 0) // could be here for a presale entry with a balance now being whitelisted
         pNumMembers++;
@@ -410,7 +375,7 @@ contract List is OwnedList, Math {
   // Downgrades an entry from whitelisted
   function Downgrade(address vEntryA, uint32 vDownT) external IsHubContractCaller returns (bool) {
     require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (pListMR[vEntryA].downT == 0) { // if not just changing the downgrade date then decrement grey and incr white
+    if (pListMR[vEntryA].downT == 0) { // if not just changing the downgrade date then decrement white and incr downgraded
       pNumWhite = subMaxZero(pNumWhite, 1);
       pNumDowngraded++;
     }
@@ -460,11 +425,11 @@ contract List is OwnedList, Math {
   // Is called from Token.Issue() which is called from Sale.Buy() or Sale.PresaleIssue()
   //                                                   Sale.Buy() also calls Escrow.Deposit()
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller returns (bool) {
-    uint8 typeN = EntryType(toA);
-    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
+    R_List storage rsEntryR = pListMR[toA];
+    uint32 bits = rsEntryR.bits;
+    require(bits > 0 && bits & LE_NO_SENDING_FUNDS_COMBO_B == 0 && bits & LE_WHITELISTED_B > 0); // already checked by Sale.Buy() so expected to be ok
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
-    R_List storage rsEntryR = pListMR[toA];
     if (rsEntryR.weiContributed == 0) {
       rsEntryR.firstContribT = uint32(now);
       if (rsEntryR.whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
@@ -484,9 +449,9 @@ contract List is OwnedList, Math {
   // Is called from Sale.Buy() for prepurchase funds being deposited
   //                Sale.Buy() also calls Pescrow.Deposit()
   function PrepurchaseDeposit(address toA, uint256 vWei) external IsSaleContractCaller returns (bool) {
-    uint8 typeN = EntryType(toA);
-    require(typeN == LE_TYPE_GREY, 'Invalid list type for Grey deposit');
     R_List storage rsEntryR = pListMR[toA];
+    uint32 bits = rsEntryR.bits;
+    require(bits > 0 && bits & LE_NO_SENDING_FUNDS_COMBO_B == 0 && (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0)); // already checked by Sale.Buy() so expected to be ok
     if (rsEntryR.weiContributed == 0)
       rsEntryR.firstContribT = uint32(now);
     rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
@@ -524,24 +489,26 @@ contract List is OwnedList, Math {
   // Refunded PIOs are transferred back to the Sale contract account. They are not burnt or destroyed.
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
-    require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
-    uint8 typeN = EntryType(toA);
+    uint32 bits = rsEntryR.bits;
+    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0); // Already checked by Hub.pRefund() so expected to be ok
     if (vRefundBit >= LE_REFUND_PESCROW_S_CAP_MISS_B) {
-      require(typeN == LE_TYPE_GREY, "Invalid list type for Grey Refund");
-      require(rsEntryR.weiContributed == vRefundWei, "Invalid List Grey refund call");
+      // Pescrow refundBit
+      require(bits & LE_PREPURCHASE_B > 0, "Invalid list type for Prepurchase Refund");
+      require(rsEntryR.weiContributed == vRefundWei, "Invalid List Prepurchase Refund call");
     }else{
-      require(typeN == LE_TYPE_PRESALE || typeN >= LE_TYPE_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
+      // Escrow refund bit
+      require(bits & LE_HOLDS_PIOS_B > 0, "Invalid list type for Refund");
       refundPicos = rsEntryR.picosBalance;
       require(refundPicos > 0 && vRefundWei > 0, "Invalid List Escrow refund call");
-      pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos);
-      rsEntryR.picosBalance   = 0;
+      pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos); // transfer the Picos back to the sale contract. TokenRefund() emits a Transfer() event for this.
+      rsEntryR.picosBalance = 0;
     }
     rsEntryR.refundT = uint32(now);
-    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since type -> LE_TYPE_REFUNDED after this
+    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since will fail LE_NO_REFUND_COMBO_B after thids
     rsEntryR.bits |= vRefundBit;                                       // LE_REFUND_ESCROW_S_CAP_MISS_B  Refund of all Escrow funds due to soft cap not being reached
     emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B Refund of remaining Escrow funds proportionately following a yes vote for project termination
-    pNumRefunded++;                                                    // LE_REFUND_ESCROW_ONCE_OFF_B    Once off Escrow refund for whatever reason including downgrade from whitelisted
-  }                                                                    // LE_REFUND_PESCROW_S_CAP_MISS_B Refund of Prepurchase escrow funds due to soft cap not being reached
+  }                                                                    // LE_REFUND_ESCROW_ONCE_OFF_B    Once off Escrow refund for whatever reason including downgrade from whitelisted
+                                                                       // LE_REFUND_PESCROW_S_CAP_MISS_B Refund of Prepurchase escrow funds due to soft cap not being reached
                                                                        // LE_REFUND_PESCROW_SALE_CLOSE_B Refund of Prepurchase escrow funds that have not been whitelisted by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
                                                                        // LE_REFUND_PESCROW_ONCE_OFF_B   Once off Admin/Manual Prepurchase escrow refund for whatever reason
   // List.Burn()
@@ -556,7 +523,6 @@ contract List is OwnedList, Math {
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
     rsEntryR.bits |= LE_BURNT_B;
     rsEntryR.picosBalance = 0;
-    pNumBurnt++;
   }
 
   // List.Destroy()
@@ -565,7 +531,7 @@ contract List is OwnedList, Math {
   // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsTokenContractCaller {
-    require(pListMR[pSaleA].bits & LE_TYPE_CONTRACT > 0, "Not a contract list entry");
+    require(pListMR[pSaleA].bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
     pListMR[pSaleA].picosBalance = subMaxZero(pListMR[pSaleA].picosBalance, vPicos);
   }
 

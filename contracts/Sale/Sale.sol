@@ -69,11 +69,11 @@ contract Sale is OwnedSale, Math {
                                   // |- u updated during running
                                   // |- t initialised to true but can be changed manually
                                   // |- f initialised to false
-  I_ListSale   private pListC;   // the List contract        -  read only use so List does not need to have Sale as an owner
-  I_TokenSale  private pTokenC;  // the Token contract       /- make state changing calls so need to have Sale as an owner
-  I_EscrowSale private pEscrowC; // the Escrow contract      |
-  I_PescrowSale   private pPescrowC;   // the Prepurchase escrow contract |
-                                 // Don't need I_Hub pHubC as iOwnersYA[HUB_OWNER_X] is the Hub contract
+  I_ListSale    private pListC;    // the List contract     -  read only use so List does not need to have Sale as an owner
+  I_Hub         private pHubC;     // the Hub contract     /- make state changing calls so these contracts need to have Sale as an owner
+  I_TokenSale   private pTokenC;   // the Token contract   |
+  I_EscrowSale  private pEscrowC;  // the Escrow contract  |
+  I_PescrowSale private pPescrowC; // the Pescrow contract |
 
   // No constructor
   // ==============
@@ -207,7 +207,7 @@ contract Sale is OwnedSale, Math {
   event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
-  event StartSaleV(uint32 StartTime, uint32 EndTime);
+  event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
   event PrepurchaseDepositV(address indexed Contributor, uint256 Wei);
   event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
   event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
@@ -227,10 +227,11 @@ contract Sale is OwnedSale, Math {
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pTokenC  = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
-    pListC   = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
-    pEscrowC = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
-    pPescrowC   = I_PescrowSale(opManC.ContractXA(PESCROW_CONTRACT_X));
+    pHubC     = I_Hub(iOwnersYA[HUB_OWNER_X]);
+    pTokenC   = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC    = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
+    pEscrowC  = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
+    pPescrowC = I_PescrowSale(opManC.ContractXA(PESCROW_CONTRACT_X));
     emit InitialiseV(pTokenC, pListC, pEscrowC, pPescrowC);
   //iInitialisingB = false; No. Leave in initialising state
   }
@@ -293,15 +294,15 @@ contract Sale is OwnedSale, Math {
     // No event emit as List.Issue() does it
   }
 
-  // Sale.StartSale()
-  // ----------------
-  // Called from Hub.StartSale() to start the sale going
+  // Sale.SetSaleDates()
+  // -------------------
+  // Called from Hub.SetSaleDates() to set sale dates
   // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
-  // Hub.StartSale() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
-  function StartSale(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
+  // Hub.SetSaleDates() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
+  function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
     pStartT = vStartT;
     pEndT   = vEndT;
-    emit StartSaleV(vStartT, vEndT);
+    emit SetSaleDatesV(vStartT, vEndT);
   }
 
   // Sale.SetUsdHardCapB()
@@ -332,7 +333,7 @@ contract Sale is OwnedSale, Math {
   // Sale.Buy()
   // ----------
   // Main function for funds being sent to the DAICO.
-  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not whitelisted.
+  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be not whitelisted.
   // Cases:
   // - sending when not yet whitelisted -> prepurchase whether sale open or not
   // - sending when whitelisted but sale is not yet open -> prepurchase
@@ -340,25 +341,21 @@ contract Sale is OwnedSale, Math {
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
-    (uint32 bonusCentiPc, uint8 typeN) = pListC.BonusPcAndType(msg.sender);
-    // typeN could be:
-    // LE_TYPE_NONE       0 An undefined entry with no add date
-    // LE_TYPE_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-    // LE_TYPE_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-    // LE_TYPE_PRESALE    3 Seed presale or internal placement entry. Has LE_PRESALE_B bit set. whiteT is not set
-    // LE_TYPE_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-    // LE_TYPE_DOWNGRADED 5 Has been downgraded from White or Member and refunded
-    // LE_TYPE_BURNT      6 Has been burnt
-    // LE_TYPE_WHITE      7 Whitelisted with no picosBalance
-    // LE_TYPE_MEMBER     8 Whitelisted with a picosBalance
-    if (typeN == LE_TYPE_GREY) { // list entry has been created via a Hub.CreateListEntry() call -> grey state
-      pListC.PrepurchaseDeposit(msg.sender, msg.value);   // updates the list entry
-      pPescrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Prepurchase escrow account
+    (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
+    require(bits > 0, 'Account not registered');
+    require(bits & LE_NO_SENDING_FUNDS_COMBO_B == 0, 'Sending not allowed');
+    if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pStartT)
+      // Sale hasn't started yet but the time come
+      pHubC.StartSaleMO(); // changes state to STATE_OPEN_B
+    if (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0) {
+      // Not whitelisted yet || sale hasn't started yet -> Prepurchase
+      pListC.PrepurchaseDeposit(msg.sender, msg.value); // updates the list entry
+      pPescrowC.Deposit.value(msg.value)(msg.sender);   // transfers msg.value to the Prepurchase escrow account
       emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
-    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
-    // Which tranche?                                                         // rejects LE_TYPE_NONE, LE_TYPE_CONTRACT, LE_TYPE_REFUNDED, LE_TYPE_DOWNGRADED, LE_TYPE_BURNT
+    // Whitelisted and ok to send funds
+    // Which tranche?
     uint32  tranche = 3;                 // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;
     if (msg.value >= pMinWeiT2) {
@@ -408,7 +405,7 @@ contract Sale is OwnedSale, Math {
   // Sale.pSoftCapReached()
   // ----------------------
   function pSoftCapReached() private {
-    I_Hub(iOwnersYA[HUB_OWNER_X]).SoftCapReachedMO(); // This will cause a StateChange() callback
+    pHubC.SoftCapReachedMO(); // This will cause a StateChange() callback
   }
 
   // Sale.pHardCapReached()
@@ -422,7 +419,7 @@ contract Sale is OwnedSale, Math {
   // ---------------
   // Called from Buy() for time up and pHardCapReached() for hard cap reached
   function pEndSale(uint32 vBit) private {
-    I_Hub(iOwnersYA[HUB_OWNER_X]).EndSaleMO(vBit);
+    pHubC.EndSaleMO(vBit);
   }
 
   // Sale Fallback function
