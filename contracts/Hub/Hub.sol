@@ -222,10 +222,13 @@ contract Hub is OwnedHub, Math {
     uint256 refundPicos;
     uint256 refundWei;
     uint32  refundBit;
-    uint8   typeN = pListC.EntryType(toA);
-    pRefundId++;
-    if (typeN == LE_TYPE_GREY) {
+    uint32  bits = pListC.EntryBits(toA);
+    bool pescrowB;
+    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0);        // LE_NO_REFUND_COMBO_B is not a complete check
+         && (vOnceOffB || pState & STATE_REFUNDING_COMBO_B > 0));
+    if (bits & LE_PREPURCHASE_B) {
       // Pescrow Refund
+      pescrowB = true;
       if (vOnceOffB)
         refundBit = LE_REFUND_PESCROW_ONCE_OFF_B;
       else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
@@ -234,15 +237,15 @@ contract Hub is OwnedHub, Math {
         refundBit = LE_REFUND_PESCROW_SALE_CLOSE_B;
       if (refundBit > 0)
         refundWei = Min(pListC.WeiContributed(toA), pPescrowC.EscrowWei());
-    }else if (typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE) {
+    }else if (bits & LE_HOLDS_PIOS_B > 0) {
       // Escrow Refund
       (refundPicos, refundWei, refundBit) = pEscrowC.RefundInfo(pRefundId, toA);
       if (vOnceOffB)
         refundBit = LE_REFUND_ESCROW_ONCE_OFF_B;
     }
     require(refundWei > 0, 'No refund available');
-    pTokenC.Refund(pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
-    if (typeN == LE_TYPE_GREY) {
+    pTokenC.Refund(++pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
+    if (pescrowB) {
       if (!pPescrowC.Refund(pRefundId, toA, refundWei, refundBit)) {
         if (pPescrowC.EscrowWei() == 0) {
           pSetState(pState |= STATE_PESCROW_EMPTY_B);

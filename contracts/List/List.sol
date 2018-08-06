@@ -5,20 +5,26 @@ List of people/addresses to do with Pacio
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
-• burn refunded PIOs
-• change refund to be on the basis of PIOs held
-• From Marcell: I am for option c.) store the Eth, only send PIO if and when there is an account. And have a manual send back Eth process just in case.
 - other owners e.g. voting contract?
 - add vote count data
 
+  // - sending when not yet whitelisted -> prepurchase whether sale open or not
+  // - sending when whitelisted but sale is not yet open -> prepurchase
+  // - sending when whitelisted but sale is open -> Escrow
+
+
 Member types -  see Constants.sol
-None,       // 0 An undefined entry with no add date
-Contract,   // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-Grey,       // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-Presale,    // 3 Seed presale or private placement entry. Has LE_PRESALE_B bit set. whiteT is not set
-Refunded,   // 4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-Downgraded, // 5 Has been downgraded from White or Member and refunded
-White,      // 6 Whitelisted with no picosBalance
+None        // 0 An undefined entry with no add date
+Contract    // 1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
+PGrey       //   Prepurchase funds sent, not whitelisted, sale not open
+PGrey       //   Prepurchase funds sent, not whitelisted, sale open
+PGrey       //   Prepurchase funds sent, whitelisted, sale not open
+PGrey       //   Prepurchase funds sent, whitelisted, sale open - should be temporary. To be transferred to Escrow with PIOs issued via Admin or Web op immediately after sale opens
+Grey        // 2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
+Presale     // 3 Seed presale or private placement entry. Has LE_PRESALE_B bit set. whiteT is not set
+Refunded    // 4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
+Downgraded  // 5 Has been downgraded from White or Member and refunded
+White       // 6 Whitelisted with no picosBalance
 Member      // 7 Whitelisted with a picosBalance
 
 Member info [Struct order is different to minimise slots used]
@@ -115,15 +121,11 @@ contract List is OwnedList, Math {
   function NumberOfDowngrades() external view returns (uint256) {
     return pNumDowngraded;
   }
-  function IsTransferAllowedByDefault() external view returns (bool) {
-    return pTransfersOkB;
-  }
-  function IsTransferAllowed(address frA) private view returns (bool) {
-    return (pTransfersOkB                           // Transfers can be made
-         || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0); // or they are allowed for this member
-  }
   function ListEntryExists(address accountA) external view returns (bool) {
     return pListMR[accountA].addedT > 0;
+  }
+  function IsPrepurchase(address accountA) external view returns (bool) {
+    return pListMR[accountA].bits & LE_PREPURCHASE_B > 0;
   }
   function WeiContributed(address accountA) external view returns (uint256) {
     return pListMR[accountA].weiContributed;
@@ -140,19 +142,16 @@ contract List is OwnedList, Math {
   function BonusPcAndType(address accountA) external view returns (uint32 bonusCentiPc, uint8 typeN) {
     return (pListMR[accountA].bonusCentiPc, EntryType(accountA));
   }
+  function IsTransferAllowedByDefault() external view returns (bool) {
+    return pTransfersOkB;
+  }
+  function IsTransferAllowed(address frA) private view returns (bool) {
+    return (pTransfersOkB                           // Transfers can be made
+         || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0); // or they are allowed for this member
+  }
   // List.EntryType()
   // ----------------
-  // Returns the entry type of the accountA list entry as one of the LE_TYPE_ constants:
-  // LE_TYPE_NONE       0 An undefined entry with no add date
-  // LE_TYPE_CONTRACT   1 Contract (Sale) list entry for Minted tokens. Has dbId == 1
-  // LE_TYPE_GREY       2 Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-  // LE_TYPE_PRESALE    3 Seed presale or internal placement entry. Has LE_PRESALE_B bit set. whiteT is not set
-  // LE_TYPE_REFUNDED   4 Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-  // LE_TYPE_DOWNGRADED 5 Has been downgraded from White or Member and refunded
-  // LE_TYPE_BURNT      6 Has been burnt
-  // LE_TYPE_WHITE      7 Whitelisted with no picosBalance
-  // LE_TYPE_MEMBER     8 Whitelisted with a picosBalance
-  function EntryType(address accountA) public view returns (uint8 typeN) {
+
     R_List storage rsEntryR = pListMR[accountA];
     return rsEntryR.addedT == 0 ? LE_TYPE_NONE :
       (rsEntryR.bits & LE_BURNT_B > 0 ? LE_TYPE_BURNT :
@@ -462,7 +461,7 @@ contract List is OwnedList, Math {
   //                                                   Sale.Buy() also calls Escrow.Deposit()
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller returns (bool) {
     uint8 typeN = EntryType(toA);
-    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Invalid list type for issue"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     R_List storage rsEntryR = pListMR[toA];
@@ -522,6 +521,7 @@ contract List is OwnedList, Math {
   // Called from Token.Refund() IsHubContractCaller which is called from Hub.Refund()     IsNotContractCaller via Hub.pRefund()
   //                                                                  or Hub.PushRefund() IsWebOrAdminCaller  via Hub.pRefund()
   // vRefundWei can be less than or greater than List.WeiContributed() for termination case where the wei is a proportional calc based on picos held re transfers, not wei contributed
+  // Refunded PIOs are transferred back to the Sale contract account. They are not burnt or destroyed.
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
     require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
@@ -530,7 +530,7 @@ contract List is OwnedList, Math {
       require(typeN == LE_TYPE_GREY, "Invalid list type for Grey Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Grey refund call");
     }else{
-      require(typeN == LE_TYPE_PRESALE || typeN >= LE_TYPE_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+      require(typeN == LE_TYPE_PRESALE || typeN >= LE_TYPE_WHITE, "Invalid list type for Refund"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
       refundPicos = rsEntryR.picosBalance;
       require(refundPicos > 0 && vRefundWei > 0, "Invalid List Escrow refund call");
       pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos);
@@ -542,7 +542,7 @@ contract List is OwnedList, Math {
     emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit); // LE_REFUND_ESCROW_TERMINATION_B Refund of remaining Escrow funds proportionately following a yes vote for project termination
     pNumRefunded++;                                                    // LE_REFUND_ESCROW_ONCE_OFF_B    Once off Escrow refund for whatever reason including downgrade from whitelisted
   }                                                                    // LE_REFUND_PESCROW_S_CAP_MISS_B Refund of Prepurchase escrow funds due to soft cap not being reached
-                                                                       // LE_REFUND_PESCROW_SALE_CLOSE_B Refund of Prepurchase escrow funds that have not been white listed by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
+                                                                       // LE_REFUND_PESCROW_SALE_CLOSE_B Refund of Prepurchase escrow funds that have not been whitelisted by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
                                                                        // LE_REFUND_PESCROW_ONCE_OFF_B   Once off Admin/Manual Prepurchase escrow refund for whatever reason
   // List.Burn()
   // -----------

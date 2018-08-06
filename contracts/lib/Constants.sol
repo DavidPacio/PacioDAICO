@@ -85,33 +85,46 @@ contract Constants {
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
-  // List Entry Bits                                                /- bit and bit setting description
-  uint32 internal constant LE_PRESALE_B                   =   1; // 0 A Presale List entry - Pacio Seed Presale or Pacio internal Placement
-  uint32 internal constant LE_TRANSFER_OK_B               =   2; // 1 Transfers allowed for this member even if pTransfersOkB is false
-  uint32 internal constant LE_HAS_PROXY_B                 =   4; // 2 This entry has a Proxy appointed
-  uint32 internal constant LE_BURNT_B                     =   8; // 3 This entry has had its PIOs burnt
-  uint32 internal constant LE_REFUND_ESCROW_S_CAP_MISS_B  =  16; // 4 Refund of all Escrow funds due to soft cap not being reached
-  uint32 internal constant LE_REFUND_ESCROW_TERMINATION_B =  32; // 5 Refund of remaining Escrow funds proportionately following a yes vote for project termination
-  uint32 internal constant LE_REFUND_ESCROW_ONCE_OFF_B    =  64; // 6 Once off Escrow refund for whatever reason including downgrade from whitelisted
-  uint32 internal constant LE_REFUND_PESCROW_S_CAP_MISS_B = 128; // 7 Refund of Prepurchase escrow funds due to soft cap not being reached
-  uint32 internal constant LE_REFUND_PESCROW_SALE_CLOSE_B = 256; // 8 Refund of Prepurchase escrow funds that have not been white listed by the time that the sale closes. No need for a Prepurchase termination case as sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
-  uint32 internal constant LE_REFUND_PESCROW_ONCE_OFF_B   = 512; // 9 Once off Admin/Manual Prepurchase escrow refund for whatever reason
+
+  // List Entry Bits                                                    /- bit and bit setting description
+  // Zero                                                                 Undefined so can be used a test for an entry existing, or addedT > 0
+  uint32 internal constant LE_REGISTERED_B                =      1; //  0 Entry has been registered with addedT set but nothing more
+  uint32 internal constant LE_SALE_CONTRACT_B             =      2; //  1 Is the Sale Contract entry - where the minted PIOs are held. Has dbId == 1
+  uint32 internal constant LE_FUNDED_B                    =      4; //  2 Funds sent
+  uint32 internal constant LE_HOLDS_PIOS_B                =      8; //  3 Holds PIOs. Can be set wo LE_FUNDED_B being set as a result of a transfer
+  uint32 internal constant LE_PREPURCHASE_B               =     16; //  4 Prepurchase funded entry. There are 4 types of prepurchase entries as below. If unset then entry is an escrow entry, and must then have either LE_WHITELISTED_B or LE_PRESALE_B set or both.
+  uint32 internal constant LE_WHITELISTED_B               =     32; //  5 Has been whitelisted
+  uint32 internal constant LE_MEMBER_B                    =     64; //  6 Is a Pacio Member: Whitelisted with a picosBalance
+  uint32 internal constant LE_PRESALE_B                   =    128; //  7 A Presale List entry - Pacio Seed Presale or Pacio Private Placement - not yet whitelisted
+  uint32 internal constant LE_WAS_PRESALE_B               =    256; //  8 Was a Presale entry which has been whitelisted
+  uint32 internal constant LE_TRANSFER_OK_B               =    512; //  9 Transfers allowed for this entry even if pTransfersOkB is false
+  uint32 internal constant LE_HAS_PROXY_B                 =   1024; // 10 This entry has a Proxy appointed
+  uint32 internal constant LE_DOWNGRADED_B                =   2048; // 11 This entry has been downgraded from whitelisted. Refunding candidate.
+  uint32 internal constant LE_BURNT_B                     =   4096; // 12 This entry has had its PIOs burnt
+  uint32 internal constant LE_REFUND_PESCROW_S_CAP_MISS_B =   8192; // 13 Prepurchase escrow funds Refunded due to soft cap not being reached
+  uint32 internal constant LE_REFUND_PESCROW_SALE_CLOSE_B =  16384; // 14 Prepurchase escrow funds Refunded due to not being whitelisted by the time that the sale closes
+  uint32 internal constant LE_REFUND_PESCROW_ONCE_OFF_B   =  32768; // 15 Prepurchase escrow funds Refunded once off manually for whatever reason
+  uint32 internal constant LE_REFUND_ESCROW_S_CAP_MISS_B  =  65536; // 16 Escrow funds Refunded due to soft cap not being reached
+  uint32 internal constant LE_REFUND_ESCROW_TERMINATION_B = 131072; // 17 Escrow funds Refunded proportionately according to Picos held following a yes vote for project termination
+  uint32 internal constant LE_REFUND_ESCROW_ONCE_OFF_B    = 262144; // 18 Escrow funds Refunded once off manually for whatever reason including downgrade from whitelisted
+  // Combos for anding checks
+  uint32 internal constant LE_REFUNDED_COMBO_B           =  516096; // LE_REFUND_PESCROW_S_CAP_MISS_B | LE_REFUND_PESCROW_SALE_CLOSE_B | LE_REFUND_PESCROW_ONCE_OFF_B | LE_REFUND_ESCROW_S_CAP_MISS_B | LE_REFUND_ESCROW_TERMINATION_B | LE_REFUND_ESCROW_ONCE_OFF_B
+  uint32 internal constant LE_DEAD_COMBO_B               =  520192; // LE_BURNT_B | LE_REFUNDED_COMBO_B  or bits >= 4096
+  uint32 internal constant LE_NO_SENDING_FUNDS_COMBO_B   =  522370; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
+  uint32 internal constant LE_NO_REFUND_COMBO_B          =  520194; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
+
+  // There is no need for a Prepurchase refund termination bit as the sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
+
+  // Prepurchase Entry Types:
+  // uint8 internal constant LE_TYPE_PRE_NWL_SNO = 1; // Prepurchase entry, funded, not whitelisted, sale not open
+  // uint8 internal constant LE_TYPE_PRE_NWL_SO  = 2; // Prepurchase entry, funded, not whitelisted, sale open
+  // uint8 internal constant LE_TYPE_PRE_WL_SNO  = 3; // Prepurchase entry, funded, whitelisted, sale not open
+  // uint8 internal constant LE_TYPE_PRE_WL_SO   = 4; // Prepurchase entry, funded, whitelisted, sale open - temporary to be transferred to Escrow with PIOs issued via Admin or Web op immediately after sale opens
 
   // List Browsing actions
   uint8 internal constant BROWSE_FIRST = 1;
   uint8 internal constant BROWSE_LAST  = 2;
   uint8 internal constant BROWSE_NEXT  = 3;
   uint8 internal constant BROWSE_PREV  = 4;
-
-  // List Entry Types
-  uint8 internal constant LE_TYPE_NONE       = 0; // An undefined entry with no add date
-  uint8 internal constant LE_TYPE_CONTRACT   = 1; // Contract (Sale) list entry for Minted tokens. Has dbId == 1
-  uint8 internal constant LE_TYPE_GREY       = 2; // Grey listed, initial default, not whitelisted, not contract, not presale, not refunded, not downgraded, not member
-  uint8 internal constant LE_TYPE_PRESALE    = 3; // Seed presale or internal placement entry. Has LE_PRESALE_B bit set. whiteT is not set
-  uint8 internal constant LE_TYPE_REFUNDED   = 4; // Funds have been refunded at refundedT, either in full or in part if a Project Termination refund.
-  uint8 internal constant LE_TYPE_DOWNGRADED = 5; // Has been downgraded from White or Member and refunded
-  uint8 internal constant LE_TYPE_BURNT      = 6; // Has been burnt
-  uint8 internal constant LE_TYPE_WHITE      = 7; // Whitelisted with no picosBalance
-  uint8 internal constant LE_TYPE_MEMBER     = 8; // Whitelisted with a picosBalance
 
 } // End Constants Contract

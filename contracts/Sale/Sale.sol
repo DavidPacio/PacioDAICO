@@ -332,11 +332,11 @@ contract Sale is OwnedSale, Math {
   // Sale.Buy()
   // ----------
   // Main function for funds being sent to the DAICO.
-  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not white listed.
+  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be grey i.e. not whitelisted.
   // Cases:
-  // - sending when not yet white listed -> prepurchase whether sale open or not
-  // - sending when white listed but sale is not yet open -> prepurchase
-  // - sending when white listed but sale is open -> Escrow
+  // - sending when not yet whitelisted -> prepurchase whether sale open or not
+  // - sending when whitelisted but sale is not yet open -> prepurchase
+  // - sending when whitelisted but sale is open -> Escrow
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
@@ -357,7 +357,7 @@ contract Sale is OwnedSale, Math {
       emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
-    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet white listed = ok to buy
+    require(typeN >= LE_TYPE_WHITE || typeN == LE_TYPE_PRESALE, "Unable to buy"); // sender is White or Member or a presale contributor not yet whitelisted = ok to buy
     // Which tranche?                                                         // rejects LE_TYPE_NONE, LE_TYPE_CONTRACT, LE_TYPE_REFUNDED, LE_TYPE_DOWNGRADED, LE_TYPE_BURNT
     uint32  tranche = 3;                 // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;

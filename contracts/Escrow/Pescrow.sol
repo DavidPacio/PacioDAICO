@@ -2,8 +2,8 @@
 
 Escrow management of prepurchase funds in the Pacio DAICO
 Cases:
-• sending when not yet white listed -> prepurchase whether sale open or not
-• sending when white listed but sale is not yet open -> prepurchase
+• sending when not yet whitelisted -> prepurchase whether sale open or not
+• sending when whitelisted but sale is not yet open -> prepurchase
 
 Owned by Deployer, OpMan, Hub, Sale
 
