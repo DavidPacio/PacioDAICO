@@ -28,7 +28,7 @@ import "../lib/OwnedEscrow.sol";
 import "../lib/Math.sol";
 import "../OpMan/I_OpMan.sol";
 import "../List/I_ListEscrow.sol";
-import "../Escrow/I_MFundPFund.sol";
+import "../Escrow/I_MfundPfund.sol";
 
 contract Pescrow is OwnedEscrow, Math {
   string  public name = "Pacio DAICO Prepurchase Escrow";
@@ -38,7 +38,7 @@ contract Pescrow is OwnedEscrow, Math {
   uint256 private pWhitelistId;  // Whitelisting transfer Id
   uint256 private pRefundId;     // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
   I_ListEscrow private pListC;   // the List contract
-  I_MFundPFund private pMFundC;  // the MFund contract
+  I_MfundPfund private pMfundC;  // the Mfund contract
 
   // View Methods
   // ============
@@ -87,7 +87,7 @@ contract Pescrow is OwnedEscrow, Math {
   // Called from the deploy script to initialise the Pescrow contract
   function Initialise() external IsInitialising {
     pListC  = I_ListEscrow(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
-    pMFundC = I_MFundPFund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(ESCROW_CONTRACT_X));
+    pMfundC = I_MfundPfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(ESCROW_CONTRACT_X));
     iPausedB       =        // make Prepurchase escrow active
     iInitialisingB = false;
     emit InitialiseV();
@@ -114,13 +114,13 @@ contract Pescrow is OwnedEscrow, Math {
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
-  // PFund.PMTransfer()
+  // Pfund.PMTransfer()
   // ------------------
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally Hub.pPMtransfer() calls here to transfer the Ether from P to M
   function PMTransfer(address vSenderA, uint256 vWei) external IsHubContractCaller {
-    pMFundC.Deposit.value(vWei)(vSenderA); // transfers vWei from PFund to MFund
+    pMfundC.Deposit.value(vWei)(vSenderA); // transfers vWei from Pfund to Mfund
   }
 
   // Pescrow.Refund()

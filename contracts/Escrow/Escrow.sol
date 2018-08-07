@@ -183,9 +183,9 @@ contract Escrow is OwnedEscrow, Math {
   // ----------------
   // Called from:
   // a. Sale.Buy() to transfer the contribution here,     after a                      Sale.pBuy()-> Token.Issue() -> List.Issue() call
-  // b. Hub.pPMtransfer() to transfer from PFund to MFund after a Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() call
+  // b. Hub.pPMtransfer() to transfer from Pfund to Mfund after a Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() call
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
-    // require(iIsSaleContractCallerB() || iIsPFundCallerB(), 'Not Sale or PFund caller');   djh?? Fix
+    require(iIsSaleContractCallerB() || iIsPfundCallerB(), 'Not Sale or Pfund caller');
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit to Escrow not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
     emit DepositV(++pDepositId, vSenderA, msg.value);

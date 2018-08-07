@@ -60,7 +60,7 @@ contract Sale is OwnedSale, Math {
   uint256 private pPicosSoldT1;   // s Picos sold in tranche 1 /- sum should == Token.pPicosIssued
   uint256 private pPicosSoldT2;   // s Picos sold in tranche 2 |
   uint256 private pPicosSoldT3;   // s Picos sold in tranche 3 |
-  uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> PFund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
+  uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> Pfund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
   bool    private pUsdHardCapB;   // t True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
                                   // |- i  initialised via setup fn calls
@@ -335,9 +335,9 @@ contract Sale is OwnedSale, Math {
   // Main function for funds being sent to the DAICO.
   // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be not whitelisted.
   // Cases:
-  // - sending when not yet whitelisted                  -> PFund whether sale open or not
-  // - sending when whitelisted but sale is not yet open -> PFund
-  // - sending when whitelisted and sale is open         -> MFund via pBuy()
+  // - sending when not yet whitelisted                  -> Pfund whether sale open or not
+  // - sending when whitelisted but sale is not yet open -> Pfund
+  // - sending when whitelisted and sale is open         -> Mfund via pBuy()
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
@@ -362,10 +362,10 @@ contract Sale is OwnedSale, Math {
 
   // Sale.pBuy() private
   // -----------
-  // Split from Buy() to handle the PFund -> MFund cases:
+  // Split from Buy() to handle the Pfund -> Mfund cases:
   // a. Sale.Buy()                                                 -> here -> Token.Issue() -> List.Issue() for normal buying
-  // b. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
-  // c. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // b. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // c. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // Decides on the tranche, calculates the picos, checks for softcap being reached, or the sale ending via hard cap being reached or time being up
   function pBuy(address senderA, uint256 weiContributed, uint32 bonusCentiPc) private {
     // Which tranche?
@@ -416,9 +416,9 @@ contract Sale is OwnedSale, Math {
   // Sale.PMtransfer()
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
-  // then finally Hub.pPMtransfer() transfer the Ether from PFund to MFund
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // then finally Hub.pPMtransfer() transfer the Ether from Pfund to Mfund
   function PMtransfer(address senderA, uint256 weiContributed) external IsHubContractCaller {
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
     require(bits > 0, 'Account not registered');

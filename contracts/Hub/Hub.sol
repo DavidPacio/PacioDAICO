@@ -55,7 +55,7 @@ contract Hub is OwnedHub, Math {
   I_TokenHub   private pTokenC;    // the Token contract
   I_ListHub    private pListC;     // the List contract
   I_EscrowHub  private pEscrowC;   // the Escrow contract
-  I_PescrowHub private pPescrowC;  // the Prepurchase escrow contract
+  I_PescrowHub private pPfundC;  // the Prepurchase escrow contract
   bool private pRefundInProgressB; // to prevent re-entrant refund calls
   uint256 private pRefundId;       // Refund Id
 
@@ -109,7 +109,7 @@ contract Hub is OwnedHub, Math {
     pTokenC   =  I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
     pListC    =   I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
     pEscrowC  = I_EscrowHub(pOpManC.ContractXA(ESCROW_CONTRACT_X));
-    pPescrowC =   I_PescrowHub(pOpManC.ContractXA(PESCROW_CONTRACT_X));
+    pPfundC =   I_PescrowHub(pOpManC.ContractXA(PESCROW_CONTRACT_X));
     emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
     iPausedB       =        // make active
     iInitialisingB = false;
@@ -149,7 +149,7 @@ contract Hub is OwnedHub, Math {
       pTokenC.StateChange(vState);
       pListC.StateChange(vState);
       pEscrowC.StateChange(vState);
-      pPescrowC.StateChange(vState);
+      pPfundC.StateChange(vState);
     //pVoteTapC.StateChange(vState); /- These can get state from Hub
     //pVoteEndC.StateChange(vState); |
       emit StateChangeV(pState, vState);
@@ -209,22 +209,22 @@ contract Hub is OwnedHub, Math {
   // Called by Admin or from web to whitelist an entry.
   // Possible actions:
   // a. Registered only account (no funds)                   -> whitelisting only
-  // b. PFund not whitelisted account with sale not yet open -> whitelisting only
-  // c. PFund not whitelisted account with sale open         -> whitelisting plus -> MFund with PIOs issued
-  // d. MFund presale not whitelisted account                -> whitelisting plus presale bits and counts updated
+  // b. Pfund not whitelisted account with sale not yet open -> whitelisting only
+  // c. Pfund not whitelisted account with sale open         -> whitelisting plus -> Mfund with PIOs issued
+  // d. Mfund presale not whitelisted account                -> whitelisting plus presale bits and counts updated
   // If 0 is passed for vWhiteT then now is used
   function Whitelist(address accountA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
     uint32  bits = pListC.EntryBits(accountA);
     require(bits > 0, 'Unknown account');
     require(bits & LE_WHITELISTED_B == 0, 'Already whitelisted');
     pListC.Whitelist(accountA, vWhiteT > 0 ? vWhiteT : uint32(now)); // completes cases a, b, d
-    return (bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) PFund -> MFund with PIOs issued
+    return (bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) Pfund -> Mfund with PIOs issued
                                                                       : true; // cases a, b, d
   }
 
   // Hub.PMtransfer()
   // ----------------
-  // Called by Admin or from web to transfer a PFund whitelisted account that was still in PFund because the sale had not opened yet, to MFund with PIOs issued following opening of the sale.
+  // Called by Admin or from web to transfer a Pfund whitelisted account that was still in Pfund because the sale had not opened yet, to Mfund with PIOs issued following opening of the sale.
   function PMtransfer(address accountA) external IsWebOrAdminCaller IsActive returns (bool) {
     uint32  bits = pListC.EntryBits(accountA);
     require(bits > 0, 'Unknown account');
@@ -236,13 +236,13 @@ contract Hub is OwnedHub, Math {
   // Hub.pPMtransfer() private
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
-  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally transfer the Ether from P to M
   function pPMtransfer(address accountA) private returns (bool) {
-    uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPescrowC.EscrowWei());
-      pSaleC.PMtransfer(accountA, weiContributed);
-    pPescrowC.PMTransfer(accountA, weiContributed); // transfers weiContribured to the Escrow account
+    uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.EscrowWei());
+      pSaleC.PMtransfer(accountA, weiContributed);  // processes the issue
+    pPfundC.PMTransfer(accountA, weiContributed); // transfers weiContribured from the Pfund to the Mfund
     // djh?? add an event
     return true;
   }
@@ -288,7 +288,7 @@ contract Hub is OwnedHub, Math {
       else if (pState & STATE_CLOSED_COMBO_B > 0)
         refundBit = LE_REFUND_PESCROW_SALE_CLOSE_B;
       if (refundBit > 0)
-        refundWei = Min(pListC.WeiContributed(toA), pPescrowC.EscrowWei());
+        refundWei = Min(pListC.WeiContributed(toA), pPfundC.EscrowWei());
     }else if (bits & LE_HOLDS_PIOS_B > 0) {
       // Escrow Refund
       (refundPicos, refundWei, refundBit) = pEscrowC.RefundInfo(pRefundId, toA);
@@ -298,8 +298,8 @@ contract Hub is OwnedHub, Math {
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(++pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
     if (pescrowB) {
-      if (!pPescrowC.Refund(pRefundId, toA, refundWei, refundBit)) {
-        if (pPescrowC.EscrowWei() == 0) {
+      if (!pPfundC.Refund(pRefundId, toA, refundWei, refundBit)) {
+        if (pPfundC.EscrowWei() == 0) {
           pSetState(pState |= STATE_PESCROW_EMPTY_B);
           emit PescrowRefundingCompleteV();
         }
