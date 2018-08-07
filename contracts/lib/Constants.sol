@@ -117,11 +117,11 @@ contract Constants {
 
   // There is no need for a Prepurchase refund termination bit as the sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
 
-  // Prepurchase Entry Types:
-  // uint8 internal constant LE_TYPE_PRE_NWL_SNO = 1; // Prepurchase entry, funded, not whitelisted, sale not open
-  // uint8 internal constant LE_TYPE_PRE_NWL_SO  = 2; // Prepurchase entry, funded, not whitelisted, sale open
-  // uint8 internal constant LE_TYPE_PRE_WL_SNO  = 3; // Prepurchase entry, funded, whitelisted, sale not open
-  // uint8 internal constant LE_TYPE_PRE_WL_SO   = 4; // Prepurchase entry, funded, whitelisted, sale open - temporary to be transferred to Escrow with PIOs issued via Admin or Web op immediately after sale opens
+  // PFund Entry Types: All are funded.
+  // uint8 internal constant LE_PF_TYPE_NWL_SNO = 1; // PFund entry, not whitelisted, sale not open
+  // uint8 internal constant LE_PF_TYPE_NWL_SO  = 2; // PFund entry, not whitelisted, sale open
+  // uint8 internal constant LE_PF_TYPE_WL_SNO  = 3; // PFund entry, whitelisted, sale not open
+  // uint8 internal constant LE_PF_TYPE_WL_SO   = 4; // PFund entry, whitelisted, sale open - temporary to be transferred to Escrow with PIOs issued via Admin or Web op immediately after sale opens
 
   // List Browsing actions
   uint8 internal constant BROWSE_FIRST = 1;

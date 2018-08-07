@@ -204,6 +204,45 @@ contract Hub is OwnedHub, Math {
     pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
 
+  // Hub.Whitelist()
+  // ---------------
+  // Called by Admin or from web to whitelist an entry.
+  // Possible actions:
+  // a. Registered only account (no funds)                   -> whitelisting only
+  // b. PFund not whitelisted account with sale not yet open -> whitelisting only
+  // c. PFund not whitelisted account with sale open         -> whitelisting plus -> MFund with PIOs issued
+  // d. MFund presale not whitelisted account                -> whitelisting plus presale bits and counts updated
+  // If 0 is passed for vWhiteT then now is used
+  function Whitelist(address accountA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
+    uint32  bits = pListC.EntryBits(accountA);
+    require(bits > 0, 'Unknown account');
+    require(bits & LE_WHITELISTED_B == 0, 'Already whitelisted');
+    pListC.Whitelist(accountA, vWhiteT > 0 ? vWhiteT : uint32(now)); // completes cases a, b, d
+    return (bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) PFund -> MFund with PIOs issued
+                                                                      : true; // cases a, b, d
+  }
+
+  // Hub.PMtransfer()
+  // ----------------
+  // Called by Admin or from web to transfer a PFund whitelisted account that was still in PFund because the sale had opened yet, to MFund with PIOs issued following opening of the sale.
+  // Similar actions to be performed to Hub.Whitelist() action c) except for the whitelisting.
+  function PMtransfer(address accountA) external IsWebOrAdminCaller IsActive returns (bool) {
+    uint32  bits = pListC.EntryBits(accountA);
+    require(bits > 0, 'Unknown account');
+    require(bits & LE_WHITELISTED_B > 0, 'Not whitelisted');
+    require(bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0, 'Invalid PMtransfer call');
+    return pPMtransfer(accountA);
+  }
+
+  // Hub.pPMtransfer() private
+  // -----------------
+  // Called from Whitelist() or PMtransfer() to
+  function pPMtransfer(address accountA) private returns (bool) {
+    // djh?? complete
+
+  }
+
+
   // Hub.Refund()
   // ------------
   // Pull refund request from a contributor, not a contract
@@ -356,12 +395,6 @@ djh??
     return pListC.CreateListEntry(accountA, vBits, vDbId);
   }
 
-  // Hub.Whitelist()
-  // ---------------
-  // Whitelist an entry
-  function Whitelist(address accountA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.Whitelist(accountA, vWhiteT);
-  }
   // Hub.Downgrade()
   // ---------------
   // Downgrades an entry from whitelisted
@@ -395,10 +428,6 @@ djh??
   function SetTransferOk(address accountA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetTransferOk(accountA, B);
   }
-
-  // Others
-  // ======
-
 
   // Hub Fallback function
   // =====================

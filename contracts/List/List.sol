@@ -248,7 +248,7 @@ contract List is OwnedList, Math {
   // --------------------
   // Called from Hub.SetTransferOk to set LE_FROM_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
   function SetTransferOk(address vEntryA, bool B) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].bits > 0, "Account not known"); // Entry is expected to exist
+    require(pListMR[vEntryA].bits > 0, 'Unknown account'); // Entry is expected to exist
     if (B) // Set
       pListMR[vEntryA].bits |= LE_FROM_TRANSFER_OK_B;
     else   // Unset
@@ -365,7 +365,7 @@ contract List is OwnedList, Math {
   function Whitelist(address vEntryA, uint32 vWhiteT) external IsHubContractCaller returns (bool) {
     uint32 bitsToSet = LE_WHITELISTED_B;
     R_List storage rsEntryR = pListMR[vEntryA];
-    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
+    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
     if (rsEntryR.whiteT == 0) { // if not just changing the whitelist date then decrement prepurchases and incr white
       pNumWhite++;
       if (rsEntryR.picosBalance > 0) { // could be here for a presale entry with a balance now being whitelisted
@@ -407,7 +407,7 @@ contract List is OwnedList, Math {
   // ---------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
   function SetBonus(address vEntryA, uint32 vBonusPc) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].bits > 0, "Account not known"); // Entry is expected to exist
+    require(pListMR[vEntryA].bits > 0, 'Unknown account'); // Entry is expected to exist
     pListMR[vEntryA].bonusCentiPc = vBonusPc;
     emit SetBonusV(vEntryA, vBonusPc);
     return true;
@@ -419,7 +419,7 @@ contract List is OwnedList, Math {
   // vProxyA = 0x0 to unset or remove a proxy
   function SetProxy(address vEntryA, address vProxyA) external IsHubContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[vEntryA];
-    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
+    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
     if (vProxyA == address(0)) {
       // Unset or remove proxy
       if (rsEntryR.proxyA >= address(0)) {
@@ -560,7 +560,7 @@ contract List is OwnedList, Math {
   // Deployment Gas usage: 3142286. When done using pListMR[tx.origin] throughtout rather than the rsEntryR pointer, the deployment gas usage was more at 3143422. Presumably the gas usage would be less at run time too.
   function Burn() external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[tx.origin];
-    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
+    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
     rsEntryR.picosBalance = 0;
     rsEntryR.bits |= LE_BURNT_B;
     if (rsEntryR.bits & LE_MEMBER_B > 0)
