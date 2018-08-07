@@ -51,27 +51,27 @@ contract List is OwnedList, Math {
   address private pSaleA;          // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;   // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
-  // Struct to hold member data, with a doubly linked list of List to permit traversing List
-  // Each member requires 6 storage slots.
-  struct R_List{        // Bytes Storage slot  Comment
-    address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
-    uint32  bits;          //  4 0 Bit settings
-    uint32  addedT;        //  4 0 Datetime when added
-    uint32  whiteT;        //  4 0 Datetime when whitelisted
-    address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
-    uint32  firstContribT; //  4 1 Datetime when first contribution made. Can be a prepurchase contribution.
-    uint32  refundT;       //  4 1 Datetime when refunded
-    uint32  downT;         //  4 1 Datetime when downgraded
-    address proxyA;        // 20 2 Address of proxy for voting purposes
-    uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-    uint32  dbId;          //  4 2 Id in DB for name and KYC info
-    uint32  contributions; //  4 2 Number of separate contributions made
-    uint256 weiContributed;// 32 3 wei contributed
-    uint256 weiRefunded;   // 32 4 wei refunded
-    uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
-    uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
-  }
-  mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
+// Struct to hold member data, with a doubly linked list of the List entries to permit traversing
+// Each member requires 6 storage slots.
+struct R_List{        // Bytes Storage slot  Comment
+  address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
+  uint32  bits;          //  4 0 Bit settings
+  uint32  addedT;        //  4 0 Datetime when added
+  uint32  whiteT;        //  4 0 Datetime when whitelisted
+  address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
+  uint32  firstContribT; //  4 1 Datetime when first contribution made. Can be a prepurchase contribution.
+  uint32  refundT;       //  4 1 Datetime when refunded
+  uint32  downT;         //  4 1 Datetime when downgraded
+  address proxyA;        // 20 2 Address of proxy for voting purposes
+  uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
+  uint32  dbId;          //  4 2 Id in DB for name and KYC info
+  uint32  contributions; //  4 2 Number of separate contributions made
+  uint256 weiContributed;// 32 3 wei contributed
+  uint256 weiRefunded;   // 32 4 wei refunded
+  uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
+  uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+}
+mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
 
   // View Methods
   // ============
@@ -442,8 +442,12 @@ contract List is OwnedList, Math {
 
   // List.Issue()
   // ------------
-  // Is called from Token.Issue() which is called from Sale.Buy() or Sale.PresaleIssue()
-  //                                      In this case Sale.Buy() also calls Escrow.Deposit()
+  // Cases:
+  // a. Hub.PresaleIssue() -> Sale.PresaleIssue()-> Token.Issue()                                 -> here for all Seed Presale and Private Placement pContributors (aggregated)
+  // b. Sale.Buy()-> Sale.pBuy()-> Token.Issue()                                                  -> here for normal buying
+  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> here for PFund to MFund transfers on whitelisting
+  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> here for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // djh?? List.Issue() handle cases c and d
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;

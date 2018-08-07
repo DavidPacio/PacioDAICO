@@ -224,8 +224,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.PMtransfer()
   // ----------------
-  // Called by Admin or from web to transfer a PFund whitelisted account that was still in PFund because the sale had opened yet, to MFund with PIOs issued following opening of the sale.
-  // Similar actions to be performed to Hub.Whitelist() action c) except for the whitelisting.
+  // Called by Admin or from web to transfer a PFund whitelisted account that was still in PFund because the sale had not opened yet, to MFund with PIOs issued following opening of the sale.
   function PMtransfer(address accountA) external IsWebOrAdminCaller IsActive returns (bool) {
     uint32  bits = pListC.EntryBits(accountA);
     require(bits > 0, 'Unknown account');
@@ -236,12 +235,17 @@ contract Hub is OwnedHub, Math {
 
   // Hub.pPMtransfer() private
   // -----------------
-  // Called from Whitelist() or PMtransfer() to
+  // Cases:
+  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
+  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // then finally transfer the Ether from P to M
   function pPMtransfer(address accountA) private returns (bool) {
-    // djh?? complete
-
+    uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPescrowC.EscrowWei());
+      pSaleC.PMtransfer(accountA, weiContributed);
+    pPescrowC.PMTransfer(accountA, weiContributed); // transfers weiContribured to the Escrow account
+    // djh?? add an event
+    return true;
   }
-
 
   // Hub.Refund()
   // ------------

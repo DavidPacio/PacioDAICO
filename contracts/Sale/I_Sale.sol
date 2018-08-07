@@ -10,6 +10,7 @@ interface I_Sale {
   function StateChange(uint32 vState) external;
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external;
   function SetSaleDates(uint32 vStartT, uint32 vEndT) external;
+  function PMtransfer(address senderA, uint256 weiContributed) external;
 }
 // End I_Sale interface
 

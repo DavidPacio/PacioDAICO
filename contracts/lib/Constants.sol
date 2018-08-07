@@ -87,7 +87,7 @@ contract Constants {
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
   // List Entry Bits                                                    /- bit and bit setting description
-  // Zero                                                                 Undefined so can be used a test for an entry existing, or addedT > 0
+  // Zero                                                                 Undefined so can be used a test for an entry existing
   uint32 internal constant LE_REGISTERED_B                =      1; //  0 Entry has been registered with addedT set but nothing more
   uint32 internal constant LE_SALE_CONTRACT_B             =      2; //  1 Is the Sale Contract entry - where the minted PIOs are held. Has dbId == 1
   uint32 internal constant LE_FUNDED_B                    =      4; //  2 Funds sent via Sale.Buy() for Escrow or Pescrow cases, or Sale.PresaleIssue()

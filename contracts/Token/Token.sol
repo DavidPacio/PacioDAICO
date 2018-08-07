@@ -134,10 +134,11 @@ contract Token is EIP20Token, Math {
 
   // Token.Issue()
   // -------------
-  // Called by:
-  // . Hub.PresaleIssue() -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
-  //   List entry is created by Hub.Presale.Issue() which checks toA
-  // . Sale.Buy() which checks toA
+  // Cases:
+  // a. Hub.PresaleIssue() -> Sale.PresaleIssue()                                 -> here for all Seed Presale and Private Placement pContributors (aggregated)
+  // b. Sale.Buy()-> Sale.pBuy()                                                  -> here for normal buying
+  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> here for PFund to MFund transfers on whitelisting
+  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> here for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsSaleContractCaller IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)
       pContributors++;

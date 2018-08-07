@@ -60,7 +60,7 @@ contract Sale is OwnedSale, Math {
   uint256 private pPicosSoldT1;   // s Picos sold in tranche 1 /- sum should == Token.pPicosIssued
   uint256 private pPicosSoldT2;   // s Picos sold in tranche 2 |
   uint256 private pPicosSoldT3;   // s Picos sold in tranche 3 |
-  uint256 private pWeiRaised;     // s cumulative wei raised  USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
+  uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> PFund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
   bool    private pUsdHardCapB;   // t True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
                                   // |- i  initialised via setup fn calls
@@ -335,9 +335,9 @@ contract Sale is OwnedSale, Math {
   // Main function for funds being sent to the DAICO.
   // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be not whitelisted.
   // Cases:
-  // - sending when not yet whitelisted -> prepurchase whether sale open or not
-  // - sending when whitelisted but sale is not yet open -> prepurchase
-  // - sending when whitelisted but sale is open -> Escrow
+  // - sending when not yet whitelisted                  -> PFund whether sale open or not
+  // - sending when whitelisted but sale is not yet open -> PFund
+  // - sending when whitelisted and sale is open         -> MFund via pBuy()
   function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
     require(msg.value >= pMinWeiT3, "Ether less than minimum"); // sent >= tranche 3 min ETH
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
@@ -354,13 +354,26 @@ contract Sale is OwnedSale, Math {
       emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
-    // Whitelisted and ok to send funds
+    // Whitelisted and ok to buy
+    pBuy(msg.sender, msg.value, bonusCentiPc);
+    pEscrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Escrow account
+    return true;
+  }
+
+  // Sale.pBuy() private
+  // -----------
+  // Split from Buy() to handle the PFund -> MFund cases:
+  // a. Sale.Buy()                                                 -> here -> Token.Issue() -> List.Issue() for normal buying
+  // b. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
+  // c. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // Decides on the tranche, calculates the picos, checks for softcap being reached, or the sale ending via hard cap being reached or time being up
+  function pBuy(address senderA, uint256 weiContributed, uint32 bonusCentiPc) private {
     // Which tranche?
     uint32  tranche = 3;                 // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;
-    if (msg.value >= pMinWeiT2) {
+    if (weiContributed >= pMinWeiT2) {
       // Tranche 2 or 1 if not filled
-      if (msg.value >= pMinWeiT1 && pPicosSoldT1 < pPicosCapT1) {
+      if (weiContributed >= pMinWeiT1 && pPicosSoldT1 < pPicosCapT1) {
         tranche = 1;
         picosPerEth = pPicosPerEthT1;
       } else if (pPicosSoldT2 < pPicosCapT2) {
@@ -368,15 +381,14 @@ contract Sale is OwnedSale, Math {
         picosPerEth = pPicosPerEthT2;
       } // else 3 as tranche by size is filled
     }
-    uint256 picos = safeMul(picosPerEth, msg.value) / 10**18; // Picos = Picos per ETH * Wei / 10^18
+    uint256 picos = safeMul(picosPerEth, weiContributed) / 10**18; // Picos = Picos per ETH * Wei / 10^18
     // Bonus?
     if (bonusCentiPc > 0) // 675 for 6.75%
       picos += safeMul(picos, bonusCentiPc) / 10000;
-    pWeiRaised = safeAdd(pWeiRaised, msg.value);
-    pTokenC.Issue(msg.sender, picos, msg.value); // which calls List.Issue()
-    pEscrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Escrow account
+    pWeiRaised = safeAdd(pWeiRaised, weiContributed);
+    pTokenC.Issue(senderA, picos, weiContributed); // which calls List.Issue()
     uint256 usdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
-    emit SaleV(msg.sender, picos, msg.value, tranche, pUsdEtherPrice, picosPerEth, bonusCentiPc);
+    emit SaleV(senderA, picos, weiContributed, tranche, pUsdEtherPrice, picosPerEth, bonusCentiPc);
     if (pState & STATE_S_CAP_REACHED_B == 0 && usdRaised >= pUsdSoftCap)
       pSoftCapReached();
     if (tranche == 3)
@@ -399,7 +411,19 @@ contract Sale is OwnedSale, Math {
       pEndSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
     }
-    return true;
+  }
+
+  // Sale.PMtransfer()
+  // -----------------
+  // Cases:
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for PFund to MFund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // then finally Hub.pPMtransfer() transfer the Ether from PFund to MFund
+  function PMtransfer(address senderA, uint256 weiContributed) external IsHubContractCaller {
+    (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
+    require(bits > 0, 'Account not registered');
+    // djh?? add other checks
+    pBuy(senderA, weiContributed, bonusCentiPc);
   }
 
   // Sale.pSoftCapReached()
