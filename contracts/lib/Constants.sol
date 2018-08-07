@@ -86,19 +86,18 @@ contract Constants {
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
-
   // List Entry Bits                                                    /- bit and bit setting description
   // Zero                                                                 Undefined so can be used a test for an entry existing, or addedT > 0
   uint32 internal constant LE_REGISTERED_B                =      1; //  0 Entry has been registered with addedT set but nothing more
   uint32 internal constant LE_SALE_CONTRACT_B             =      2; //  1 Is the Sale Contract entry - where the minted PIOs are held. Has dbId == 1
-  uint32 internal constant LE_FUNDED_B                    =      4; //  2 Funds sent
+  uint32 internal constant LE_FUNDED_B                    =      4; //  2 Funds sent via Sale.Buy() for Escrow or Pescrow cases, or Sale.PresaleIssue()
   uint32 internal constant LE_HOLDS_PIOS_B                =      8; //  3 Holds PIOs. Can be set wo LE_FUNDED_B being set as a result of a transfer
   uint32 internal constant LE_PREPURCHASE_B               =     16; //  4 Prepurchase funded entry. There are 4 types of prepurchase entries as below. If unset then entry is an escrow entry, and must then have either LE_WHITELISTED_B or LE_PRESALE_B set or both.
   uint32 internal constant LE_WHITELISTED_B               =     32; //  5 Has been whitelisted
   uint32 internal constant LE_MEMBER_B                    =     64; //  6 Is a Pacio Member: Whitelisted with a picosBalance
   uint32 internal constant LE_PRESALE_B                   =    128; //  7 A Presale List entry - Pacio Seed Presale or Pacio Private Placement - not yet whitelisted
   uint32 internal constant LE_WAS_PRESALE_B               =    256; //  8 Was a Presale entry which has been whitelisted
-  uint32 internal constant LE_TRANSFER_OK_B               =    512; //  9 Transfers allowed for this entry even if pTransfersOkB is false
+  uint32 internal constant LE_FROM_TRANSFER_OK_B          =    512; //  9 Transfers from this entry allowed entry even if pTransfersOkB is false. Is set for the Sale contract entry.
   uint32 internal constant LE_HAS_PROXY_B                 =   1024; // 10 This entry has a Proxy appointed
   uint32 internal constant LE_DOWNGRADED_B                =   2048; // 11 This entry has been downgraded from whitelisted. Refunding candidate.
   uint32 internal constant LE_BURNT_B                     =   4096; // 12 This entry has had its PIOs burnt
@@ -108,7 +107,9 @@ contract Constants {
   uint32 internal constant LE_REFUND_ESCROW_S_CAP_MISS_B  =  65536; // 16 Escrow funds Refunded due to soft cap not being reached
   uint32 internal constant LE_REFUND_ESCROW_TERMINATION_B = 131072; // 17 Escrow funds Refunded proportionately according to Picos held following a yes vote for project termination
   uint32 internal constant LE_REFUND_ESCROW_ONCE_OFF_B    = 262144; // 18 Escrow funds Refunded once off manually for whatever reason including downgrade from whitelisted
-  // Combos for anding checks
+  // Combos
+  uint32 internal constant LE_HOLDS_PIOS_N_MEMBER_B      =      72; // LE_HOLDS_PIOS_B | LE_MEMBER_B
+  uint32 internal constant LE_WHITELISTED_N_MEMBER_B     =      96; // LE_WHITELISTED_B | LE_MEMBER_B
   uint32 internal constant LE_REFUNDED_COMBO_B           =  516096; // LE_REFUND_PESCROW_S_CAP_MISS_B | LE_REFUND_PESCROW_SALE_CLOSE_B | LE_REFUND_PESCROW_ONCE_OFF_B | LE_REFUND_ESCROW_S_CAP_MISS_B | LE_REFUND_ESCROW_TERMINATION_B | LE_REFUND_ESCROW_ONCE_OFF_B
   uint32 internal constant LE_DEAD_COMBO_B               =  520192; // LE_BURNT_B | LE_REFUNDED_COMBO_B  or bits >= 4096
   uint32 internal constant LE_NO_SENDING_FUNDS_COMBO_B   =  522370; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B

@@ -102,14 +102,14 @@ contract Token is EIP20Token, Math {
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-  function Initialise() external IsInitialising {
+  function Initialise(uint32 vDbId) external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract
     pSaleA   = iOwnersYA[SALE_OWNER_X];
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
     // Create the Sale sale contract list entry
-    iListC.CreateSaleContractEntry(10**21);
+    iListC.CreateSaleContractEntry(10**21, vDbId);
     // 10^20 = 100,000,000,000,000,000,000 picos
     //       = 100,000,000 or 100 million PIOEs
     // 10^19 = 10,000,000,000,000,000,000 picos

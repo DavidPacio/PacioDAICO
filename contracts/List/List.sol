@@ -5,8 +5,7 @@ List of people/addresses to do with Pacio
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
-• set LE bits
-• check counts
+• prepurchase -> escrow PFund -> MFund and decr pNumPrepurchases
 • update set whitelisted re ...
 - other owners e.g. voting contract?
 - add vote count data
@@ -39,18 +38,18 @@ import "../OpMan/I_OpMan.sol";
 
 contract List is OwnedList, Math {
   string  public  name = "Pacio DAICO Participants List";
-  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  address private pFirstEntryA;   // Address of first entry
-  address private pLastEntryA;    // Address of last entry
-  uint256 private pNumEntries;    // Number of list entries              /- counts don't include those effectively counted by Id i.e. RefundId, BurnId
-  uint256 private pNumPrepurchase;// Number of prepurchase list entries  V
-  uint256 private pNumWhite;      // Number of whitelist entries
-  uint256 private pNumMembers;    // Number of Pacio members
-  uint256 private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
-  uint256 private pNumProxies;    // Number of entries with a Proxy set
-  uint256 private pNumDowngraded; // Number downgraded (from whitelist)
-  address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
-  bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
+  uint32  private pState;          // DAICO state using the STATE_ bits. Replicated from Hub on a change
+  address private pFirstEntryA;    // Address of first entry
+  address private pLastEntryA;     // Address of last entry
+  uint256 private pNumEntries;     // Number of list entries              /- no pNum* counts for those effectively counted by Id i.e. RefundId, BurnId
+  uint256 private pNumPrepurchases;// Number of prepurchase list entries  V
+  uint256 private pNumWhite;       // Number of whitelist entries
+  uint256 private pNumMembers;     // Number of Pacio members
+  uint256 private pNumPresale;     // Number of presale list entries = seed presale and private placement entries
+  uint256 private pNumProxies;     // Number of entries with a Proxy set
+  uint256 private pNumDowngraded;  // Number downgraded (from whitelist)
+  address private pSaleA;          // the Sale contract address - only used as an address here i.e. don't need pSaleC
+  bool    private pTransfersOkB;   // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
   // Struct to hold member data, with a doubly linked list of List to permit traversing List
   // Each member requires 6 storage slots.
@@ -76,11 +75,14 @@ contract List is OwnedList, Math {
 
   // View Methods
   // ============
-  function NumberOfListEntries() external view returns (uint256) {
+  function NumberOfKnownAccounts() external view returns (uint256) {
     return pNumEntries;
   }
-  function NumberOfPrepurchaseListEntries() external view returns (uint256) {
-    return pNumPrepurchase;
+  function NumberOfManagedFundAccounts() external view returns (uint256) {
+    return pNumEntries - pNumPrepurchases;
+  }
+  function NumberOfPrepurchaseFundAccounts() external view returns (uint256) {
+    return pNumPrepurchases;
   }
   function NumberOfWhitelistEntries() external view returns (uint256) {
     return pNumWhite;
@@ -94,7 +96,7 @@ contract List is OwnedList, Math {
   function NumberOfMembersWithProxy() external view returns (uint256) {
     return pNumProxies;
   }
-  function NumberOfDowngrades() external view returns (uint256) {
+  function NumberOfWhitelistDowngrades() external view returns (uint256) {
     return pNumDowngraded;
   }
   function EntryBits(address accountA) external view returns (uint32) {
@@ -118,12 +120,12 @@ contract List is OwnedList, Math {
   function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
     return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
   }
-  function IsTransferAllowedByDefault() external view returns (bool) {
+  function IsTransferFromAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
   }
-  function IsTransferAllowed(address frA) external view returns (bool) {
-    return (pTransfersOkB                           // Transfers can be made
-         || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0); // or they are allowed for this member
+  function IsTransferFromAllowed(address frA) external view returns (bool) {
+    return (pTransfersOkB                                   // Transfers can be made
+         || pListMR[frA].bits & LE_FROM_TRANSFER_OK_B > 0); // or they are allowed for this member
   }
   // List.Browse()
   // -------------
@@ -244,13 +246,13 @@ contract List is OwnedList, Math {
 
   // List.SetTransferOk()
   // --------------------
-  // Callable only from Hub to set LE_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
+  // Called from Hub.SetTransferOk to set LE_FROM_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
   function SetTransferOk(address vEntryA, bool B) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
+    require(pListMR[vEntryA].bits > 0, "Account not known"); // Entry is expected to exist
     if (B) // Set
-      pListMR[vEntryA].bits |= LE_TRANSFER_OK_B;
+      pListMR[vEntryA].bits |= LE_FROM_TRANSFER_OK_B;
     else   // Unset
-      pListMR[vEntryA].bits &= ~LE_TRANSFER_OK_B;
+      pListMR[vEntryA].bits &= ~LE_FROM_TRANSFER_OK_B;
     emit SetTransferOkV(vEntryA, B);
     return true;
   }
@@ -262,13 +264,14 @@ contract List is OwnedList, Math {
   // Checks that both frA and toA exist; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   // Also have an IsTransferOK modifier in EIP20Token
   modifier IsTransferOK(address frA, address toA, uint256 vPicos) {
-    require(vPicos > 0                              // Non-zero transfer No! The EIP-20 std says: Note Transfers of 0 vPicoss MUST be treated as normal transfers and fire the Transfer event
-      // && toA != frA                              // Destination is different from source. Not here. Is checked in calling fn.
-         && pListMR[frA].addedT > 0                 // frA exists
-         && pListMR[toA].whiteT > 0                 // toA exists and is whitelisted
-         && (pTransfersOkB                          // Transfers can be made                /- ok to transfer from frA
-          || (pListMR[frA].bits & LE_TRANSFER_OK_B) > 0) // or they are allowed for this member  |
-         && pListMR[frA].picosBalance >= vPicos,    // frA has the picos available
+    R_List storage rsEntryR = pListMR[frA];  // the frA entry
+    require(// vPicos > 0                    // Non-zero transfer No! The EIP-20 std says: Note Transfers of 0 vPicoss MUST be treated as normal transfers and fire the Transfer event
+      // && toA != frA                       // Destination is different from source. Not here. Is checked in calling fn.
+            rsEntryR.bits > 0                // frA exists
+         && pListMR[toA].whiteT > 0          // toA exists and is whitelisted
+         && (pTransfersOkB || rsEntryR.bits  // Transfers can be made                /- ok to transfer from frA
+             & LE_FROM_TRANSFER_OK_B > 0)    // or they are allowed for this member  |
+         && rsEntryR.picosBalance >= vPicos, // frA has the picos available
             "Transfer not allowed");
     _;
   }
@@ -279,44 +282,46 @@ contract List is OwnedList, Math {
   // List.CreateListEntry()
   // ----------------------
   // Create a new list entry, and add it into the doubly linked list
-  // Is called from Hub
-  // 0 OpMan, 1 Hub, 2 Sale, 3 Token
+  // Is called from Hub.CreateListEntry()
   function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsHubContractCaller returns (bool) {
     return pCreateEntry(vEntryA, vBits, vDbId);
   }
 
   // List.pCreateEntry() private
-  // ------------------
+  // -------------------
   // Create a new list entry, and add it into the doubly linked list
-  // Is called from Hub via List.CreateListEntry()
-  //    and locally from CreateSaleContractEntry() and CreatePresaleEntry()
-  // 0 Deployer, 1 OpMan, 2 Hub, 3 Token
+  // Is called from Hub.CreateListEntry() -> List.CreateListEntry()         -> here to create a list entry for a new participant via web or admin
+  //              Token.Initialise()      -> List.CreateSaleContractEntry() -> here to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale sale contract
+  //              Token.NewSaleContract() -> List.CreateSaleContractEntry() -> here to create the new Sale contract list entry djh?? wip
+  //                Hub.PresaleIssue()    -> CreatePresaleEntry()           -> here to create a Seed Presale or Private Placement list entry
+  // Sets the LE_REGISTERED_B bit always so that bits for any entry which exists is > 0
+  // List is owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
   function pCreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) private returns (bool) {
-    require(vEntryA != address(0)     // Defined
+    require(vEntryA != address(0)                // Defined      djh?? Could have an OpMan fn that checked vs all contracts except a nominated one e.g. Sale
          && vEntryA != iOwnersYA[OP_MAN_OWNER_X] // Not OpMan
          && vEntryA != iOwnersYA[HUB_OWNER_X]    // Not Hub
       // && vEntryA != pSaleA                    // Not Sale - No as we do create a Sale contract entry
          && vEntryA != iOwnersYA[TOKEN_OWNER_X]  // Not Token
          && vEntryA != address(this), // Not this list contract
             'Invalid account address');
-    require(pListMR[vEntryA].addedT == 0, "Account already exists"); // Not already in existence
+    require(pListMR[vEntryA].bits == 0, "Account already exists"); // Require account not to already exist
     pListMR[vEntryA] = R_List(
-      address(0),   // address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
-      vBits,        // uint32  bits;          //  4 0 Bit settings
-      uint32(now),  // uint32  addedT;        //  4 0 Datetime when added
-      0,            // uint32  whiteT;        //  4 0 Datetime when whitelisted
-      pLastEntryA,  // address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
-      0,            // uint32  firstContribT; //  4 1 Datetime when first contribution made
-      0,            // uint32  refundT;       //  4 1 Datetime when refunded
-      0,            // uint32  downT;         //  4 1 Datetime when downgraded
-      0,            // address proxyA;        // 20 2 Address of proxy for voting purposes
-      0,            // uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-      vDbId,        // uint32  dbId;          //  4 2 Id in DB for name and KYC info
-      0,            // uint32  contributions; //  4 2 Number of separate contributions made
-      0,            // uint256 weiContributed;// 32 3 wei contributed
-      0,            // uint256 weiRefunded;   // 32 4 wei refunded
-      0,            // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
-      0);           // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+      address(0),               // address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
+      vBits |= LE_REGISTERED_B, // uint32  bits;          //  4 0 Bit settings
+      uint32(now),              // uint32  addedT;        //  4 0 Datetime when added
+      0,                        // uint32  whiteT;        //  4 0 Datetime when whitelisted
+      pLastEntryA,              // address prevEntryA;    // 20 1 Address of the previous entry - 0 for the first one
+      0,                        // uint32  firstContribT; //  4 1 Datetime when first contribution made
+      0,                        // uint32  refundT;       //  4 1 Datetime when refunded
+      0,                        // uint32  downT;         //  4 1 Datetime when downgraded
+      0,                        // address proxyA;        // 20 2 Address of proxy for voting purposes
+      0,                        // uint32  bonusCentiPc;  //  4 2 Bonus percentage * 100 i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
+      vDbId,                    // uint32  dbId;          //  4 2 Id in DB for name and KYC info
+      0,                        // uint32  contributions; //  4 2 Number of separate contributions made
+      0,                        // uint256 weiContributed;// 32 3 wei contributed
+      0,                        // uint256 weiRefunded;   // 32 4 wei refunded
+      0,                        // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
+      0);                       // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
     // Update other state vars
     if (++pNumEntries == 1) // Number of list entries
       pFirstEntryA = vEntryA;
@@ -330,11 +335,12 @@ contract List is OwnedList, Math {
   // List.CreateSaleContractEntry()
   // ------------------------------
   // Called from Token.Initialise() to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale sale contract
-  // Called from Token.NewSaleContract() to create the new Sale contract list entry
-  // Not whitelisted so that transfers from it cannot be done. Decrementing happens via Issue().
-  // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract
-  function CreateSaleContractEntry(uint256 vPicos) external IsTokenContractCaller returns (bool) {
-    require(pCreateEntry(pSaleA, LE_TRANSFER_OK_B, 1)); // DbId of 1 assumed for Sale sale contract
+  // Called from Token.NewSaleContract() to create a new Sale contract list entry djh?? wip
+  // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract  djh?? wip
+  // Transfers from it are done for issuing PIOs so set LE_FROM_TRANSFER_OK_B
+  // Transfers to it are done for refunds involving PIOs by List.Refund()
+  function CreateSaleContractEntry(uint256 vPicos, uint32 vDbId) external IsTokenContractCaller returns (bool) {
+    require(pCreateEntry(pSaleA, LE_SALE_CONTRACT_B | LE_HOLDS_PIOS_B | LE_FROM_TRANSFER_OK_B, vDbId));
     pListMR[pSaleA].picosBalance = vPicos;
     return true;
   }
@@ -356,16 +362,24 @@ contract List is OwnedList, Math {
   // ----------------
   // Whitelist an entry
   // djh?? Add Issue of PIOs
-  //       Add Presale handling
   function Whitelist(address vEntryA, uint32 vWhiteT) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (pListMR[vEntryA].whiteT == 0) { // if not just changing the whitelist date then decrement prepurchases and incr white
-      pNumPrepurchase = subMaxZero(pNumPrepurchase, 1);
+    uint32 bitsToSet = LE_WHITELISTED_B;
+    R_List storage rsEntryR = pListMR[vEntryA];
+    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
+    if (rsEntryR.whiteT == 0) { // if not just changing the whitelist date then decrement prepurchases and incr white
       pNumWhite++;
-      if (pListMR[vEntryA].picosBalance > 0) // could be here for a presale entry with a balance now being whitelisted
+      if (rsEntryR.picosBalance > 0) { // could be here for a presale entry with a balance now being whitelisted
         pNumMembers++;
+        bitsToSet |= LE_MEMBER_B;
+      }
     }
-    pListMR[vEntryA].whiteT = vWhiteT;
+    if (rsEntryR.bits & LE_PRESALE_B > 0) {
+      // Presale entry now whitelisted. Unset LE_PRESALE_B and set LE_WAS_PRESALE_B bits
+      rsEntryR.bits &= ~LE_PRESALE_B;
+      bitsToSet |= LE_WAS_PRESALE_B;
+    }
+    rsEntryR.whiteT = vWhiteT;
+    rsEntryR.bits |= bitsToSet;
     emit WhitelistV(vEntryA, vWhiteT);
     return true;
   }
@@ -374,12 +388,17 @@ contract List is OwnedList, Math {
   // ----------------
   // Downgrades an entry from whitelisted
   function Downgrade(address vEntryA, uint32 vDownT) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
-    if (pListMR[vEntryA].downT == 0) { // if not just changing the downgrade date then decrement white and incr downgraded
+    R_List storage rsEntryR = pListMR[vEntryA];
+    require(rsEntryR.bits & LE_WHITELISTED_B > 0, 'Account not whitelisted'); // Entry is expected to exist and be whitelisted
+    if (rsEntryR.downT == 0) { // if not just changing the downgrade date then decrement white and incr downgraded
+      if (rsEntryR.bits & LE_MEMBER_B > 0)
+        pNumMembers = subMaxZero(pNumMembers, 1);
+      rsEntryR.bits &= ~LE_WHITELISTED_N_MEMBER_B; // unset LE_WHITELISTED_B and LE_MEMBER_B bits
       pNumWhite = subMaxZero(pNumWhite, 1);
+      rsEntryR.bits |= LE_DOWNGRADED_B;
       pNumDowngraded++;
     }
-    pListMR[vEntryA].downT = vDownT;
+    rsEntryR.downT = vDownT;
     emit DowngradeV(vEntryA, vDownT);
     return true;
   }
@@ -388,7 +407,7 @@ contract List is OwnedList, Math {
   // ---------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
   function SetBonus(address vEntryA, uint32 vBonusPc) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
+    require(pListMR[vEntryA].bits > 0, "Account not known"); // Entry is expected to exist
     pListMR[vEntryA].bonusCentiPc = vBonusPc;
     emit SetBonusV(vEntryA, vBonusPc);
     return true;
@@ -399,23 +418,24 @@ contract List is OwnedList, Math {
   // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
   function SetProxy(address vEntryA, address vProxyA) external IsHubContractCaller returns (bool) {
-    require(pListMR[vEntryA].addedT > 0, "Account not known"); // Entry is expected to exist
+    R_List storage rsEntryR = pListMR[vEntryA];
+    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
     if (vProxyA == address(0)) {
       // Unset or remove proxy
-      if (pListMR[vEntryA].proxyA >= address(0)) {
+      if (rsEntryR.proxyA >= address(0)) {
         // Did have a proxy set
-        pListMR[vEntryA].bits &= ~LE_HAS_PROXY_B; // rather than ^= LE_HAS_PROXY_B in case the LE_HAS_PROXY_B bit is wrongly not set
+        rsEntryR.bits &= ~LE_HAS_PROXY_B; // rather than ^= LE_HAS_PROXY_B in case the LE_HAS_PROXY_B bit is wrongly not set
         pNumProxies = subMaxZero(pNumProxies, 1);
       }
     }else{
       // Set proxy
-      if (pListMR[vEntryA].proxyA == address(0))
+      if (rsEntryR.proxyA == address(0))
         // Didn't previously have one set
         pNumProxies++;
       // else changing proxy
-      pListMR[vEntryA].bits |= LE_HAS_PROXY_B;
+      rsEntryR.bits |= LE_HAS_PROXY_B;
     }
-    pListMR[vEntryA].proxyA = vProxyA;
+    rsEntryR.proxyA = vProxyA;
     emit SetProxyV(vEntryA, vProxyA);
     return true;
   }
@@ -423,39 +443,46 @@ contract List is OwnedList, Math {
   // List.Issue()
   // ------------
   // Is called from Token.Issue() which is called from Sale.Buy() or Sale.PresaleIssue()
-  //                                                   Sale.Buy() also calls Escrow.Deposit()
+  //                                      In this case Sale.Buy() also calls Escrow.Deposit()
   function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
+    uint32 bitsToSet = LE_FUNDED_B | LE_HOLDS_PIOS_B;
     require(bits > 0 && bits & LE_NO_SENDING_FUNDS_COMBO_B == 0 && bits & LE_WHITELISTED_B > 0); // already checked by Sale.Buy() so expected to be ok
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     if (rsEntryR.weiContributed == 0) {
       rsEntryR.firstContribT = uint32(now);
-      if (rsEntryR.whiteT > 0) // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
+      if (rsEntryR.whiteT > 0) { // could be here for a presale issue not yet whitelisted in which case don't incr pNumMembers - that is done when entry is whitelisted
+        bitsToSet |= LE_MEMBER_B;
         pNumMembers++;
+      }
     }
+    rsEntryR.bits          |= bitsToSet;
     rsEntryR.picosBought    = safeAdd(rsEntryR.picosBought, vPicos);
     rsEntryR.picosBalance   = safeAdd(rsEntryR.picosBalance, vPicos);
     rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
     pListMR[pSaleA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the pListMR[pSaleA].picosBalance >= vPicos check
-    emit IssueV(toA, vPicos, vWei);
+    emit IssueV(toA, vPicos, vWei);         // Should never go to zero for the Pacio DAICO given reserves held
     return true;
   }
 
   // List.PrepurchaseDeposit()
   // -------------------------
   // Is called from Sale.Buy() for prepurchase funds being deposited
-  //                Sale.Buy() also calls Pescrow.Deposit()
+  //   In this case Sale.Buy() also calls Pescrow.Deposit()
   function PrepurchaseDeposit(address toA, uint256 vWei) external IsSaleContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
     require(bits > 0 && bits & LE_NO_SENDING_FUNDS_COMBO_B == 0 && (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0)); // already checked by Sale.Buy() so expected to be ok
-    if (rsEntryR.weiContributed == 0)
+    if (rsEntryR.weiContributed == 0) {
       rsEntryR.firstContribT = uint32(now);
+      pNumPrepurchases++;
+    }
     rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
+    rsEntryR.bits |= LE_FUNDED_B | LE_PREPURCHASE_B;
     emit PrepurchaseDepositV(toA, vWei);
     return true;
   }
@@ -464,22 +491,32 @@ contract List is OwnedList, Math {
   // ---------------
   // Is called for EIP20 transfers from EIP20Token.transfer() and EIP20Token.transferFrom()
   function Transfer(address frA, address toA, uint256 vPicos) external IsTransferOK(frA, toA, vPicos) IsTokenContractCaller returns (bool success) {
-    pListMR[frA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= vPicos check
-    pListMR[toA].picosBalance = safeAdd(pListMR[toA].picosBalance, vPicos);
-    if (vPicos > 0 && pListMR[frA].picosBalance == 0) // vPicos > 0 check because EIP-20 allows transfers of 0
-      pNumMembers = subMaxZero(pNumMembers, 1);
+    // From
+    R_List storage rsEntryR = pListMR[frA];
+    if ((rsEntryR.picosBalance -= vPicos) == 0) { // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= vPicos check
+      // frA now has no picos
+      if (rsEntryR.bits & LE_MEMBER_B > 0)
+        pNumMembers = subMaxZero(pNumMembers, 1);
+      rsEntryR.bits &= ~LE_HOLDS_PIOS_N_MEMBER_B; // unset the frA LE_HOLDS_PIOS_B and LE_MEMBER_B bits
+    }
+    // To
+    rsEntryR = pListMR[toA];
+    // toA becomes a member because it has picos and it must be whitelisted for IsTransferOK() to pass
+    rsEntryR.picosBalance = safeAdd(rsEntryR.picosBalance, vPicos);
+    rsEntryR.bits |= LE_HOLDS_PIOS_N_MEMBER_B; // set the toA LE_HOLDS_PIOS_B and LE_MEMBER_B bits
+    pNumMembers++;
     return true;
   }
 
-  // List.TransferSaleContractBalance()
-  // ----------------------------------------
-  // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
-  // pSaleA is still the old Sale when this is called
-  function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenContractCaller returns (bool success) {
-    pListMR[vNewSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
-    pListMR[pSaleA].picosBalance = 0;
-    return true;
-  }
+  // // List.TransferSaleContractBalance()  djh?? wip
+  // // ----------------------------------
+  // // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
+  // // pSaleA is still the old Sale when this is called
+  // function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenContractCaller returns (bool success) {
+  //   pListMR[vNewSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
+  //   pListMR[pSaleA].picosBalance = 0;
+  //   return true;
+  // }
 
   // List.Refund()
   // -------------
@@ -500,8 +537,11 @@ contract List is OwnedList, Math {
       require(bits & LE_HOLDS_PIOS_B > 0, "Invalid list type for Refund");
       refundPicos = rsEntryR.picosBalance;
       require(refundPicos > 0 && vRefundWei > 0, "Invalid List Escrow refund call");
-      pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos); // transfer the Picos back to the sale contract. TokenRefund() emits a Transfer() event for this.
+      pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos); // transfer the Picos back to the sale contract. Token.Refund() emits a Transfer() event for this.
       rsEntryR.picosBalance = 0;
+      if (bits & LE_MEMBER_B > 0)
+        pNumMembers = subMaxZero(pNumMembers, 1);
+      rsEntryR.bits &= ~LE_HOLDS_PIOS_N_MEMBER_B; // unset the frA LE_HOLDS_PIOS_B and LE_MEMBER_B bits
     }
     rsEntryR.refundT = uint32(now);
     rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since will fail LE_NO_REFUND_COMBO_B after thids
@@ -520,19 +560,24 @@ contract List is OwnedList, Math {
   // Deployment Gas usage: 3142286. When done using pListMR[tx.origin] throughtout rather than the rsEntryR pointer, the deployment gas usage was more at 3143422. Presumably the gas usage would be less at run time too.
   function Burn() external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[tx.origin];
-    require(rsEntryR.addedT > 0, "Account not known"); // Entry is expected to exist
-    rsEntryR.bits |= LE_BURNT_B;
+    require(rsEntryR.bits > 0, "Account not known"); // Entry is expected to exist
     rsEntryR.picosBalance = 0;
+    rsEntryR.bits |= LE_BURNT_B;
+    if (rsEntryR.bits & LE_MEMBER_B > 0)
+      pNumMembers = subMaxZero(pNumMembers, 1);
+    rsEntryR.bits &= ~LE_HOLDS_PIOS_N_MEMBER_B; // unset the frA LE_HOLDS_PIOS_B and LE_MEMBER_B bits
   }
 
   // List.Destroy()
   // --------------
-  // For use when transferring unissued PIOs to the Pacio Blockchain
+  // For use when transferring unissued PIOs to the Pacio Blockchain to destroy Sale contract store of minted PIOs
   // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsTokenContractCaller {
-    require(pListMR[pSaleA].bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
-    pListMR[pSaleA].picosBalance = subMaxZero(pListMR[pSaleA].picosBalance, vPicos);
+    R_List storage rsEntryR = pListMR[pSaleA];
+    require(rsEntryR.bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
+    if ((rsEntryR.picosBalance = subMaxZero(rsEntryR.picosBalance, vPicos)) == 0)
+      rsEntryR.bits &= ~LE_HOLDS_PIOS_B; // unset the LE_HOLDS_PIOS_B bit
   }
 
   // List.Fallback function

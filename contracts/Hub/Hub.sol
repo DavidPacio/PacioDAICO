@@ -9,11 +9,10 @@ OpMan; Sale; Token; List; Escrow; Pescrow;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
-• The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
 
+• The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
 • fns for replacing contracts - all of them
 • Provide a way for Pescrow -> escrow on whitelisting before sale opens and -> PIOs issued
-• add manual account creation
 • Hub.Destroy() ?
 • Add Ids for Issues and Deposits as for Refunds and Burns
   • Escrow
@@ -351,35 +350,36 @@ djh??
 
   // Hub.CreateListEntry()
   // ---------------------
-  // Create a new list entry, and add it into the doubly linked list
-  function CreateListEntry(address vEntryA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.CreateListEntry(vEntryA, vBits, vDbId);
+  // Create a new list entry, and add it into the doubly linked list.
+  // List.CreateListEntry() sets the LE_REGISTERED_B bit so there is no need to include that in vBits
+  function CreateListEntry(address accountA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.CreateListEntry(accountA, vBits, vDbId);
   }
 
   // Hub.Whitelist()
   // ---------------
   // Whitelist an entry
-  function Whitelist(address vEntryA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.Whitelist(vEntryA, vWhiteT);
+  function Whitelist(address accountA, uint32 vWhiteT) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.Whitelist(accountA, vWhiteT);
   }
   // Hub.Downgrade()
   // ---------------
   // Downgrades an entry from whitelisted
-  function Downgrade(address vEntryA, uint32 vDownT) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.Downgrade(vEntryA, vDownT);
+  function Downgrade(address accountA, uint32 vDownT) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.Downgrade(accountA, vDownT);
   }
   // Hub.SetBonus()
   // --------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
-  function SetBonus(address vEntryA, uint32 vBonusPc) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetBonus(vEntryA, vBonusPc);
+  function SetBonus(address accountA, uint32 vBonusPc) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.SetBonus(accountA, vBonusPc);
   }
   // Hub.SetProxy()
   // --------------
-  // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
+  // Sets the proxy address of entry accountA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address vEntryA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetProxy(vEntryA, vProxyA);
+  function SetProxy(address accountA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.SetProxy(accountA, vProxyA);
   }
 
   // Hub.SetTransfersOkByDefault()
@@ -391,9 +391,9 @@ djh??
 
   // Hub.SetTransferOk()
   // -------------------
-  // To set LE_TRANSFER_OK_B bit of entry vEntryA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address vEntryA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetTransferOk(vEntryA, B);
+  // To set LE_FROM_TRANSFER_OK_B bit of entry accountA on if B is true, or unset the bit if B is false
+  function SetTransferOk(address accountA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.SetTransferOk(accountA, B);
   }
 
   // Others

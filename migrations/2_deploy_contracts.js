@@ -71,7 +71,7 @@ Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
-Token.Initialise() To set the contract variable, and do the PIOE minting.
+Token.Initialise(1) To set the contract variable, and do the PIOE minting. Assumes dbId of 1 for the Sale Contract
 
 Escrow owned by Deployer, OpMan, Hub, Sale, Admin
 ------
