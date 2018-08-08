@@ -5,18 +5,17 @@ The hub or management contract for the Pacio DAICO
 Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 
 Calls
-OpMan; Sale; Token; List; Escrow; Pescrow;
+OpMan; Sale; Token; List; Mfund; Pfund;
 VoteTap; VoteEnd; Mvp djh??
 
 djh??
 
-• The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
 • fns for replacing contracts - all of them
-• Provide a way for Pescrow -> escrow on whitelisting before sale opens and -> PIOs issued
+• Provide a way for Pfund -> escrow on whitelisting before sale opens and -> PIOs issued
 • Hub.Destroy() ?
 • Add Ids for Issues and Deposits as for Refunds and Burns
-  • Escrow
-  . Pescrow
+  • Mfund
+  . Pfund
   . Token
 • Provide an emergency reset of the pRefundInProgressB bools
 
@@ -41,21 +40,21 @@ import "../OpMan/I_OpMan.sol";
 import "../Sale/I_Sale.sol";
 import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
-import "../Escrow/I_EscrowHub.sol";
-import "../Escrow/I_PescrowHub.sol";
-//import "../Vote/I_VoteTap.sol";
-//import "../Vote/I_VoteEnd.sol";
-//import "../Mvp/I_Mvp.sol";
+import "../Funds/I_MfundHub.sol";
+import "../Funds/I_PfundHub.sol";
+//port "../Votes/I_VoteTap.sol";
+//port "../Votes/I_VoteEnd.sol";
+//port "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
-  uint32       private pState;     // DAICO state using the STATE_ bits. Passed through to Sale, Token, Escrow, and Pescrow on change
-  I_OpMan      private pOpManC;    // the OpMan contract
-  I_Sale       private pSaleC;     // the Sale contract
-  I_TokenHub   private pTokenC;    // the Token contract
-  I_ListHub    private pListC;     // the List contract
-  I_EscrowHub  private pEscrowC;   // the Escrow contract
-  I_PescrowHub private pPfundC;  // the Prepurchase escrow contract
+  uint32     private pState;  // DAICO state using the STATE_ bits. Passed through to Sale, Token, Mfund, and Pfund on change
+  I_OpMan    private pOpManC; // the OpMan contract
+  I_Sale     private pSaleC;  // the Sale contract
+  I_TokenHub private pTokenC; // the Token contract
+  I_ListHub  private pListC;  // the List contract
+  I_MfundHub private pMfundC; // the Mfund contract
+  I_PfundHub private pPfundC; // the Pfund contract
   bool private pRefundInProgressB; // to prevent re-entrant refund calls
   uint256 private pRefundId;       // Refund Id
 
@@ -79,14 +78,14 @@ contract Hub is OwnedHub, Math {
 
   // Events
   // ======
-  event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address EscrowContract);
+  event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
   event EndSaleV();
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
-  event PescrowRefundingCompleteV();
-  event EscrowRefundingCompleteV();
+  event PfundRefundingCompleteV();
+  event MfundRefundingCompleteV();
 
   // Initialisation/Setup Methods
   // ============================
@@ -104,13 +103,13 @@ contract Hub is OwnedHub, Math {
   // ----------------
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
-    pOpManC   = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pSaleC    =  I_Sale(iOwnersYA[SALE_OWNER_X]);
-    pTokenC   =  I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
-    pListC    =   I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
-    pEscrowC  = I_EscrowHub(pOpManC.ContractXA(ESCROW_CONTRACT_X));
-    pPfundC =   I_PescrowHub(pOpManC.ContractXA(PESCROW_CONTRACT_X));
-    emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pEscrowC);
+    pOpManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    pSaleC  =  I_Sale(iOwnersYA[SALE_OWNER_X]);
+    pTokenC = I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC  =  I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
+    pPfundC = I_PfundHub(pOpManC.ContractXA(PFUND_CONTRACT_X));
+    pMfundC = I_MfundHub(pOpManC.ContractXA(MFUND_CONTRACT_X));
+    emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pPfundC, pMfundC);
     iPausedB       =        // make active
     iInitialisingB = false;
   }
@@ -130,7 +129,7 @@ contract Hub is OwnedHub, Math {
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
-  // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Escrow.SetPclAccountMO(), Escrow.EndInitialise() and PresaleIssue() multiple times must have been called before this.
+  // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
@@ -148,7 +147,7 @@ contract Hub is OwnedHub, Math {
       pSaleC.StateChange(vState);
       pTokenC.StateChange(vState);
       pListC.StateChange(vState);
-      pEscrowC.StateChange(vState);
+      pMfundC.StateChange(vState);
       pPfundC.StateChange(vState);
     //pVoteTapC.StateChange(vState); /- These can get state from Hub
     //pVoteEndC.StateChange(vState); |
@@ -193,14 +192,14 @@ contract Hub is OwnedHub, Math {
 
   // Hub.Terminate()
   // ---------------
-  // Called when a VoteEnd vote has voted to end the project, Escrow funds to be refunded in proportion to Picos held
+  // Called when a VoteEnd vote has voted to end the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
   function Terminate() external IsVoteEndContractCaller {
-  //pEscrowC.Terminate(pTokenC.PicosIssued()); No. Done via StateChange() call
+    pSetState(STATE_TERMINATE_REFUND_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pOpManC.PauseContract(TOKEN_CONTRACT_X);
-    pOpManC.PauseContract(ESCROW_CONTRACT_X);
-    pOpManC.PauseContract(PESCROW_CONTRACT_X);
+    pOpManC.PauseContract(MFUND_CONTRACT_X);
+    pOpManC.PauseContract(PFUND_CONTRACT_X);
     pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
   }
 
@@ -218,8 +217,8 @@ contract Hub is OwnedHub, Math {
     require(bits > 0, 'Unknown account');
     require(bits & LE_WHITELISTED_B == 0, 'Already whitelisted');
     pListC.Whitelist(accountA, vWhiteT > 0 ? vWhiteT : uint32(now)); // completes cases a, b, d
-    return (bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) Pfund -> Mfund with PIOs issued
-                                                                      : true; // cases a, b, d
+    return (bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) Pfund -> Mfund with PIOs issued
+                                                                 : true; // cases a, b, d
   }
 
   // Hub.PMtransfer()
@@ -229,7 +228,7 @@ contract Hub is OwnedHub, Math {
     uint32  bits = pListC.EntryBits(accountA);
     require(bits > 0, 'Unknown account');
     require(bits & LE_WHITELISTED_B > 0, 'Not whitelisted');
-    require(bits & LE_PREPURCHASE_B > 0 && pState & STATE_OPEN_B > 0, 'Invalid PMtransfer call');
+    require(bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0, 'Invalid PMtransfer call');
     return pPMtransfer(accountA);
   }
 
@@ -240,10 +239,10 @@ contract Hub is OwnedHub, Math {
   // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally transfer the Ether from P to M
   function pPMtransfer(address accountA) private returns (bool) {
-    uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.EscrowWei());
+    uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.FundWei());
       pSaleC.PMtransfer(accountA, weiContributed);  // processes the issue
     pPfundC.PMTransfer(accountA, weiContributed); // transfers weiContribured from the Pfund to the Mfund
-    // djh?? add an event
+    // Pfund.PMTransfer() emits an event
     return true;
   }
 
@@ -264,10 +263,10 @@ contract Hub is OwnedHub, Math {
   // Hub.pRefund()
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
-  // Calls: List.EntryBits()                        - for type info
-  //        here for Pescrow or Escrow.RefundInfo() - for refund info: picos, amount and bit
-  //        Token.Refund() -> List.Refund()         - to update Token and List data, in the reverse of an Issue
-  //        Pescrow/Eescrow.Refund()                - to do the actual refund
+  // Calls: List.EntryBits()                     - for type info
+  //        here for Pfund or Mfund.RefundInfo() - for refund info: picos, amount and bit
+  //        Token.Refund() -> List.Refund()      - to update Token and List data, in the reverse of an Issue
+  //        Pfund/Mfund.Refund()                 - to do the actual refund
   function pRefund(address toA, bool vOnceOffB) private returns (bool) {
     require(!pRefundInProgressB, 'Refund already in Progress'); // Prevent re-entrant calls
     pRefundInProgressB = true;
@@ -275,40 +274,42 @@ contract Hub is OwnedHub, Math {
     uint256 refundWei;
     uint32  refundBit;
     uint32  bits = pListC.EntryBits(toA);
-    bool pescrowB;
+    bool pfundB;
     require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0          // LE_NO_REFUND_COMBO_B is not a complete check
          && (vOnceOffB || pState & STATE_REFUNDING_COMBO_B > 0));
-    if (bits & LE_PREPURCHASE_B > 0) {
-      // Pescrow Refund
-      pescrowB = true;
+    if (bits & LE_P_FUND_B > 0) {
+      // Pfund Refund
+      pfundB = true;
       if (vOnceOffB)
-        refundBit = LE_REFUND_PESCROW_ONCE_OFF_B;
+        refundBit = LE_P_REFUND_ONCE_OFF_B;
       else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
-        refundBit = LE_REFUND_PESCROW_S_CAP_MISS_B;
+        refundBit = LE_P_REFUND_S_CAP_MISS_B;
       else if (pState & STATE_CLOSED_COMBO_B > 0)
-        refundBit = LE_REFUND_PESCROW_SALE_CLOSE_B;
+        refundBit = LE_P_REFUND_SALE_CLOSE_B;
       if (refundBit > 0)
-        refundWei = Min(pListC.WeiContributed(toA), pPfundC.EscrowWei());
-    }else if (bits & LE_HOLDS_PIOS_B > 0) {
-      // Escrow Refund
-      (refundPicos, refundWei, refundBit) = pEscrowC.RefundInfo(pRefundId, toA);
+        refundWei = Min(pListC.WeiContributed(toA), pPfundC.FundWei());
+    }else if (bits & LE_PICOS_B > 0) {
+      // Mfund or Presale Refund
+      if (bits & LE_EVER_PRESALE_COMBO_B == 0)
+        (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA);
+      // else no refund for a Presale investor unless done manually
       if (vOnceOffB)
-        refundBit = LE_REFUND_ESCROW_ONCE_OFF_B;
+        refundBit = LE_M_REFUND_ONCE_OFF_B;
     }
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(++pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
-    if (pescrowB) {
+    if (pfundB) {
       if (!pPfundC.Refund(pRefundId, toA, refundWei, refundBit)) {
-        if (pPfundC.EscrowWei() == 0) {
-          pSetState(pState |= STATE_PESCROW_EMPTY_B);
-          emit PescrowRefundingCompleteV();
+        if (pPfundC.FundWei() == 0) {
+          pSetState(pState |= STATE_PFUND_EMPTY_B);
+          emit PfundRefundingCompleteV();
         }
       }
     }else{
-      if (!pEscrowC.Refund(pRefundId, toA, refundPicos, refundWei, refundBit)) {
-        if (pEscrowC.EscrowWei() == 0) {
-          pSetState(pState |= STATE_ESCROW_EMPTY_B);
-          emit EscrowRefundingCompleteV();
+      if (!pMfundC.Refund(pRefundId, toA, refundPicos, refundWei, refundBit)) {
+        if (pMfundC.FundWei() == 0) {
+          pSetState(pState |= STATE_MFUND_EMPTY_B);
+          emit MfundRefundingCompleteV();
         }
       }
     }

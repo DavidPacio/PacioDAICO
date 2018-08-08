@@ -3,18 +3,18 @@ var OpMan = artifacts.require("./OpMan/OpMan.sol");
 /* djh??
 // To be changed to deploy all the contracts, recording their addresses, then to call the Initialise() functions.
 
-Contract Description                                      Owned By                                            External Calls
--------- -----------                                      --------                                            --------------
-OpMan    Operations management: multisig for critical ops Deployer, Self,  Admin                              All including self
-Hub      Hub or management contract                       Deployer, OpMan, Admin, Sale, VoteTap, VoteEnd, Web OpMan; Sale; Token; List; Escrow; Pescrow; VoteTap; VoteEnd; Mvp
-Sale     Sale                                             Deployer, OpMan, Hub, Admin                         OpMan; Hub -> Token,List,Escrow,Pescrow,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Pescrow
-Token    Token contract with EIP-20 functions             Deployer, OpMan, Hub, Sale, Mvp                     OpMan; List
-List     List of participants                             Deployer, OpMan, Hub, Sale, Token                   OpMan
-Escrow   Escrow management of purchase PIOs issued funds  Deployer, OpMan, Hub, Sale, Admin                   OpMan
-Pescrow  Escrow management of prepurchase funds           Deployer, OpMan, Hub, Sale                          OpMan
-VoteTap  For a tap vote                                   Deployer, OpMan, Hub                                OpMan; Hub -> Escrow, List
-VoteEnd  For a terminate and refund vote                  Deployer, OpMan, Hub                                OpMan; Hub -> Escrow, List
-Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer, OpMan, Hub                                OpMan; List; Token -> List
+Contract Description                                      Owned By                                       External Calls
+-------- -----------                                      --------                                       --------------
+OpMan    Operations management: multisig for critical ops Deployer Self  Admin                           All including self
+Hub      Hub or management contract                       Deployer OpMan Admin Sale  VoteTap VoteEnd Web OpMan; Sale; Token; List; Mfund; Pfund; VoteTap; VoteEnd; Mvp
+Sale     Sale                                             Deployer OpMan Hub   Admin                     OpMan; Hub -> Token,List,Mfund,Pfund,VoteTap,VoteEnd,Mvp; List; Token -> List; Mfund; Pfund
+Token    Token contract with EIP-20 functions             Deployer OpMan Hub   Sale  Mvp                 OpMan; List
+List     List of participants                             Deployer OpMan Hub   Sale  Token               OpMan
+Mfund    Managed fund for PIO purchases or transfers      Deployer OpMan Hub   Sale  Pfund   Admin       OpMan
+Pfund    Prepurchases escrow fund                         Deployer OpMan Hub   Sale                      OpMan; Mfund
+VoteTap  For a tap vote                                   Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
+VoteEnd  For a terminate and refund vote                  Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
+Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer OpMan Hub                             OpMan; List; Token -> List
 
 where Deployer is the PCL account used to deploy the contracts = ms.sender in the constructors and Truffle deploy script
 where Admin is a PCL hardware wallet
@@ -33,7 +33,7 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.
   Arguments:
-  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Pescrow, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
 
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
@@ -73,22 +73,23 @@ Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
 Token.Initialise(1) To set the contract variable, and do the PIOE minting. Assumes dbId of 1 for the Sale Contract
 
-Escrow owned by Deployer, OpMan, Hub, Sale, Admin
-------
-Escrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-Escrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Escrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Escrow.ChangeOwnerMO(ESCROW_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-Escrow.Initialise() to initialise the Escrow contract
-Escrow.SetPclAccountMO(address vPclAccountA) external
-Escrow.EndInitialise() to end initialising
+Mfund owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Pfund, 5 Admin
+-----
+Mfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Mfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Mfund.ChangeOwnerMO(MFUND_PFUND_OWNER_X, Pfund address)
+Mfund.ChangeOwnerMO(MFUND_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+Mfund.Initialise() to initialise the Mfund contract
+Mfund.SetPclAccountMO(address vPclAccountA) external
+Mfund.EndInitialise() to end initialising
 
-Pescrow owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
-----
-Pescrow.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-Pescrow.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Pescrow.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Pescrow.Initialise()
+Pfund owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+-----
+Pfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Pfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+Pfund.Initialise()
 
 VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
 -------

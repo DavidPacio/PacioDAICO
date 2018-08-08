@@ -1,14 +1,12 @@
 /* \Sale\Sale.sol 2018.06.06 started
 
-The sale contract for the Pacio DAICO
+The Sale contract for the Pacio DAICO
 
 Owners:
 0 Deployer
 1 OpMan
 2 Hub
 3 Admin
-
-Calls: OpMan; Hub -> Token,List,Escrow,Pescrow,VoteTap,VoteEnd,Mvp; List; Token -> List; Escrow; Pescrow
 
 Pause/Resume
 ============
@@ -29,8 +27,8 @@ import "../lib/Math.sol";
 import "../Hub/I_Hub.sol";
 import "../List/I_ListSale.sol";
 import "../Token/I_TokenSale.sol";
-import "../Escrow/I_EscrowSale.sol";
-import "../Escrow/I_PescrowSale.sol";
+import "../Funds/I_MfundSale.sol";
+import "../Funds/I_PfundSale.sol";
 
 // Tranches
 // 1. 32 million PIOEs for >=  50 ETH             at 7.50 Cents
@@ -69,11 +67,11 @@ contract Sale is OwnedSale, Math {
                                   // |- u updated during running
                                   // |- t initialised to true but can be changed manually
                                   // |- f initialised to false
-  I_ListSale    private pListC;    // the List contract     -  read only use so List does not need to have Sale as an owner
-  I_Hub         private pHubC;     // the Hub contract     /- make state changing calls so these contracts need to have Sale as an owner
-  I_TokenSale   private pTokenC;   // the Token contract   |
-  I_EscrowSale  private pEscrowC;  // the Escrow contract  |
-  I_PescrowSale private pPescrowC; // the Pescrow contract |
+  I_ListSale  private pListC;  // the List contract   -  read only use so List does not need to have Sale as an owner
+  I_Hub       private pHubC;   // the Hub contract   /- make state changing calls so these contracts need to have Sale as an owner
+  I_TokenSale private pTokenC; // the Token contract |
+  I_MfundSale private pMfundC; // the Mfund contract |
+  I_PfundSale private pPfundC; // the Pfund contract |
 
   // No constructor
   // ==============
@@ -169,13 +167,13 @@ contract Sale is OwnedSale, Math {
   function WeiRaised() external view returns (uint256) {
     return pWeiRaised;
   }
-  // Sale.EscrowWei()
-  function EscrowWei() external view returns (uint256) {
-    return pEscrowC.EscrowWei();
+  // Sale.FundWei()
+  function FundWei() external view returns (uint256) {
+    return pMfundC.FundWei();
   }
-  // Sale.PrepurchaseEscrowWei()
-  function PrepurchaseEscrowWei() external view returns (uint256) {
-    return pPescrowC.EscrowWei();
+  // Sale.PrepurchaseFundWei()
+  function PrepurchaseFundWei() external view returns (uint256) {
+    return pPfundC.FundWei();
   }
   // Sale.UsdEtherPrice()
   function UsdEtherPrice() external view returns (uint256) {
@@ -200,7 +198,7 @@ contract Sale is OwnedSale, Math {
 
   // Events
   // ======
-  event InitialiseV(address TokenContract, address ListContract, address EscrowContract, address PescrowContract);
+  event InitialiseV(address TokenContract, address ListContract, address MfundContract, address PfundContract);
   event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
                             uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
   event SetUsdHardCapBV(bool HardCapMethodB);
@@ -230,9 +228,9 @@ contract Sale is OwnedSale, Math {
     pHubC     = I_Hub(iOwnersYA[HUB_OWNER_X]);
     pTokenC   = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
     pListC    = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
-    pEscrowC  = I_EscrowSale(opManC.ContractXA(ESCROW_CONTRACT_X));
-    pPescrowC = I_PescrowSale(opManC.ContractXA(PESCROW_CONTRACT_X));
-    emit InitialiseV(pTokenC, pListC, pEscrowC, pPescrowC);
+    pMfundC  = I_MfundSale(opManC.ContractXA(MFUND_CONTRACT_X));
+    pPfundC = I_PfundSale(opManC.ContractXA(PFUND_CONTRACT_X));
+    emit InitialiseV(pTokenC, pListC, pMfundC, pPfundC);
   //iInitialisingB = false; No. Leave in initialising state
   }
 
@@ -343,20 +341,20 @@ contract Sale is OwnedSale, Math {
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
     require(bits > 0, 'Account not registered');
-    require(bits & LE_NO_SENDING_FUNDS_COMBO_B == 0, 'Sending not allowed');
+    require(bits & LE_NO_SEND_FUNDS_COMBO_B == 0, 'Sending not allowed');
     if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pStartT)
       // Sale hasn't started yet but the time come
       pHubC.StartSaleMO(); // changes state to STATE_OPEN_B
     if (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0) {
       // Not whitelisted yet || sale hasn't started yet -> Prepurchase
       pListC.PrepurchaseDeposit(msg.sender, msg.value); // updates the list entry
-      pPescrowC.Deposit.value(msg.value)(msg.sender);   // transfers msg.value to the Prepurchase escrow account
+      pPfundC.Deposit.value(msg.value)(msg.sender);   // transfers msg.value to the Prepurchase escrow account
       emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
     // Whitelisted and ok to buy
     pBuy(msg.sender, msg.value, bonusCentiPc);
-    pEscrowC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Escrow account
+    pMfundC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Mfund account
     return true;
   }
 
@@ -421,8 +419,7 @@ contract Sale is OwnedSale, Math {
   // then finally Hub.pPMtransfer() transfer the Ether from Pfund to Mfund
   function PMtransfer(address senderA, uint256 weiContributed) external IsHubContractCaller {
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
-    require(bits > 0, 'Account not registered');
-    // djh?? add other checks
+    require(bits > 0 && bits & LE_WHITELISTED_B == 0 && bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0); // Checked by Hub.Whitelist()/Hub.PMtransfer() so expected to be ok here
     pBuy(senderA, weiContributed, bonusCentiPc);
   }
 

@@ -1,6 +1,6 @@
-// lib\OwnedEscrow.sol
+// lib\OwnedPfund.sol
 //
-// Version of Owned for Escrow and Pescrow which is owned by Deployer, OpMan, Hub, Sale, Admin
+// Version of Owned for Pfund which is owned by Deployer, OpMan, Hub, Sale
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -8,15 +8,14 @@ pragma solidity ^0.4.24;
 import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
-contract OwnedEscrow is Constants {
-  uint256 internal constant NUM_OWNERS = 5;
+contract OwnedPfund is Constants {
+  uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Hub owner
                                           // 3 Sale  owner
-                                          // 4 Admin owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -37,9 +36,6 @@ contract OwnedEscrow is Constants {
   }
   function pIsOpManContractCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
-  }
-  function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[ESCROW_ADMIN_OWNER_X] && !pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
@@ -64,10 +60,6 @@ contract OwnedEscrow is Constants {
   }
   modifier IsSaleContractCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB(), "Not required Sale caller");
-    _;
-  }
-  modifier IsAdminCaller {
-    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsActive {
@@ -111,4 +103,4 @@ contract OwnedEscrow is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End OwnedEscrow contract
+} // End OwnedPfund contract

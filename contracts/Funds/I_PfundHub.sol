@@ -1,15 +1,15 @@
-/* \Escrow\I_PescrowHub.sol started 2018.07.11
+/* \Funds\I_PfundHub.sol started 2018.07.11
 
-Interface for the Pescrow contract external functions which are called from the Hub contract.
+Interface for the Pfund contract external functions which are called from the Hub contract.
 
 */
 
 pragma solidity ^0.4.24;
 
-interface I_PescrowHub {
-  function EscrowWei() external view returns (uint256);
+interface I_PfundHub {
+  function FundWei() external view returns (uint256);
   function StateChange(uint32 vState) external;
   function PMTransfer(address vSenderA, uint256 vWei) external;
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
 }
-// End I_PescrowHub interface
+// End I_PfundHub interface

@@ -1,4 +1,4 @@
-/* \Vote\I_VoteEnd.sol started 2018.07.11
+/* \Votes\I_VoteEnd.sol started 2018.07.11
 
 Interface for the VoteEnd contract external functions which are called from the Hub contract.
 

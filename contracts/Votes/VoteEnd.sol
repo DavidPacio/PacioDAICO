@@ -1,4 +1,4 @@
-/*  \Vote\VoteEnd.sol started 2018.07.11
+/*  \Votes\VoteEnd.sol started 2018.07.11
 
 Voting re ending the DAICO and refunding the remaining funds
 

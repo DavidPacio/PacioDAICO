@@ -106,4 +106,4 @@ contract OwnedSale is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End OwnedEscrow contract
+} // End OwnedSale contract

@@ -1,4 +1,4 @@
-/*  \Vote\VoteTap.sol started 2018.07.11
+/*  \Votes\VoteTap.sol started 2018.07.11
 
 Voting re changing the Tap rate
 

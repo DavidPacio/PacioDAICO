@@ -1,4 +1,4 @@
-/* \Vote\I_VoteTap started 2018.07.11
+/* \Votes\I_VoteTap started 2018.07.11
 
 Interface for the VoteTap contract external functions which are called from the Hub contract.
 

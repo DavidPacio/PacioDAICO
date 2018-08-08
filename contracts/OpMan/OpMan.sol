@@ -135,7 +135,7 @@ contract OpMan is OwnedOpMan {
   // Can only be called once.
   //
   // Arguments:
-  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Escrow, Pescrow, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
   function Initialise(address[] vContractsYA, address[] vSignersYA) external IsInitialising {
     // Add initial contracts
@@ -165,8 +165,8 @@ contract OpMan is OwnedOpMan {
     pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,   3, HOUR); //  6 Hub.SoftCapReachedMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_END_SALE_MO_X,           3, HOUR); //  7 Hub.EndSaleMO()
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X, 3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
-    pAddManOp(ESCROW_CONTRACT_X, ESCROW_SET_PCL_ACCOUNT_MO_X, 3, HOUR); //  5 Escrow.SetPclAccountMO()
-    pAddManOp(ESCROW_CONTRACT_X, ESCROW_WITHDRAW_MO_X,        3, HOUR); //  6 Escrow.WithdrawMO()
+    pAddManOp(MFUND_CONTRACT_X, MFUND_SET_PCL_ACCOUNT_MO_X, 3, HOUR); //  5 Mfund.SetPclAccountMO()
+    pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_MO_X,        3, HOUR); //  6 Mfund.WithdrawMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
