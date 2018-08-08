@@ -203,8 +203,6 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
    event SetProxyV(address indexed Entry, address Proxy);
   event SetTransfersOkByDefaultV(bool On);
   event SetTransferOkV(address indexed Entry, bool On);
-  event IssueV(address indexed To, uint256 Picos, uint256 Wei);
-  event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
   event PrepurchaseDepositV(address indexed To, uint256 Wei);
 
   // Initialisation/Setup Functions
@@ -480,8 +478,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     rsEntryR.picosBought  = safeAdd(rsEntryR.picosBought, vPicos);
     rsEntryR.picosBalance = safeAdd(rsEntryR.picosBalance, vPicos);
     pListMR[pSaleA].picosBalance -= vPicos; // There is no need to check this for underflow via a safeSub() call given the pListMR[pSaleA].picosBalance >= vPicos check
-    emit IssueV(toA, vPicos, vWei);         // Should never go to zero for the Pacio DAICO given reserves held
-    return true;
+    return true;                            // Should never go to zero for the Pacio DAICO given reserves held
+    // Token.Issue() emits an IssueV() event
   }
 
   // List.PrepurchaseDeposit()
@@ -540,7 +538,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   //                                                                  or Hub.PushRefund() IsWebOrAdminCaller  via Hub.pRefund()
   // vRefundWei can be less than or greater than List.WeiContributed() for termination case where the wei is a proportional calc based on picos held re transfers, not wei contributed
   // Refunded PIOs are transferred back to the Sale contract account. They are not burnt or destroyed.
-  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
     require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0); // Already checked by Hub.pRefund() so expected to be ok
@@ -564,7 +562,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     rsEntryR.refundT = uint32(now);
     rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since will fail LE_NO_REFUND_COMBO_B after thids
     rsEntryR.bits |= vRefundBit;
-    emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
+    // Token.Refund() emits RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
   }
 
   // List.Burn()

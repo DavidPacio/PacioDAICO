@@ -25,7 +25,6 @@ Fallback function
 =================
 No sending ether to this contract
 
-
 */
 
 pragma solidity ^0.4.24;
@@ -43,6 +42,7 @@ contract Token is EIP20Token, Math {
   uint256 private pPicosAvailable;   // Picos available = total supply less allocated and issued tokens
   uint256 private pContributors;     // Number of contributors
   uint256 private pPclPicosAllocated;// PCL Picos allocated
+  uint256 private pIssueId;          // Issue Id
   address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
 
   // No Constructor
@@ -61,6 +61,10 @@ contract Token is EIP20Token, Math {
   // Token.PicosAvailable()
   function PicosAvailable() external view returns (uint256) {
     return pPicosAvailable;
+  }
+  // Token.IssueId()
+  function IssueId() external view returns (uint256) {
+    return pIssueId;
   }
   // Token.WeiRaised()
   function WeiRaised() external view returns (uint256) {
@@ -86,6 +90,8 @@ contract Token is EIP20Token, Math {
   // Events
   // ------
   event StateChangeV(uint32 PrevState, uint32 NewState);
+  event  IssueV(uint256 indexed IssueId,  address indexed To, uint256 Picos, uint256 Wei);
+  event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
 //event Transfer(address indexed From, address indexed To, uint256 Value);          /- In EIP20Token
 //event Approval(address indexed Account, address indexed Spender, uint256 Value);  |
 
@@ -147,23 +153,24 @@ contract Token is EIP20Token, Math {
     pPicosAvailable = safeSub(pPicosAvailable, vPicos); // Should never go neg due to reserve, even if final Buy() goes over the hardcap
     pWeiRaised      = safeAdd(pWeiRaised, vWei);
     emit Transfer(pSaleA, toA, vPicos); // Was missing from the Presale contract
-    // iListC.Issue() makes an IssueV(toA, vPicos, vWei) event call
+    emit IssueV(++pIssueId, toA, vPicos, vWei);
     return true;
   }
 
   // Token.Refund() Reverse of Issue
-  // -------------
+  // --------------
   // Called by:
   // . Hub.Refund()     IsNotContractCaller
   //   Hub.PushRefund() IsWebOrAdminCaller
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller IsActive returns (bool) {
-    uint256 refundPicos = iListC.Refund(vRefundId, toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
-    pPicosIssued    = safeSub(pPicosIssued,    refundPicos);
-    pPicosAvailable = safeAdd(pPicosAvailable, refundPicos);
-    pWeiRefunded    = safeAdd(pWeiRefunded, vRefundWei);
-    if (refundPicos > 0)
+    uint256 refundPicos = iListC.Refund(toA, vRefundWei, vRefundBit); // Transfers Picos (if any) from tA back to Sale as the minted tokens owner
+    pWeiRefunded = safeAdd(pWeiRefunded, vRefundWei);
+    if (refundPicos > 0) {
+      pPicosIssued    = safeSub(pPicosIssued,    refundPicos);
+      pPicosAvailable = safeAdd(pPicosAvailable, refundPicos);
       emit Transfer(toA, pSaleA, refundPicos);
-    // iListC.Refund() makes a RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit) event call
+    }
+    emit RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
     return true;
   }
 

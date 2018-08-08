@@ -13,7 +13,7 @@ interface I_ListToken {
   function IsTransferAllowedByDefault() external view returns (bool);
   function CreateSaleContractEntry(uint256 vPicos, uint32 vDbId) external returns (bool);
   function Issue(address toA, uint256 vPicos, uint256 vWei) external returns (bool);
-  function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (uint256 refundPicos);
+  function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (uint256 refundPicos);
   function Transfer(address frA, address toA, uint256 value) external returns (bool success);
   function Burn() external;
   function Destroy(uint256 vPicos) external;

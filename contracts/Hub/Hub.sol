@@ -11,12 +11,7 @@ VoteTap; VoteEnd; Mvp djh??
 djh??
 
 • fns for replacing contracts - all of them
-• Provide a way for Pfund -> escrow on whitelisting before sale opens and -> PIOs issued
 • Hub.Destroy() ?
-• Add Ids for Issues and Deposits as for Refunds and Burns
-  • Mfund
-  . Pfund
-  . Token
 • Provide an emergency reset of the pRefundInProgressB bools
 
 Pause/Resume
