@@ -11,7 +11,6 @@ VoteTap; VoteEnd; Mvp djh??
 djh??
 
 • fns for replacing contracts - all of them
-• Hub.Destroy() ?
 • Provide an emergency reset of the pRefundInProgressB bools
 
 Pause/Resume
@@ -39,7 +38,7 @@ import "../Funds/I_MfundHub.sol";
 import "../Funds/I_PfundHub.sol";
 //port "../Votes/I_VoteTap.sol";
 //port "../Votes/I_VoteEnd.sol";
-//port "../Mvp/I_Mvp.sol";
+import "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
@@ -171,31 +170,40 @@ contract Hub is OwnedHub, Math {
     emit SoftCapReachedV();
   }
 
-  // Hub.EndSaleMO()
-  // ---------------
-  // Is called from Sale.pEndSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
+  // Hub.CloseSaleMO()
+  // -----------------
+  // Is called from Sale.pCloseSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
   // Can be called manually by Admin to end the sale prematurely as a managed op if necessary. In that case vBit is not used and the STATE_CLOSED_MANUAL_B state bit is used
-  function EndSaleMO(uint32 vBit) external {
+  function CloseSaleMO(uint32 vBit) external {
     if (iIsSaleContractCallerB())
       pSetState(vBit);
-    else if (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_END_SALE_MO_X))
+    else if (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_CLOSE_SALE_MO_X))
       pSetState(STATE_CLOSED_MANUAL_B);
     else
       revert();
     emit EndSaleV();
   }
 
-  // Hub.Terminate()
-  // ---------------
+  // Hub.TransferToPacioBlockchainMO()
+  // ---------------------------------
+  // To be called by Admin as a managed op when starting the process of transferring to the Pacio Blockchain with vBit = STATE_TRANSFER_TO_PB_B
+  //                                                                        and when the process is finished with vBit = STATE_TRANSFERRED_TO_PB_B
+  function TransferToPacioBlockchainMO(uint32 vBit) external IsVoteEndContractCaller {
+    require((vBit == STATE_TRANSFER_TO_PB_B || vBit == STATE_TRANSFERRED_TO_PB_B)
+         && iIsAdminCallerB()
+         && pOpManC.IsManOpApproved(HUB_TRANSFER_TO_PB_MO_X));
+    pSetState(pState |= vBit);
+    I_Mvp(pOpManC.ContractXA(MVP_CONTRACT_X)).StateChange(pState);
+  }
+
+  // Hub.TerminateVote()
+  // -------------------
   // Called when a VoteEnd vote has voted to end the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
-  function Terminate() external IsVoteEndContractCaller {
-    pSetState(STATE_TERMINATE_REFUND_B);
+  function TerminateVote() external IsVoteEndContractCaller {
+    pSetState(pState |= STATE_TERMINATE_REFUND_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
-    pOpManC.PauseContract(TOKEN_CONTRACT_X);
-    pOpManC.PauseContract(MFUND_CONTRACT_X);
-    pOpManC.PauseContract(PFUND_CONTRACT_X);
-    pListC.SetTransfersOkByDefault(false); // shouldn't matter with Token paused but set everything off...
+    pListC.SetTransfersOkByDefault(false);
   }
 
   // Hub.Whitelist()

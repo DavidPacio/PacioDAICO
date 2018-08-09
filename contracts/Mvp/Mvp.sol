@@ -2,7 +2,7 @@
 
 The MVP launch contract for the Pacio DAICO
 
-Owned by Deployer, OpMan, Hub
+Owned by Deployer, OpMan, Hub, Admin
 
 djh??
 To be completed
@@ -13,15 +13,6 @@ OpMan
 List
 Token -> List
 
-View Methods
-============
-
-Initialisation/Setup Functions
-==============================
-
-State changing external methods
-===============================
-
 Pause/Resume
 ============
 OpMan.PauseContract(MVP_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
@@ -31,8 +22,6 @@ Mvp Fallback function
 =====================
 Sending Ether is not allowed
 
-Events
-======
 */
 
 pragma solidity ^0.4.24;
@@ -41,20 +30,31 @@ import "../lib/OwnedByOpManAndHub.sol";
 import "../Token/I_TokenMvp.sol";
 import "../List/I_ListMvp.sol";
 
-
 contract Mvp is OwnedByOpManAndHub {
   string  public name = "Pacio MVP Launch"; // contract name
-  uint32  private pBurnId; // Id for Burns, starting from 1, incremented for each burn,
+  uint32  private pState;     // DAICO state using the STATE_ bits. Replicated from Hub only on a on a change
   I_ListMvp  private pListC;  // the List contract
   I_TokenMvp private pTokenC; // the Token contract
 
+  // View Methods
+  // ============
+  // Mvp.State()
+  function State() external view returns (uint32) {
+    return pState;
+  }
+
+  // Events
+  // ======
+  event BurnV(address Account, uint256 Picos);
+  event DestroyV(uint256 Picos);
+
   // Initialisation/Setup Functions
   // ==============================
-  // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
   // Owners must first be set by deploy script calls:
   //   Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   Mvp.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // Mvp.Initialise()
   // ----------------
@@ -67,18 +67,6 @@ contract Mvp is OwnedByOpManAndHub {
     iInitialisingB = false;
   }
 
-  // Events
-  // ======
-  event BurnV(uint32 indexed BurnId, address Account, uint256 Picos); // indexed by BurnId to facilitate monitoring for transferring to PIOs
-  event DestroyV(uint256 Picos);
-
-  // View Methods
-  // ============
-  // Mvp.BurnId()
-  function BurnId() external view returns (uint32) {
-    return pBurnId;
-  }
-
   // State changing external methods
   // ===============================
 
@@ -86,18 +74,23 @@ contract Mvp is OwnedByOpManAndHub {
   // ----------
   // For use when transferring issued PIOEs to PIOs. Burns picos held for msg.sender
   // Is to be called by the owner of the tokens. This will need to be integrated with an import into the Pacio Blockchain as PIOs
-  function Burn() external {
+  // Must be in the STATE_TRANSFER_TO_PB_B state for this to run.
+  function Burn() external IsNotContractCaller {
+    require(pState & STATE_TRANSFER_TO_PB_B > 0, 'Not in Transfer to PB state');
     uint256 picos = pListC.PicosBalance(msg.sender);
-    require(picos > 0, "No PIOEs to burn");
-    pTokenC.Burn();
-    emit BurnV(++pBurnId, msg.sender, picos);
+    require(picos > 0, "No PIOEs to burn"); // is also a check for account existing
+    pTokenC.Burn(msg.sender);
+    emit BurnV(msg.sender, picos);
   }
 
-  // Mvp.Destroy()
-  // -------------
+  // Mvp.DestroyMO()
+  // ---------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
-  // Is to be called from Hub.Destroy()
-  function Destroy(uint256 vPicos) external IsHubContractCaller {
+  // Is to be called by Admin as a managed operation
+  // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
+  function DestroyMO(uint256 vPicos) external IsAdminCaller {
+    require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MVP_DESTROY_MO_X));
     pTokenC.Destroy(vPicos);
     emit DestroyV(vPicos);
   }

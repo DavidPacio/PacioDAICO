@@ -43,6 +43,7 @@ contract Token is EIP20Token, Math {
   uint256 private pContributors;     // Number of contributors
   uint256 private pPclPicosAllocated;// PCL Picos allocated
   uint256 private pIssueId;          // Issue Id
+  uint256 private pBurnId;           // Burns Id
   address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
 
   // No Constructor
@@ -50,6 +51,10 @@ contract Token is EIP20Token, Math {
 
   // View Methods
   // ============
+  // Token.State()  Should be the same as Hub.State()
+  function State() external view returns (uint32) {
+    return pState;
+  }
   // Token.IsSaleOpen()
   function IsSaleOpen() external view returns (bool) {
     return pState & STATE_OPEN_B > 0;
@@ -92,6 +97,8 @@ contract Token is EIP20Token, Math {
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event  IssueV(uint256 indexed IssueId,  address indexed To, uint256 Picos, uint256 Wei);
   event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
+  event   BurnV(uint256 indexed BurnId,   address Account, uint256 Picos);
+  event DestroyV(uint256 Picos);
 //event Transfer(address indexed From, address indexed To, uint256 Value);          /- In EIP20Token
 //event Approval(address indexed Account, address indexed Spender, uint256 Value);  |
 
@@ -177,34 +184,38 @@ contract Token is EIP20Token, Math {
   // Functions for calling via same name function in Hub()
   // =====================================================
 
-  // Functions for calling via same name function in Mvp
-  // ===================================================
+  // Functions for calling from Mvp
+  // ==============================
   // Token.Burn()
   // ------------
-  // For use when transferring issued PIOEs to PIOs. Burns the picos held by tx.origin
-  // Is called by Mvp.Burn() -> here thus use of tx.origin rather than msg.sender
-  // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
-  // The event call is made by Mvp.Burn()
-  function Burn() external IsMvpContractCaller {
-    require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
-    uint256 picos = iListC.PicosBalance(tx.origin);
-  //require(picos > 0, "No PIOEs to burn"); Not needed here as already done by Mvp.Burn()
-    iListC.Burn(); // reverts if a tx.origin list entry doesn't exist
+  // Is called by Mvp.Burn() -> here
+  // For use when transferring issued PIOs to the Pacio Blockchain. Burns the picos held by the Mvp.Burn() non contract caller.
+  // Cannot be called directly - only from the Mvp contract and there only by a non contract caller to burn the caller's picos if any.
+  // Must be in the STATE_TRANSFER_TO_PB_B state for this to run.
+  function Burn(address accountA) external IsMvpContractCaller {
+    require(pState & STATE_TRANSFER_TO_PB_B > 0, 'Not in Transfer to PB state');
+    uint256 picos = iListC.PicosBalance(accountA);
+    require(picos > 0, 'No PIOEs to burn');
+    iListC.Burn(accountA); // reverts if a list entry doesn't exist
     pPicosIssued = subMaxZero(pPicosIssued, picos);
     totalSupply  = subMaxZero(totalSupply,  picos);
+    emit BurnV(++pBurnId, msg.sender, picos);
     // Does not affect pPicosAvailable or the Sale contract balance as these are issued tokens that are being burnt
   }
 
   // Token.Destroy()
   // ---------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
-  // Is called by Mvp.Destroy() -> here to destroy unissued Sale picos
+  // Is called by Mvp.DestroyMO() -> here to destroy unissued Sale picos
   // The event call is made by Mvp.Destroy()
+  // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
   function Destroy(uint256 vPicos) external IsMvpContractCaller {
+    require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
     require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
     iListC.Destroy(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);
     pPicosAvailable = subMaxZero(pPicosAvailable, vPicos);
+    emit DestroyV(vPicos);
   }
 
   // Token.Fallback function

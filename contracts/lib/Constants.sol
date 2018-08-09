@@ -8,19 +8,22 @@ Did not use enums because they can't be used with interface contracts. Would hav
 pragma solidity ^0.4.24;
 
 contract Constants {
-  // State Bits for use with pState                            /- Bit and description
-  // All zero                                        =           Nothing started yet
-  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =   1; // 0 Open for registration, Prepurchase escrow deposits, and white listing
-  uint32 internal constant STATE_OPEN_B              =   2; // 1 Sale is open. Is unset on any of the closes
-  uint32 internal constant STATE_S_CAP_REACHED_B     =   4; // 2 Soft cap reached -> initial draw
-  uint32 internal constant STATE_CLOSED_H_CAP_B      =   8; // 3 Sale closed due to hitting hard cap
-  uint32 internal constant STATE_CLOSED_TIME_UP_B    =  16; // 4 Sale closed due to running out of time
-  uint32 internal constant STATE_CLOSED_MANUAL_B     =  32; // 5 Sale closed manually for whatever reason
-  uint32 internal constant STATE_TAPS_OK_B           =  64; // 6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
-  uint32 internal constant STATE_S_CAP_MISS_REFUND_B = 128; // 7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_TERMINATE_REFUND_B  = 256; // 8 A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_MFUND_EMPTY_B       = 512; // 9 Mfund is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_PFUND_EMPTY_B      = 1024; // A Pfund is empty as a result of refunds or withdrawals emptying the pot
+  // State Bits for use with pState                             /- Bit and description
+  // All zero                                        =            Nothing started yet
+  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =    1; // 0 Open for registration, Prepurchase escrow deposits, and white listing
+  uint32 internal constant STATE_OPEN_B              =    2; // 1 Sale is open. Is unset on any of the closes
+  uint32 internal constant STATE_S_CAP_REACHED_B     =    4; // 2 Soft cap reached -> initial draw
+  uint32 internal constant STATE_CLOSED_H_CAP_B      =    8; // 3 Sale closed due to hitting hard cap
+  uint32 internal constant STATE_CLOSED_TIME_UP_B    =   16; // 4 Sale closed due to running out of time
+  uint32 internal constant STATE_CLOSED_MANUAL_B     =   32; // 5 Sale closed manually for whatever reason
+  uint32 internal constant STATE_TAPS_OK_B           =   64; // 6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
+  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =  128; // 7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; // 8 A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_MFUND_EMPTY_B       =  512; // 9 Mfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_PFUND_EMPTY_B       = 1024; // A Pfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_TRANSFER_TO_PB_B    = 2048; // B PIOs are being transferred to the Pacio Blockchain
+  uint32 internal constant STATE_TRANSFERRED_TO_PB_B = 4096; // B All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
+
   // Combos for anding checks
   uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
   uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
@@ -48,9 +51,9 @@ contract Constants {
   // List      Deployer OpMan Hub   Sale  Token
   // Mfund     Deployer OpMan Hub   Sale  Pfund   Admin
   // Pfund     Deployer OpMan Hub   Sale
-  // VoteTap   Deployer OpMan Hub
-  // VoteEnd   Deployer OpMan Hub
-  // Mvp       Deployer OpMan Hub
+  // VoteTap   Deployer OpMan Hub   Admin
+  // VoteEnd   Deployer OpMan Hub   Admin
+  // Mvp       Deployer OpMan Hub   Admin
   uint256 internal constant DEPLOYER_X       = 0;
   uint256 internal constant OP_MAN_OWNER_X   = 1;
   uint256 internal constant HUB_OWNER_X      = 2;
@@ -77,10 +80,12 @@ contract Constants {
   uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X   = 10; // UpdateManOpMO()
   uint256 internal constant HUB_START_SALE_X            =  5; // Hub.StartSaleMO();
   uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X   =  6; // Hub.SoftCapReachedMO()
-  uint256 internal constant HUB_END_SALE_MO_X           =  7; // Hub.EndSaleMO()
+  uint256 internal constant HUB_CLOSE_SALE_MO_X         =  7; // Hub.CloseSaleMO()
+  uint256 internal constant HUB_TRANSFER_TO_PB_MO_X     =  8; // Hub.TransferToPacioBlockchainMO()
   uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X =  5; // Sale.SetCapsAndTranchesMO()
   uint256 internal constant MFUND_SET_PCL_ACCOUNT_MO_X  =  5; // Mfund.SetPclAccountMO()
   uint256 internal constant MFUND_WITHDRAW_MO_X         =  6; // Mfund.WithdrawMO()
+  uint256 internal constant MVP_DESTROY_MO_X            =  5; // Mvp.DestroyMO()
 
     // Time
   uint32 internal constant DAY         = 86400;

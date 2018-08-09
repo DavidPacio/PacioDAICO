@@ -75,6 +75,10 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // View Methods
   // ============
+  // List.State()  Should be the same as Hub.State()
+  function State() external view returns (uint32) {
+    return pState;
+  }
   function NumberOfKnownAccounts() external view returns (uint256) {
     return pNumEntries;
   }
@@ -135,21 +139,16 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // - currentA  Address of the current entry, ignored for vActionN == First | Last
   // - vActionN { First, Last, Next, Prev} Browse action to be performed
   // Returns:
-  // - retA   address of the list entry found, 0x0 if none
+  // - retA   address of the list entry found, 0x0 if none with bits 0 too
   // - bits   bits of the entry
   // Note: Browsing for a particular type of entry is not implemented as that would involve looping -> gas problems.
   //       The calling app will need to do the looping if necessary, thus the return of bits.
   function Browse(address currentA, uint8 vActionN) external view IsHubContractCaller returns (address retA, uint32 bits) {
-    if (vActionN == BROWSE_FIRST) {
-      retA = pFirstEntryA;
-    }else if (vActionN == BROWSE_LAST) {
-      retA = pLastEntryA;
-    }else if (vActionN == BROWSE_NEXT) {
-      retA = pListMR[currentA].nextEntryA;
-    }else{ // Prev
-      retA = pListMR[currentA].prevEntryA;
-    }
-    return (retA, pListMR[retA].bits);
+         if (vActionN == BROWSE_FIRST) retA = pFirstEntryA;
+    else if (vActionN == BROWSE_LAST)  retA = pLastEntryA;
+    else if (vActionN == BROWSE_NEXT)  retA = pListMR[currentA].nextEntryA;
+    else                               retA = pListMR[currentA].prevEntryA; // Prev
+    return (retA, pListMR[retA].bits); // retA 0x0 abd bits 0 at the end either going forwards or backwards
   }
   // List.NextEntry()
   // ----------------
@@ -418,20 +417,21 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function SetProxy(address vEntryA, address vProxyA) external IsHubContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[vEntryA];
     require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
+    bool proxySetB = rsEntryR.bits & LE_HAS_PROXY_B > 0;
     if (vProxyA == address(0)) {
       // Unset or remove proxy
-      if (rsEntryR.proxyA >= address(0)) {
+      if (proxySetB) {
         // Did have a proxy set
-        rsEntryR.bits &= ~LE_HAS_PROXY_B; // rather than ^= LE_HAS_PROXY_B in case the LE_HAS_PROXY_B bit is wrongly not set
+        rsEntryR.bits ^= LE_HAS_PROXY_B; // unset the LE_HAS_PROXY_B bit which we know is set
         pNumProxies = subMaxZero(pNumProxies, 1);
       }
     }else{
       // Set proxy
-      if (rsEntryR.proxyA == address(0))
-        // Didn't previously have one set
+      if (!proxySetB) {
+        // Didn't previously have a proxy
         pNumProxies++;
-      // else changing proxy
-      rsEntryR.bits |= LE_HAS_PROXY_B;
+        rsEntryR.bits |= LE_HAS_PROXY_B;
+      }
     }
     rsEntryR.proxyA = vProxyA;
     emit SetProxyV(vEntryA, vProxyA);
@@ -567,27 +567,28 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // List.Burn()
   // -----------
-  // For use when transferring issued PIOEs to PIOs
-  // Is called by Mvp.Burn() -> Token.Burn() -> here thus use of tx.origin rather than msg.sender
-  // There is no security risk associated with the use of tx.origin here as it is not used in any ownership/authorisation test
+  // For use when transferring issued PIOs to the Pacio blockchain
+  // Is called by Mvp.Burn() -> Token.Burn() -> here
   // The event call is made by Mvp.Burn() where a Burn Id is updated and logged
-  // Deployment Gas usage: 3142286. When done using pListMR[tx.origin] throughtout rather than the rsEntryR pointer, the deployment gas usage was more at 3143422. Presumably the gas usage would be less at run time too.
-  function Burn() external IsTokenContractCaller {
-    R_List storage rsEntryR = pListMR[tx.origin];
-    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
+  function Burn(address accountA) external IsTokenContractCaller {
+    R_List storage rsEntryR = pListMR[accountA];
+    require(pState & STATE_TRANSFER_TO_PB_B > 0 // /- also checked by Mvp.Burn() and Token.Burn() so no fail msg
+         && rsEntryR.bits > 0);                 // |
     rsEntryR.picosBalance = 0;
     rsEntryR.bits |= LE_BURNT_B;
-    if (rsEntryR.bits & LE_MEMBER_B > 0)
-      pNumMembers = subMaxZero(pNumMembers, 1);
+    if (rsEntryR.bits & LE_MEMBER_B > 0)    pNumMembers = subMaxZero(pNumMembers, 1);
+    if (rsEntryR.bits & LE_HAS_PROXY_B > 0) pNumProxies = subMaxZero(pNumProxies, 1);
     rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the frA LE_M_FUND_B, LE_PICOS_B and LE_MEMBER_B bits
+    // Token.Burn() emit BurnV(++pBurnId, accountA, picos);
   }
 
   // List.Destroy()
   // --------------
   // For use when transferring unissued PIOs to the Pacio Blockchain to destroy Sale contract store of minted PIOs
-  // Is called by Mvp.Destroy() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
+  // Is called by Mvp.DestroyMO() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
   // The event call is made by Mvp.Destroy()
   function Destroy(uint256 vPicos) external IsTokenContractCaller {
+    require(pState & STATE_TRANSFERRED_TO_PB_B > 0); // also checked by Mvp.DestroyMO() and Token.Destroy() so no fail msg
     R_List storage rsEntryR = pListMR[pSaleA];
     require(rsEntryR.bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
     if ((rsEntryR.picosBalance = subMaxZero(rsEntryR.picosBalance, vPicos)) == 0)

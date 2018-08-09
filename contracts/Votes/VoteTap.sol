@@ -2,7 +2,7 @@
 
 Voting re changing the Tap rate
 
-Owned by Deployer, OpMan, Hub
+Owned by Deployer, OpMan, Hub, Admin
 
 djh??
 
@@ -39,10 +39,11 @@ contract VoteTap is OwnedByOpManAndHub, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
   // Owners must first be set by deploy script calls:
   //   VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-  //   VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   VoteTap.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
+  //   VoteTap.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // VoteTap.Initialise()
   // -------------------

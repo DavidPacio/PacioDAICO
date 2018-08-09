@@ -7,7 +7,7 @@ Interface for the Mvp contract for the external functions called from the Hub co
 pragma solidity ^0.4.24;
 
 interface I_Mvp {
-
+  function StateChange(uint32 vState) external;
 }
 // End I_Mvp interface
 

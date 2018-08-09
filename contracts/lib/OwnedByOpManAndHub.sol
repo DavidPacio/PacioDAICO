@@ -1,6 +1,6 @@
 // \lib\OwnedByOpManAndHub.sol
 
-// Version of Owned owned by Deployer, OpMan and Hub for use with the VoteTap, VoteEnd, and Mvp contracts
+// Version of Owned owned by Deployer, OpMan, Hub, and Admin for use with the VoteTap, VoteEnd, and Mvp contracts
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,12 +9,13 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedByOpManAndHub is Constants {
-  uint256 internal constant NUM_OWNERS = 3;
+  uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Hub  owner
+                                          // 3 Admin owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -49,12 +50,20 @@ contract OwnedByOpManAndHub is Constants {
     require(iIsInitialisingB(), "Not initialising");
     _;
   }
+  modifier IsAdminCaller {
+    require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB(), "Not required Admin caller");
+    _;
+  }
   modifier IsOpManContractCaller {
     require(pIsOpManContractCallerB(), "Not required OpMan caller");
     _;
   }
   modifier IsHubContractCaller {
     require(msg.sender == iOwnersYA[HUB_OWNER_X] && pIsContractCallerB(), "Not required Hub caller");
+    _;
+  }
+  modifier IsNotContractCaller {
+    require(!pIsContractCallerB(), 'No contract callers');
     _;
   }
   modifier IsActive {

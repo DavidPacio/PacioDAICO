@@ -16,9 +16,9 @@ Token    Token contract with EIP-20 functions             Deployer OpMan Hub   S
 List     List of participants                             Deployer OpMan Hub   Sale  Token               OpMan
 Mfund    Managed fund for PIO purchases or transfers      Deployer OpMan Hub   Sale  Pfund   Admin       OpMan
 Pfund    Prepurchases escrow fund                         Deployer OpMan Hub   Sale                      OpMan; Mfund
-VoteTap  For a tap vote                                   Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
-VoteEnd  For a terminate and refund vote                  Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
-Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer OpMan Hub                             OpMan; List; Token -> List
+VoteTap  For a tap vote                                   Deployer OpMan Hub   Admin                     OpMan; Hub -> Mfund, List
+VoteEnd  For a terminate and refund vote                  Deployer OpMan Hub   Admin                     OpMan; Hub -> Mfund, List
+Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer OpMan Hub   Admin                     OpMan; List; Token -> List
 
 where Deployer is the PCL account used to deploy the contracts = ms.sender in the constructors and Truffle deploy script
 where Admin is a PCL hardware wallet

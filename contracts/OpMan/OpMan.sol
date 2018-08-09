@@ -149,6 +149,8 @@ contract OpMan is OwnedOpMan {
     for (j=0; j<vSignersYA.length; j++)
       pAddSigner(vSignersYA[j]);
     // Add initial (OpMan) manOps
+    // djh?? Review the values
+    // djh?? Move to deploy script?
     // pAddManOp(uint256 vContractX, uint32 vSigsRequired, uint32 vSecsToSign) private
     pAddManOp(OP_MAN_CONTRACT_X, RESUME_MO_X,                 3, HOUR); //  0 ResumeMO()
   //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+1,    3, HOUR); //  1 ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
@@ -163,10 +165,11 @@ contract OpMan is OwnedOpMan {
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,   3, HOUR); // 10 UpdateManOpMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,            3, HOUR); //  5 Hub.StartSaleMO();
     pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,   3, HOUR); //  6 Hub.SoftCapReachedMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_END_SALE_MO_X,           3, HOUR); //  7 Hub.EndSaleMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,         3, HOUR); //  7 Hub.CloseSaleMO()
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X, 3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
-    pAddManOp(MFUND_CONTRACT_X, MFUND_SET_PCL_ACCOUNT_MO_X, 3, HOUR); //  5 Mfund.SetPclAccountMO()
-    pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_MO_X,        3, HOUR); //  6 Mfund.WithdrawMO()
+    pAddManOp(MFUND_CONTRACT_X,  MFUND_SET_PCL_ACCOUNT_MO_X,  3, HOUR); //  5 Mfund.SetPclAccountMO()
+    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_MO_X,         3, HOUR); //  6 Mfund.WithdrawMO()
+    pAddManOp(MVP_CONTRACT_X,    MVP_DESTROY_MO_X,            3, HOUR); //  5 Mvp.DestroyMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }

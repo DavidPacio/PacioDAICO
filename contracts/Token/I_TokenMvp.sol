@@ -7,7 +7,7 @@ Interface for the Token contract for the external functions called from the Mvp 
 pragma solidity ^0.4.24;
 
 interface I_TokenMvp {
-  function Burn() external;
+  function Burn(address accountA) external;
   function Destroy(uint256 vPicos) external;
 }
 // End I_TokenMvp interface

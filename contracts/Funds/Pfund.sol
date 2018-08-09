@@ -33,6 +33,10 @@ contract Pfund is OwnedPfund, Math {
 
   // View Methods
   // ============
+  // Pfund.State()  Should be the same as Hub.State()
+  function State() external view returns (uint32) {
+    return pState;
+  }
   // Pfund.FundWei() -- Echoed in Sale View Methods
   function FundWei() external view returns (uint256) {
     return address(this).balance;
@@ -40,10 +44,6 @@ contract Pfund is OwnedPfund, Math {
   // Pfund.TotalDepositedWei() Total wei deposited in Prepurchase escrow before any whitelist transfers or refunds.
   function TotalDepositedWei() external view returns (uint256) {
     return pTotalDepositedWei;
-  }
-  // Pfund.State()  Should be the same as Hub.State()
-  function State() external view returns (uint32) {
-    return pState;
   }
   // Pfund.DepositId()
   function DepositId() external view returns (uint256) {

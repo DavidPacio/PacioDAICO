@@ -9,7 +9,7 @@ pragma solidity ^0.4.24;
 interface I_Hub {
   function StartSaleMO() external;
   function SoftCapReachedMO() external;
-  function EndSaleMO(uint32 vBit) external;
+  function CloseSaleMO(uint32 vBit) external;
 }
 // End I_Hub interface
 

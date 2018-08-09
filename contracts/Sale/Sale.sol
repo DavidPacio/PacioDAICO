@@ -405,8 +405,8 @@ contract Sale is OwnedSale, Math {
         pHardCapReached();
     }
     if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
-      // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then pEndSale() wouldn't be run. Does allow one tran over time.
-      pEndSale(STATE_CLOSED_TIME_UP_B);
+      // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then pCloseSale() wouldn't be run. Does allow one tran over time.
+      pCloseSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
     }
   }
@@ -433,14 +433,14 @@ contract Sale is OwnedSale, Math {
   // ----------------------
   function pHardCapReached() private {
     // Cap reached so end the sale
-    pEndSale(STATE_CLOSED_H_CAP_B);
+    pCloseSale(STATE_CLOSED_H_CAP_B);
     emit HardCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice, pUsdHardCapB);
   }
-  // Sale.pEndSale()
-  // ---------------
+  // Sale.pCloseSale()
+  // -----------------
   // Called from Buy() for time up and pHardCapReached() for hard cap reached
-  function pEndSale(uint32 vBit) private {
-    pHubC.EndSaleMO(vBit);
+  function pCloseSale(uint32 vBit) private {
+    pHubC.CloseSaleMO(vBit);
   }
 
   // Sale Fallback function

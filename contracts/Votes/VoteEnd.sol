@@ -2,12 +2,12 @@
 
 Voting re ending the DAICO and refunding the remaining funds
 
-Owned by Deployer, OpMan, Hub
+Owned by Deployer, OpMan, Hub, Admin
 
 djh??
 
 • No vote allowed until sale has been closed
-• to call Hub.Terminate() on a Yes to end vote
+• to call Hub.TerminateVote() on a Yes to end vote
 
 View Methods
 ============
@@ -42,10 +42,11 @@ contract VoteEnd is OwnedByOpManAndHub, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
   // Owners must first be set by deploy script calls:
   //   VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-  //   VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+  //   VoteEnd.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
+  //   VoteEnd.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // VoteEnd.Initialise()
   // -------------------

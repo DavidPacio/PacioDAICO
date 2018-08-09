@@ -91,22 +91,25 @@ Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Pfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Pfund.Initialise()
 
-VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub
+VoteTap owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
 -------
 VoteTap.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteTap.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+VoteTap.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 VoteTap.Initialise()
 
-VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub
+VoteEnd owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
 -------
 VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+VoteEnd.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 VoteEnd.Initialise()
 
-Mvp owned by 0 Deployer, 1 OpMan, 2 Hub
+Mvp owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
 ---
 Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
+Mvp.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Mvp.Initialise()
 
 Then Manually by Admin
