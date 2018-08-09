@@ -143,7 +143,7 @@ contract Sale is OwnedSale, Math {
   function PicosPerEtherTranch3() external view returns (uint256) {
     return pPicosPerEthT3; // Picos per Ether for tranche 3
   }
-  // Sale.PicosSold() -- should == Token.pPicosIssued unless refunding/burning/destroying happens
+  // Sale.PicosSold() -- should == Token.pPicosIssued unless refunding/transferring to Pacio Blockchain happens
   function PicosSold() external view returns (uint256) {
     return pPicosPresale + pPicosSoldT1 + pPicosSoldT2 + pPicosSoldT3;
   }

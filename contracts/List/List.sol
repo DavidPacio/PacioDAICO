@@ -38,7 +38,7 @@ contract List is OwnedList, Math {
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   address private pFirstEntryA;   // Address of first entry
   address private pLastEntryA;    // Address of last entry
-  uint256 private pNumEntries;    // Number of list entries        /- no pNum* counts for those effectively counted by Id i.e. RefundId, BurnId
+  uint256 private pNumEntries;    // Number of list entries        /- no pNum* counts for those effectively counted by Id i.e. RefundId, TransferToPbId
   uint256 private pNumPfund;      // Number of Pfund list entries  V
   uint256 private pNumWhite;      // Number of whitelist entries
   uint256 private pNumMembers;    // Number of Pacio members
@@ -556,30 +556,28 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     // Token.Refund() emits RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
   }
 
-  // List.Burn()
-  // -----------
+  // List.TransferIssuedPIOsToPacioBc()
+  // ------------------------------------------
   // For use when transferring issued PIOs to the Pacio blockchain
-  // Is called by Mvp.Burn() -> Token.Burn() -> here
-  // The event call is made by Mvp.Burn() where a Burn Id is updated and logged
-  function Burn(address accountA) external IsTokenContractCaller {
+  // Is called by Mvp.TransferIssuedPIOsToPacioBc() -> Token.TransferIssuedPIOsToPacioBc() -> here
+  function TransferIssuedPIOsToPacioBc(address accountA) external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[accountA];
-    require(pState & STATE_TRANSFER_TO_PB_B > 0 // /- also checked by Mvp.Burn() and Token.Burn() so no fail msg
+    require(pState & STATE_TRANSFER_TO_PB_B > 0 // /- also checked by Mvp.TransferIssuedPIOsToPacioBc() and Token.TransferIssuedPIOsToPacioBc() so no fail msg
          && rsEntryR.bits > 0);                 // |
     rsEntryR.picosBalance = 0;
-    rsEntryR.bits |= LE_BURNT_B;
+    rsEntryR.bits |= LE_TRANSFERRED_TO_PB_B;
     if (rsEntryR.bits & LE_MEMBER_B > 0)    pNumMembers = subMaxZero(pNumMembers, 1);
     if (rsEntryR.bits & LE_HAS_PROXY_B > 0) pNumProxies = subMaxZero(pNumProxies, 1);
     rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the frA LE_M_FUND_B, LE_PICOS_B and LE_MEMBER_B bits
-    // Token.Burn() emit BurnV(++pBurnId, accountA, picos);
+    // Token.TransferIssuedPIOsToPacioBc() emits TransferIssuedPIOsToPacioBcV(++pTransferToPbId, accountA, picos);
   }
 
-  // List.Destroy()
-  // --------------
-  // For use when transferring unissued PIOs to the Pacio Blockchain to destroy Sale contract store of minted PIOs
-  // Is called by Mvp.DestroyMO() -> Token.Destroy() -> here to destroy unissued Sale (pSaleA) picos
-  // The event call is made by Mvp.Destroy()
-  function Destroy(uint256 vPicos) external IsTokenContractCaller {
-    require(pState & STATE_TRANSFERRED_TO_PB_B > 0); // also checked by Mvp.DestroyMO() and Token.Destroy() so no fail msg
+  // List.TransferUnIssuedPIOsToPacioBc()
+  // ------------------------------------
+  // For use when transferring unissued PIOs to the Pacio Blockchain to decrement the Sale contract store of minted PIOs
+  // Is called by Mvp.TransferUnIssuedPIOsToPacioBcMO() -> Token.TransferUnIssuedPIOsToPacioBc() -> here to decrement unissued Sale (pSaleA) picos
+  function TransferUnIssuedPIOsToPacioBc(uint256 vPicos) external IsTokenContractCaller {
+    require(pState & STATE_TRANSFERRED_TO_PB_B > 0); // also checked by Mvp.TransferUnIssuedPIOsToPacioBcMO() and Token.TransferUnIssuedPIOsToPacioBc() so no fail msg
     R_List storage rsEntryR = pListMR[pSaleA];
     require(rsEntryR.bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
     if ((rsEntryR.picosBalance = subMaxZero(rsEntryR.picosBalance, vPicos)) == 0)

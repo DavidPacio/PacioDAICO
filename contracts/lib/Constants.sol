@@ -69,23 +69,23 @@ contract Constants {
   uint256 internal constant MVP_OWNER_X      = 4;
 
   // Managed Operation Indices
-  uint256 internal constant RESUME_MO_X                 =  0; // ResumeMO()
-  uint256 internal constant CHANGE_OWNER_BASE_MO_X      =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
+  uint256 internal constant RESUME_MO_X                  =  0; // ResumeMO()
+  uint256 internal constant CHANGE_OWNER_BASE_MO_X       =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
   // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
-  uint256 internal constant OP_MAN_ADD_CONTRACT_MO_X    =  5; // AddContractMO()
-  uint256 internal constant OP_MAN_ADD_SIGNER_MO_X      =  6; // AddSignerMO()
-  uint256 internal constant OP_MAN_ADD_MAN_OP_MO_X      =  7; // AddManOpMO
-  uint256 internal constant OP_MAN_CHANGE_SIGNER_MO_X   =  8; // ChangeSignerMO()
-  uint256 internal constant OP_MAN_UPDATE_CONTRACT_MO_X =  9; // UpdateContractMO()
-  uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X   = 10; // UpdateManOpMO()
-  uint256 internal constant HUB_START_SALE_X            =  5; // Hub.StartSaleMO();
-  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X   =  6; // Hub.SoftCapReachedMO()
-  uint256 internal constant HUB_CLOSE_SALE_MO_X         =  7; // Hub.CloseSaleMO()
-  uint256 internal constant HUB_TRANSFER_TO_PB_MO_X     =  8; // Hub.TransferToPacioBlockchainMO()
-  uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X =  5; // Sale.SetCapsAndTranchesMO()
-  uint256 internal constant MFUND_SET_PCL_ACCOUNT_MO_X  =  5; // Mfund.SetPclAccountMO()
-  uint256 internal constant MFUND_WITHDRAW_MO_X         =  6; // Mfund.WithdrawMO()
-  uint256 internal constant MVP_DESTROY_MO_X            =  5; // Mvp.DestroyMO()
+  uint256 internal constant OP_MAN_ADD_CONTRACT_MO_X     =  5; // AddContractMO()
+  uint256 internal constant OP_MAN_ADD_SIGNER_MO_X       =  6; // AddSignerMO()
+  uint256 internal constant OP_MAN_ADD_MAN_OP_MO_X       =  7; // AddManOpMO
+  uint256 internal constant OP_MAN_CHANGE_SIGNER_MO_X    =  8; // ChangeSignerMO()
+  uint256 internal constant OP_MAN_UPDATE_CONTRACT_MO_X  =  9; // UpdateContractMO()
+  uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X    = 10; // UpdateManOpMO()
+  uint256 internal constant HUB_START_SALE_X             =  5; // Hub.StartSaleMO();
+  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X    =  6; // Hub.SoftCapReachedMO()
+  uint256 internal constant HUB_CLOSE_SALE_MO_X          =  7; // Hub.CloseSaleMO()
+  uint256 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X=  8; // Hub.SetTransferToPacioBcStateMO()
+  uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X  =  5; // Sale.SetCapsAndTranchesMO()
+  uint256 internal constant MFUND_SET_PCL_ACCOUNT_MO_X   =  5; // Mfund.SetPclAccountMO()
+  uint256 internal constant MFUND_WITHDRAW_MO_X          =  6; // Mfund.WithdrawMO()
+  uint256 internal constant MVP_TRAN_UNISSUED_TO_PB_MO_X =  5; // Mvp.TransferUnIssuedPIOsToPacioBcMO()
 
     // Time
   uint32 internal constant DAY         = 86400;
@@ -107,7 +107,7 @@ contract Constants {
   uint32 internal constant LE_FROM_TRANSFER_OK_B      =    512; //  9 Transfers from this entry allowed entry even if pTransfersOkB is false. Is set for the Sale contract entry.
   uint32 internal constant LE_HAS_PROXY_B             =   1024; // 10 This entry has a Proxy appointed
   uint32 internal constant LE_DOWNGRADED_B            =   2048; // 11 This entry has been downgraded from whitelisted. Refunding candidate.
-  uint32 internal constant LE_BURNT_B                 =   4096; // 12 This entry has had its PIOs burnt
+  uint32 internal constant LE_TRANSFERRED_TO_PB_B     =   4096; // 12 This entry has had its PIOs transferred to the Pacio Blockchain
   uint32 internal constant LE_P_REFUND_S_CAP_MISS_B   =   8192; // 13 Pfund funds Refund due to soft cap not being reached
   uint32 internal constant LE_P_REFUND_SALE_CLOSE_B   =  16384; // 14 Pfund funds Refund due to not being whitelisted by the time that the sale closes
   uint32 internal constant LE_P_REFUND_ONCE_OFF_B     =  32768; // 15 Pfund funds Refund once off manually for whatever reason
@@ -119,7 +119,7 @@ contract Constants {
   uint32 internal constant LE_WHITELISTED_MEMBER_B    =      96; // LE_WHITELISTED_B | LE_MEMBER_B
   uint32 internal constant LE_EVER_PRESALE_COMBO_B    =     384; // LE_PRESALE_B | LE_WAS_PRESALE_B
   uint32 internal constant LE_REFUNDED_COMBO_B        =  516096; // LE_P_REFUND_S_CAP_MISS_B | LE_P_REFUND_SALE_CLOSE_B | LE_P_REFUND_ONCE_OFF_B | LE_MNP_REFUND_S_CAP_MISS_B | LE_M_REFUND_TERMINATION_B | LE_M_REFUND_ONCE_OFF_B
-  uint32 internal constant LE_DEAD_COMBO_B            =  520192; // LE_BURNT_B | LE_REFUNDED_COMBO_B  or bits >= 4096
+  uint32 internal constant LE_DEAD_COMBO_B            =  520192; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 4096
   uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B   =  522370; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
   uint32 internal constant LE_NO_REFUND_COMBO_B       =  520194; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
 

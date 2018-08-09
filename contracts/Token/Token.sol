@@ -7,7 +7,7 @@ Owners:
 1 OpMan
 2 Hub
 3 Sale
-4 Mvp for burning/destroying with the transfer of PIOs to the Pacio Blockchain
+4 Mvp
 
 Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
@@ -36,14 +36,14 @@ import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
 contract Token is EIP20Token, Math {
   uint32  private pState;            // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.PicosSold() unless refunding/burning/destroying happens
+  uint256 private pPicosIssued;      // Picos issued = picos in circulation. Should == Sale.PicosSold() unless refunding/transferring to Pacio Blockchain happens
   uint256 private pWeiRaised;        // cumulative wei raised. Should == Sale.pWeiRaised
   uint256 private pWeiRefunded;      // cumulative wei refunded. No Sale equivalent
   uint256 private pPicosAvailable;   // Picos available = total supply less allocated and issued tokens
   uint256 private pContributors;     // Number of contributors
   uint256 private pPclPicosAllocated;// PCL Picos allocated
   uint256 private pIssueId;          // Issue Id
-  uint256 private pBurnId;           // Burns Id
+  uint256 private pTransferToPbId;   // Transfer to Pacio Blockchain Id
   address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
 
   // No Constructor
@@ -97,8 +97,8 @@ contract Token is EIP20Token, Math {
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event  IssueV(uint256 indexed IssueId,  address indexed To, uint256 Picos, uint256 Wei);
   event RefundV(uint256 indexed RefundId, address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
-  event   BurnV(uint256 indexed BurnId,   address Account, uint256 Picos);
-  event DestroyV(uint256 Picos);
+  event TransferIssuedPIOsToPacioBcV(uint256 indexed TransferToPbId, address Account, uint256 Picos);
+  event TransferUnIssuedPIOsToPacioBcV(uint256 Picos);
 //event Transfer(address indexed From, address indexed To, uint256 Value);          /- In EIP20Token
 //event Approval(address indexed Account, address indexed Spender, uint256 Value);  |
 
@@ -186,36 +186,35 @@ contract Token is EIP20Token, Math {
 
   // Functions for calling from Mvp
   // ==============================
-  // Token.Burn()
-  // ------------
-  // Is called by Mvp.Burn() -> here
-  // For use when transferring issued PIOs to the Pacio Blockchain. Burns the picos held by the Mvp.Burn() non contract caller.
-  // Cannot be called directly - only from the Mvp contract and there only by a non contract caller to burn the caller's picos if any.
+  // Token.TransferIssuedPIOsToPacioBc()
+  // -------------------------------------------
+  // Is called by Mvp.TransferIssuedPIOsToPacioBc() -> here
+  // For use when transferring issued PIOs to the Pacio Blockchain. Takes the picos out of circulation.
+  // Cannot be called directly - only from the Mvp contract and there only by a non contract caller.
   // Must be in the STATE_TRANSFER_TO_PB_B state for this to run.
-  function Burn(address accountA) external IsMvpContractCaller {
+  function TransferIssuedPIOsToPacioBc(address accountA) external IsMvpContractCaller {
     require(pState & STATE_TRANSFER_TO_PB_B > 0, 'Not in Transfer to PB state');
     uint256 picos = iListC.PicosBalance(accountA);
-    require(picos > 0, 'No PIOEs to burn');
-    iListC.Burn(accountA); // reverts if a list entry doesn't exist
+    require(picos > 0); // no msg as already checked by Mvp.TransferIssuedPIOsToPacioBc()
+    iListC.TransferIssuedPIOsToPacioBc(accountA); // reverts if a list entry doesn't exist
     pPicosIssued = subMaxZero(pPicosIssued, picos);
     totalSupply  = subMaxZero(totalSupply,  picos);
-    emit BurnV(++pBurnId, msg.sender, picos);
-    // Does not affect pPicosAvailable or the Sale contract balance as these are issued tokens that are being burnt
+    emit TransferIssuedPIOsToPacioBcV(++pTransferToPbId, msg.sender, picos);
+    // Does not affect pPicosAvailable or the Sale contract balance as these are issued tokens that are being removed.
   }
 
-  // Token.Destroy()
-  // ---------------
+  // Token.TransferUnIssuedPIOsToPacioBc()
+  // ---------------------------------------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
-  // Is called by Mvp.DestroyMO() -> here to destroy unissued Sale picos
-  // The event call is made by Mvp.Destroy()
+  // Is called by Mvp.TransferUnIssuedPIOsToPacioBcMO() -> here to decrement unissued Sale picos
   // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
-  function Destroy(uint256 vPicos) external IsMvpContractCaller {
+  function TransferUnIssuedPIOsToPacioBc(uint256 vPicos) external IsMvpContractCaller {
     require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
     require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
-    iListC.Destroy(vPicos);
+    iListC.TransferUnIssuedPIOsToPacioBc(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);
     pPicosAvailable = subMaxZero(pPicosAvailable, vPicos);
-    emit DestroyV(vPicos);
+    emit TransferUnIssuedPIOsToPacioBcV(vPicos);
   }
 
   // Token.Fallback function

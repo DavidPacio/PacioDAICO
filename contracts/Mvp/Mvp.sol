@@ -45,8 +45,8 @@ contract Mvp is OwnedByOpManAndHub {
 
   // Events
   // ======
-  event BurnV(address Account, uint256 Picos);
-  event DestroyV(uint256 Picos);
+  event TransferIssuedPIOsToPacioBcV(address Account, uint256 Picos);
+  event TransferUnIssuedPIOsToPacioBcV(uint256 Picos);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -70,29 +70,29 @@ contract Mvp is OwnedByOpManAndHub {
   // State changing external methods
   // ===============================
 
-  // Mvp.Burn()
-  // ----------
-  // For use when transferring issued PIOEs to PIOs. Burns picos held for msg.sender
-  // Is to be called by the owner of the tokens. This will need to be integrated with an import into the Pacio Blockchain as PIOs
+  // Mvp.TransferIssuedPIOsToPacioBc()
+  // -----------------------------------------
+  // For use when transferring issued PIOs to the Pacio Blockchain.
+  // Is to be called by the owner of the PIOs. This will need to be integrated with an import of the PIOs into the Pacio Blockchain
   // Must be in the STATE_TRANSFER_TO_PB_B state for this to run.
-  function Burn() external IsNotContractCaller {
+  function TransferIssuedPIOsToPacioBc() external IsNotContractCaller {
     require(pState & STATE_TRANSFER_TO_PB_B > 0, 'Not in Transfer to PB state');
     uint256 picos = pListC.PicosBalance(msg.sender);
-    require(picos > 0, "No PIOEs to burn"); // is also a check for account existing
-    pTokenC.Burn(msg.sender);
-    emit BurnV(msg.sender, picos);
+    require(picos > 0, "No PIOEs to transfer"); // is also a check for account existing
+    pTokenC.TransferIssuedPIOsToPacioBc(msg.sender);
+    emit TransferIssuedPIOsToPacioBcV(msg.sender, picos);
   }
 
-  // Mvp.DestroyMO()
-  // ---------------
+  // Mvp.TransferUnIssuedPIOsToPacioBcMO()
+  // ---------------------------------------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
   // Is to be called by Admin as a managed operation
   // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
-  function DestroyMO(uint256 vPicos) external IsAdminCaller {
+  function TransferUnIssuedPIOsToPacioBcMO(uint256 vPicos) external IsAdminCaller {
     require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MVP_DESTROY_MO_X));
-    pTokenC.Destroy(vPicos);
-    emit DestroyV(vPicos);
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MVP_TRAN_UNISSUED_TO_PB_MO_X));
+    pTokenC.TransferUnIssuedPIOsToPacioBc(vPicos);
+    emit TransferUnIssuedPIOsToPacioBcV(vPicos);
   }
 
   // Mvp Fallback function
