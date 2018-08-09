@@ -114,6 +114,7 @@ contract Hub is OwnedHub, Math {
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsWebOrAdminCaller {
+    require(pIsAccountOkB(toA)); // Check that toA is defined and not any of the contracts or Admin
     require(pListC.CreatePresaleEntry(toA, vDbId, vAddedT, vNumContribs));
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
@@ -263,7 +264,7 @@ contract Hub is OwnedHub, Math {
     return pRefund(toA, vOnceOffB);
   }
 
-  // Hub.pRefund()
+  // Hub.pRefund() private
   // -------------
   // Private fn to process a refund, called by Hub.Refund() or Hub.PushRefund()
   // Calls: List.EntryBits()                     - for type info
@@ -398,9 +399,25 @@ djh??
   // Hub.CreateListEntry()
   // ---------------------
   // Create a new list entry, and add it into the doubly linked list.
+  // accountA Must be defined and not be a any of the contracts or Admin
   // List.CreateListEntry() sets the LE_REGISTERED_B bit so there is no need to include that in vBits
   function CreateListEntry(address accountA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
+    require(pIsAccountOkB(accountA)); // Check that accountA is defined and not any of the contracts or Admin
     return pListC.CreateListEntry(accountA, vBits, vDbId);
+  }
+
+  // Hub.pIsAccountOkB() private
+  // -------------------
+  // Checks that accountA is not any of the contracts or Admin
+  function pIsAccountOkB(address accountA) private view returns (bool) {
+    for (uint256 j=0; j<NUM_OWNERS; j++) // Checks 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
+      require(accountA != iOwnersYA[j], 'Account conflict');
+    // Now defined, self (Hub), Token, Mvp
+    require(accountA != address(0)       // Defined
+         && accountA != address(this)
+         && accountA != pOpManC.ContractXA(TOKEN_CONTRACT_X)
+         && accountA != pOpManC.ContractXA(MVP_CONTRACT_X), 'Account conflict');
+    return true;
   }
 
   // Hub.Downgrade()

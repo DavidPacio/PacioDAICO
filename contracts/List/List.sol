@@ -5,9 +5,6 @@ List of people/addresses to do with Pacio
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
-• prepurchase -> escrow Pfund -> Mfund and decr pNumPfund
-• update set whitelisted re ...
-- other owners e.g. voting contract?
 - add vote count data
 
 Member info [Struct order is different to minimise slots used]
@@ -292,15 +289,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   //              Token.NewSaleContract() -> List.CreateSaleContractEntry() -> here to create the new Sale contract list entry djh?? wip
   //                Hub.PresaleIssue()    -> CreatePresaleEntry()           -> here to create a Seed Presale or Private Placement list entry
   // Sets the LE_REGISTERED_B bit always so that bits for any entry which exists is > 0
-  // List is owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+  // Validity of vEntryA (defined and not any of the contracts or Admin) is checked by Hub.CreateListEntry() and Hub.PresaleIssue()
+  // There is one exception for vEntryA being a contract which is for the Sale contract case for holding the minted PIOs, creatred via a List.CreateSaleContractEntry() call.
   function pCreateEntry(address vEntryA, uint32 vBits, uint32 vDbId) private returns (bool) {
-    require(vEntryA != address(0)                // Defined      djh?? Could have an OpMan fn that checked vs all contracts except a nominated one e.g. Sale
-         && vEntryA != iOwnersYA[OP_MAN_OWNER_X] // Not OpMan
-         && vEntryA != iOwnersYA[HUB_OWNER_X]    // Not Hub
-      // && vEntryA != pSaleA                    // Not Sale - No as we do create a Sale contract entry
-         && vEntryA != iOwnersYA[TOKEN_OWNER_X]  // Not Token
-         && vEntryA != address(this), // Not this list contract
-            'Invalid account address');
     require(pListMR[vEntryA].bits == 0, "Account already exists"); // Require account not to already exist
     pListMR[vEntryA] = R_List(
       address(0),               // address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
@@ -331,7 +322,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // List.CreateSaleContractEntry()
   // ------------------------------
-  // Called from Token.Initialise() to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale sale contract
+  // Called from Token.Initialise() to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale contract
   // Called from Token.NewSaleContract() to create a new Sale contract list entry djh?? wip
   // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract  djh?? wip
   // Transfers from it are done for issuing PIOs so set LE_FROM_TRANSFER_OK_B
@@ -546,7 +537,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       // Pfund refundBit
       require(bits & LE_P_FUND_B > 0, "Invalid list type for Prepurchase Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Prepurchase Refund call");
-      rsEntryR.bits &= ~LE_P_FUND_B;                 // unset the prepurchase bit
+      rsEntryR.bits &= ~LE_P_FUND_B;        // unset the prepurchase bit
       pNumPfund = subMaxZero(pNumPfund, 1); // decrement pNumPfund
     }else{
       // Mfund refund bit

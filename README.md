@@ -23,4 +23,5 @@ Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer OpMan Hub   A
 where Deployer is the PCL account used to deploy the contracts = ms.sender in the constructors and Truffle deploy script
 where Admin is a PCL hardware wallet
       Web is a PCL wallet being used for Pacio DAICO web site access to Hub re white listing etc
+If a contract makes a state changing call to another contract the callee must have the caller as an owner.
 ```
