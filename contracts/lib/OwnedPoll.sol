@@ -8,7 +8,7 @@ pragma solidity ^0.4.24;
 import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
-contract OwnedByOpManAndHub is Constants {
+contract OwnedPoll is Constants {
   uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
@@ -107,4 +107,4 @@ contract OwnedByOpManAndHub is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End OwnedOwnedByOpManAndHub contract
+} // End OwnedOwnedPoll contract

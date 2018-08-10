@@ -33,8 +33,8 @@ contract Pfund is OwnedPfund, Math {
 
   // View Methods
   // ============
-  // Pfund.State()  Should be the same as Hub.State()
-  function State() external view returns (uint32) {
+  // Pfund.DaicoState() Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
     return pState;
   }
   // Pfund.FundWei() -- Echoed in Sale View Methods

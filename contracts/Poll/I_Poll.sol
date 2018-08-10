@@ -7,6 +7,6 @@ Interface for the Poll contract external functions which are called from the Hub
 pragma solidity ^0.4.24;
 
 interface I_Poll {
-
+  function StateChange(uint32 vState) external;
 }
 // End I_Poll interface

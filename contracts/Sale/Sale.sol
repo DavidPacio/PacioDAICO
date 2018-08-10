@@ -79,6 +79,10 @@ contract Sale is OwnedSale, Math {
 
   // View Methods
   // ============
+  // Sale.DaicoState()  Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
+    return pState;
+  }
   // Sale.StartTime()
   function StartTime() external view returns (uint32) {
     return uint32(pStartT);

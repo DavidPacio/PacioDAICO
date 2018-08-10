@@ -37,8 +37,8 @@ contract Mfund is OwnedMfund, Math {
 
   // View Methods
   // ============
-  // Mfund.State()  Should be the same as Hub.State()
-  function State() external view returns (uint32) {
+  // Mfund.DaicoState() Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
     return pState;
   }
   // Mfund.TotalDepositedWei() Total wei deposited before any withdrawals or refunds
@@ -141,7 +141,7 @@ contract Mfund is OwnedMfund, Math {
   // -------------------
   // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
   function StateChange(uint32 vState) external IsHubContractCaller {
-    if ((vState & STATE_S_CAP_REACHED_B) > 0 && (pState & STATE_S_CAP_REACHED_B) == 0) {
+    if (vState & STATE_S_CAP_REACHED_B > 0 && pState & STATE_S_CAP_REACHED_B == 0) {
       // Change of state for Soft Cap being reached
       // Make the soft cap withdrawal
       pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);

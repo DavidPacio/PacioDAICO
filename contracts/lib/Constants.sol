@@ -40,28 +40,28 @@ contract Constants {
   uint256 internal constant POLL_CONTRACT_X     = 7;
 
   // Owner Indices
-  // Contract  Owned By
-  //           0        1     2     3     4       5
-  // OpMan     Deployer Self  Admin
-  // Hub       Deployer OpMan Admin Sale  Poll    Web
-  // Sale      Deployer OpMan Hub   Admin
-  // Token     Deployer OpMan Hub   Sale  Admin
-  // List      Deployer OpMan Hub   Sale  Token
-  // Mfund     Deployer OpMan Hub   Sale  Pfund   Admin
-  // Pfund     Deployer OpMan Hub   Sale
-  // Poll      Deployer OpMan Hub   Admin
-  uint256 internal constant DEPLOYER_X       = 0;
-  uint256 internal constant OP_MAN_OWNER_X   = 1;
-  uint256 internal constant HUB_OWNER_X      = 2;
-  uint256 internal constant ADMIN_OWNER_X    = 2;
+  // Contract Owned By
+  //          0        1     2     3     4       5
+  // OpMan    Deployer Self  Admin
+  // Hub      Deployer OpMan Admin Sale  Poll    Web
+  // Sale     Deployer OpMan Hub   Admin
+  // Token    Deployer OpMan Hub   Sale  Admin
+  // List     Deployer OpMan Hub   Sale  Token
+  // Mfund    Deployer OpMan Hub   Sale  Pfund   Admin
+  // Pfund    Deployer OpMan Hub   Sale
+  // Poll     Deployer OpMan Hub   Admin
+  uint256 internal constant DEPLOYER_X          = 0;
+  uint256 internal constant OP_MAN_OWNER_X      = 1;
+  uint256 internal constant HUB_OWNER_X         = 2;
+  uint256 internal constant ADMIN_OWNER_X       = 2;
   uint256 internal constant SALE_ADMIN_OWNER_X  = 3;
   uint256 internal constant TOKEN_ADMIN_OWNER_X = 4;
   uint256 internal constant MFUND_PFUND_OWNER_X = 4;
   uint256 internal constant MFUND_ADMIN_OWNER_X = 5;
-  uint256 internal constant SALE_OWNER_X     = 3;
-  uint256 internal constant POLL_OWNER_X     = 4;
-  uint256 internal constant WEB_OWNER_X      = 5;
-  uint256 internal constant TOKEN_OWNER_X    = 4;
+  uint256 internal constant SALE_OWNER_X        = 3;
+  uint256 internal constant POLL_OWNER_X        = 4;
+  uint256 internal constant WEB_OWNER_X         = 5;
+  uint256 internal constant TOKEN_OWNER_X       = 4;
 
   // Managed Operation Indices
   uint256 internal constant RESUME_MO_X                   =  0; // ResumeMO()
@@ -82,10 +82,35 @@ contract Constants {
   uint256 internal constant MFUND_WITHDRAW_MO_X            =  6; // Mfund.WithdrawMO()
   uint256 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferUnIssuedPIOsToPacioBcMO()
 
-    // Time
+  // Time
   uint32 internal constant DAY         = 86400;
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
+
+  // Poll Bits                                                         /- bit and bit setting description
+  // Zero                                                                No poll has yet been run requested or run
+  uint32 internal constant POLL_RUNNING_B                =      1; //  0 A poll is running
+  uint32 internal constant POLL_CLOSED_B                 =      2; //  1 A poll has been run, is now closed, and action has been taken if the vote was to approve the poll
+  uint32 internal constant POLL_REQUEST_B                =      4; //  2 The running or closed poll is/was a poll to request a poll, Requires another bit for a POLL_REQUEST_B poll to also be set.
+  uint32 internal constant POLL_CLOSE_TRANCHE_1_B        =      8; //  3 Close tranche 1 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_2_B        =     16; //  4 Close tranche 2 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_3_B        =     32; //  5 Close tranche 3 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_4_B        =     64; //  6 Close tranche 4 of the sale
+  uint32 internal constant POLL_CLOSE_SALE_B             =    128; //  7 Close the sale
+  uint32 internal constant POLL_CHANGE_S_CAP_PIOS_B      =    256; //  8 Change the soft cap PIOs                           /- Not available once soft cap has been reached
+  uint32 internal constant POLL_CHANGE_S_CAP_USD_B       =    512; //  9 Change the soft cap USD                            |
+  uint32 internal constant POLL_CHANGE_S_CAP_WD_PC_B     =   1024; // 10 Change the soft cap reached withdrawal percentage  |
+  uint32 internal constant POLL_CHANGE_H_CAP_PIOS_B      =   2048; // 11 Change the hard cap PIOs   /- Not available once hard cap has been reached
+  uint32 internal constant POLL_CHANGE_H_CAP_USD_B       =   4096; // 12 Change the hard cap USD    |
+  uint32 internal constant POLL_CHANGE_CLOSE_DATE_B      =   8192; // 13 Change the sale close date |
+  uint32 internal constant POLL_CHANGE_TAP_B             =  16384; // 14 Change the Ether per month tap rate. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
+  uint32 internal constant POLL_CHANGE_REQUEST_PASS_PC_B =  32768; // 15 Change the percentage of PIOs in circulation required to vote yes to approve a request poll
+  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_B    =  65536; // 16 Change the days to run for a request poll
+  uint32 internal constant POLL_CHANGE_ALL_XRT_PASS_PC_B = 131072; // 17 Change the percentage of PIOs in circulation required to vote yes to approve all polls except for request and termination one
+  uint32 internal constant POLL_CHANGE_ALL_XRT_DAYS_B    = 262144; // 18 Change the days to run for all polls except for request and termination one
+  uint32 internal constant POLL_CHANGE_TERM_PASS_PC_B    = 524288; // 19 Change the percentage of PIOs in circulation required to vote yes to approve a termination poll
+  uint32 internal constant POLL_CHANGE_TERM_DAYS_B      = 1048576; // 20 Change the days to run for a termination poll
+  uint32 internal constant POLL_TERMINATE_FUNDING_B     = 2097152; // 21 Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                             Undefined so can be used a test for an entry existing
@@ -110,13 +135,13 @@ contract Constants {
   uint32 internal constant LE_M_REFUND_TERMINATION_B  = 131072; // 17 Mfund or Presale with picos Refund proportionately according to Picos held following a vote for project termination
   uint32 internal constant LE_M_REFUND_ONCE_OFF_B     = 262144; // 18 Mfund funds Refunded once off manually for whatever reason including downgrade from whitelisted
   // Combos
-  uint32 internal constant LE_M_FUND_PICOS_MEMBER_B   =      76; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B
-  uint32 internal constant LE_WHITELISTED_MEMBER_B    =      96; // LE_WHITELISTED_B | LE_MEMBER_B
-  uint32 internal constant LE_EVER_PRESALE_COMBO_B    =     384; // LE_PRESALE_B | LE_WAS_PRESALE_B
-  uint32 internal constant LE_REFUNDED_COMBO_B        =  516096; // LE_P_REFUND_S_CAP_MISS_B | LE_P_REFUND_SALE_CLOSE_B | LE_P_REFUND_ONCE_OFF_B | LE_MNP_REFUND_S_CAP_MISS_B | LE_M_REFUND_TERMINATION_B | LE_M_REFUND_ONCE_OFF_B
-  uint32 internal constant LE_DEAD_COMBO_B            =  520192; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 4096
-  uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B   =  522370; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
-  uint32 internal constant LE_NO_REFUND_COMBO_B       =  520194; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
+  uint32 internal constant LE_M_FUND_PICOS_MEMBER_B   =     76; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B
+  uint32 internal constant LE_WHITELISTED_MEMBER_B    =     96; // LE_WHITELISTED_B | LE_MEMBER_B
+  uint32 internal constant LE_EVER_PRESALE_COMBO_B    =    384; // LE_PRESALE_B | LE_WAS_PRESALE_B
+  uint32 internal constant LE_REFUNDED_COMBO_B        = 516096; // LE_P_REFUND_S_CAP_MISS_B | LE_P_REFUND_SALE_CLOSE_B | LE_P_REFUND_ONCE_OFF_B | LE_MNP_REFUND_S_CAP_MISS_B | LE_M_REFUND_TERMINATION_B | LE_M_REFUND_ONCE_OFF_B
+  uint32 internal constant LE_DEAD_COMBO_B            = 520192; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 4096
+  uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B   = 522370; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
+  uint32 internal constant LE_NO_REFUND_COMBO_B       = 520194; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
 
   // There is no need for a Prepurchase refund termination bit as the sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
 

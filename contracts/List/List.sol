@@ -72,8 +72,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // View Methods
   // ============
-  // List.State()  Should be the same as Hub.State()
-  function State() external view returns (uint32) {
+  // List.DaicoState()  Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
     return pState;
   }
   function NumberOfKnownAccounts() external view returns (uint256) {

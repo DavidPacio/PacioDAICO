@@ -35,7 +35,7 @@ import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
 import "../Funds/I_MfundHub.sol";
 import "../Funds/I_PfundHub.sol";
-//port "../Poll/I_Poll.sol";
+import "../Poll/I_Poll.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
@@ -46,6 +46,7 @@ contract Hub is OwnedHub, Math {
   I_ListHub  private pListC;  // the List contract
   I_MfundHub private pMfundC; // the Mfund contract
   I_PfundHub private pPfundC; // the Pfund contract
+  I_Poll     private pPollC;  // the Poll contract
   bool private pRefundInProgressB; // to prevent re-entrant refund calls
   uint256 private pRefundId;       // Refund Id
 
@@ -54,8 +55,8 @@ contract Hub is OwnedHub, Math {
 
   // View Methods
   // ============
-  // Hub.State()
-  function State() external view returns (uint32) {
+  // Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
     return pState;
   }
   // Hub.IsTransferAllowedByDefault()
@@ -69,7 +70,7 @@ contract Hub is OwnedHub, Math {
 
   // Events
   // ======
-  event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract);
+  event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract, address PollContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
   event SoftCapReachedV();
@@ -95,11 +96,12 @@ contract Hub is OwnedHub, Math {
   function Initialise() external IsInitialising {
     pOpManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
     pSaleC  =  I_Sale(iOwnersYA[SALE_OWNER_X]);
+    pPollC  =  I_Poll(iOwnersYA[POLL_OWNER_X]);
     pTokenC = I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
     pListC  =  I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
     pPfundC = I_PfundHub(pOpManC.ContractXA(PFUND_CONTRACT_X));
     pMfundC = I_MfundHub(pOpManC.ContractXA(MFUND_CONTRACT_X));
-    emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pPfundC, pMfundC);
+    emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pPfundC, pMfundC, pPollC);
     iPausedB       =        // make active
     iInitialisingB = false;
   }
@@ -124,7 +126,7 @@ contract Hub is OwnedHub, Math {
   function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
-    pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) + (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
+    pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) | (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
     pSaleC.SetSaleDates(vStartT, vEndT);
     emit SetSaleDatesV(vStartT, vEndT);
   }
@@ -135,12 +137,12 @@ contract Hub is OwnedHub, Math {
   // Any setting/unsetting must be done by the calling function. This does =
   function pSetState(uint32 vState) private {
     if (vState != pState) {
-      pSaleC.StateChange(vState);
+       pSaleC.StateChange(vState);
       pTokenC.StateChange(vState);
-      pListC.StateChange(vState);
+       pListC.StateChange(vState);
       pMfundC.StateChange(vState);
       pPfundC.StateChange(vState);
-    //pPollC.StateChange(vState); /- Can get state from Hub
+       pPollC.StateChange(vState);
       emit StateChangeV(pState, vState);
       pState = vState;
     }
@@ -171,12 +173,16 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.pCloseSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
   // Can be called manually by Admin to end the sale prematurely as a managed op if necessary. In that case vBit is not used and the STATE_CLOSED_MANUAL_B state bit is used
   function CloseSaleMO(uint32 vBit) external {
+    uint32 bitsToSet;
     if (iIsSaleContractCallerB())
-      pSetState(vBit);
+      bitsToSet = vBit;
     else if (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_CLOSE_SALE_MO_X))
-      pSetState(STATE_CLOSED_MANUAL_B);
+      bitsToSet = STATE_CLOSED_MANUAL_B;
     else
       revert();
+    if (pState & STATE_S_CAP_REACHED_B > 0)
+      bitsToSet |= STATE_S_CAP_REACHED_B | STATE_TAPS_OK_B; // leave STATE_S_CAP_REACHED_B set and also set STATE_TAPS_OK_B
+    pSetState(bitsToSet);
     emit EndSaleV();
   }
 
@@ -359,7 +365,7 @@ djh??
 */
 
   // Functions for Calling List IsHubContractCaller Functions
-  // ================================================
+  // ========================================================
   // Hub.Browse()
   // ------------
   // Returns address and type of the list entry being browsed to

@@ -11,7 +11,7 @@ Pause/Resume
 OpMan.PauseContract(POLL_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
 OpMan.ResumeContractMO(POLL_CONTRACT_X) IsConfirmedSigner which is a managed op
 
-List.Fallback function
+Poll.Fallback function
 ======================
 No sending ether to this contract!
 
@@ -23,11 +23,26 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedPoll.sol";
 import "../lib/Math.sol";
 
-contract Poll is OwnedByOpManAndHub, Math {
-  // Data
+contract Poll is OwnedPoll, Math {
+  string  public  name = "Pacio Polls";
+  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
+  uint32  private pPollState;     // Poll state using the POLL_ bits
+
+  // View Methods
+  // ============
+  // Poll.DaicoState()  Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
+    return pState;
+  }
+  // Poll.PollState()
+  function PollState() external view returns (uint32) {
+    return pPollState;
+  }
 
   // Events
   // ======
+  event     StateChangeV(uint32 PrevState, uint32 NewState);
+  event PollStateChangeV(uint32 PrevState, uint32 NewState);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -45,14 +60,20 @@ contract Poll is OwnedByOpManAndHub, Math {
     iInitialisingB = false;
   }
 
-  // View Methods
-  // ============
 
   // Modifier functions
   // ==================
 
   // State changing methods
   // ======================
+
+  // Poll.StateChange()
+  // ------------------
+  // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
+  function StateChange(uint32 vState) external IsHubContractCaller {
+    emit StateChangeV(pState, vState);
+    pState = vState;
+  }
 
   // Poll Fallback function
   // ======================

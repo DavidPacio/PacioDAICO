@@ -46,8 +46,8 @@ contract Token is EIP20Token, Math {
 
   // View Methods
   // ============
-  // Token.State()  Should be the same as Hub.State()
-  function State() external view returns (uint32) {
+  // Token.DaicoState() Should be the same as Hub.DaicoState()
+  function DaicoState() external view returns (uint32) {
     return pState;
   }
   // Token.IsSaleOpen()
