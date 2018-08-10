@@ -135,7 +135,7 @@ contract OpMan is OwnedOpMan {
   // Can only be called once.
   //
   // Arguments:
-  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  // - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd in that order. Note, NOT OpMan which the fn uses this for.
   // - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
   function Initialise(address[] vContractsYA, address[] vSignersYA) external IsInitialising {
     // Add initial contracts
@@ -170,7 +170,7 @@ contract OpMan is OwnedOpMan {
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_SET_PCL_ACCOUNT_MO_X,    3, HOUR); //  5 Mfund.SetPclAccountMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_MO_X,           3, HOUR); //  6 Mfund.WithdrawMO()
-    pAddManOp(MVP_CONTRACT_X,    MVP_TRAN_UNISSUED_TO_PB_MO_X,  3, HOUR); //  5 Mvp.TransferUnIssuedPIOsToPacioBcMO()
+    pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, HOUR); //  5 Token.TransferUnIssuedPIOsToPacioBcMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }

@@ -559,10 +559,10 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // List.TransferIssuedPIOsToPacioBc()
   // ------------------------------------------
   // For use when transferring issued PIOs to the Pacio blockchain
-  // Is called by Mvp.TransferIssuedPIOsToPacioBc() -> Token.TransferIssuedPIOsToPacioBc() -> here
+  // Is called by Token.TransferIssuedPIOsToPacioBc()
   function TransferIssuedPIOsToPacioBc(address accountA) external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[accountA];
-    require(pState & STATE_TRANSFER_TO_PB_B > 0 // /- also checked by Mvp.TransferIssuedPIOsToPacioBc() and Token.TransferIssuedPIOsToPacioBc() so no fail msg
+    require(pState & STATE_TRANSFER_TO_PB_B > 0 // /- also checked by Token.TransferIssuedPIOsToPacioBc() so no fail msg
          && rsEntryR.bits > 0);                 // |
     rsEntryR.picosBalance = 0;
     rsEntryR.bits |= LE_TRANSFERRED_TO_PB_B;
@@ -575,9 +575,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // List.TransferUnIssuedPIOsToPacioBc()
   // ------------------------------------
   // For use when transferring unissued PIOs to the Pacio Blockchain to decrement the Sale contract store of minted PIOs
-  // Is called by Mvp.TransferUnIssuedPIOsToPacioBcMO() -> Token.TransferUnIssuedPIOsToPacioBc() -> here to decrement unissued Sale (pSaleA) picos
+  // Is called by Token.TransferUnIssuedPIOsToPacioBc() -> here to decrement unissued Sale (pSaleA) picos
   function TransferUnIssuedPIOsToPacioBc(uint256 vPicos) external IsTokenContractCaller {
-    require(pState & STATE_TRANSFERRED_TO_PB_B > 0); // also checked by Mvp.TransferUnIssuedPIOsToPacioBcMO() and Token.TransferUnIssuedPIOsToPacioBc() so no fail msg
+    require(pState & STATE_TRANSFERRED_TO_PB_B > 0); // also checked by Token.TransferUnIssuedPIOsToPacioBcMO() so no fail msg
     R_List storage rsEntryR = pListMR[pSaleA];
     require(rsEntryR.bits & LE_SALE_CONTRACT_B > 0, "Not the Sale contract list entry");
     if ((rsEntryR.picosBalance = subMaxZero(rsEntryR.picosBalance, vPicos)) == 0)

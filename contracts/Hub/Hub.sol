@@ -6,7 +6,7 @@ Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
 
 Calls
 OpMan; Sale; Token; List; Mfund; Pfund;
-VoteTap; VoteEnd; Mvp djh??
+VoteTap; VoteEnd djh??
 
 djh??
 
@@ -38,7 +38,6 @@ import "../Funds/I_MfundHub.sol";
 import "../Funds/I_PfundHub.sol";
 //port "../Votes/I_VoteTap.sol";
 //port "../Votes/I_VoteEnd.sol";
-import "../Mvp/I_Mvp.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
@@ -185,16 +184,15 @@ contract Hub is OwnedHub, Math {
     emit EndSaleV();
   }
 
-  // Hub.TransferToPacioBlockchainMO()
+  // Hub.SetTransferToPacioBcStateMO()
   // ---------------------------------
   // To be called by Admin as a managed op when starting the process of transferring to the Pacio Blockchain with vBit = STATE_TRANSFER_TO_PB_B
   //                                                                        and when the process is finished with vBit = STATE_TRANSFERRED_TO_PB_B
-  function TransferToPacioBlockchainMO(uint32 vBit) external IsVoteEndContractCaller {
+  function SetTransferToPacioBcStateMO(uint32 vBit) external IsVoteEndContractCaller {
     require((vBit == STATE_TRANSFER_TO_PB_B || vBit == STATE_TRANSFERRED_TO_PB_B)
          && iIsAdminCallerB()
-         && pOpManC.IsManOpApproved(HUB_TRANSFER_TO_PB_MO_X));
+         && pOpManC.IsManOpApproved(HUB_SET_TRAN_TO_PB_STATE_MO_X));
     pSetState(pState |= vBit);
-    I_Mvp(pOpManC.ContractXA(MVP_CONTRACT_X)).StateChange(pState);
   }
 
   // Hub.TerminateVote()
@@ -412,11 +410,10 @@ djh??
   function pIsAccountOkB(address accountA) private view returns (bool) {
     for (uint256 j=0; j<NUM_OWNERS; j++) // Checks 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
       require(accountA != iOwnersYA[j], 'Account conflict');
-    // Now defined, self (Hub), Token, Mvp
+    // Now defined, self (Hub), Token
     require(accountA != address(0)       // Defined
          && accountA != address(this)
-         && accountA != pOpManC.ContractXA(TOKEN_CONTRACT_X)
-         && accountA != pOpManC.ContractXA(MVP_CONTRACT_X), 'Account conflict');
+         && accountA != pOpManC.ContractXA(TOKEN_CONTRACT_X), 'Account conflict');
     return true;
   }
 

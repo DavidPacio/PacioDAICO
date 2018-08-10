@@ -6,15 +6,14 @@ var OpMan = artifacts.require("./OpMan/OpMan.sol");
 Contract Description                                      Owned By                                       External Calls
 -------- -----------                                      --------                                       --------------
 OpMan    Operations management: multisig for critical ops Deployer Self  Admin                           All including self
-Hub      Hub or management contract                       Deployer OpMan Admin Sale  VoteTap VoteEnd Web OpMan; Sale; Token; List; Mfund; Pfund; VoteTap; VoteEnd; Mvp
-Sale     Sale                                             Deployer OpMan Hub   Admin                     OpMan; Hub -> Token,List,Mfund,Pfund,VoteTap,VoteEnd,Mvp; List; Token -> List; Mfund; Pfund
-Token    Token contract with EIP-20 functions             Deployer OpMan Hub   Sale  Mvp                 OpMan; List
+Hub      Hub or management contract                       Deployer OpMan Admin Sale  VoteTap VoteEnd Web OpMan; Sale; Token; List; Mfund; Pfund; VoteTap; VoteEnd
+Sale     Sale                                             Deployer OpMan Hub   Admin                     OpMan; Hub -> Token,List,Mfund,Pfund,VoteTap,VoteEnd; List; Token -> List; Mfund; Pfund
+Token    Token contract with EIP-20 functions             Deployer OpMan Hub   Sale                      OpMan; List
 List     List of participants                             Deployer OpMan Hub   Sale  Token               OpMan
 Mfund    Managed fund for PIO purchases or transfers      Deployer OpMan Hub   Sale  Pfund   Admin       OpMan
 Pfund    Prepurchases escrow fund                         Deployer OpMan Hub   Sale                      OpMan; Mfund
 VoteTap  For a tap vote                                   Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
 VoteEnd  For a terminate and refund vote                  Deployer OpMan Hub                             OpMan; Hub -> Mfund, List
-Mvp      Re MVP launch and transferring PIOEs to PIOs     Deployer OpMan Hub                             OpMan; List; Token -> List
 
 where Deployer is the PCL account used to deploy the contracts = ms.sender in the constructors and Truffle deploy script
 where Admin is a PCL hardware wallet
@@ -33,7 +32,7 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.
   Arguments:
-  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd, Mvp in that order. Note, NOT OpMan which the fn uses this for.
+  - vContractsYA  Array of contract addresses for Hub, Sale, Token, List, Mfund, Pfund, VoteTap, VoteEnd in that order. Note, NOT OpMan which the fn uses this for.
   - vSignersYA    Array of the addresses of the initial signers. These will need to be confirmed before they can be used for granting approvals.
 
 Hub owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
@@ -65,12 +64,12 @@ List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
 List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
 List.Initialise()  to set the contract address variables.
 
-Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
+Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
 -----
 Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
+Token.ChangeOwnerMO(TOKEN_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Token.Initialise(1) To set the contract variable, and do the PIOE minting. Assumes dbId of 1 for the Sale Contract
 
 Mfund owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Pfund, 5 Admin
@@ -104,13 +103,6 @@ VoteEnd.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 VoteEnd.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 VoteEnd.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 VoteEnd.Initialise()
-
-Mvp owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
----
-Mvp.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-Mvp.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-Mvp.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-Mvp.Initialise()
 
 Then Manually by Admin
 ----------------------

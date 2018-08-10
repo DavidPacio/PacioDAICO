@@ -1,6 +1,6 @@
 // \lib\OwnedByOpManAndHub.sol
 
-// Version of Owned owned by Deployer, OpMan, Hub, and Admin for use with the VoteTap, VoteEnd, and Mvp contracts
+// Version of Owned owned by Deployer, OpMan, Hub, and Admin for use with the VoteTap, VoteEnd contracts
 // Is pausable
 
 pragma solidity ^0.4.24;

@@ -39,7 +39,6 @@ contract Constants {
   uint256 internal constant PFUND_CONTRACT_X    = 6;
   uint256 internal constant VOTE_TAP_CONTRACT_X = 7;
   uint256 internal constant VOTE_END_CONTRACT_X = 8;
-  uint256 internal constant MVP_CONTRACT_X      = 9;
 
   // Owner Indices
   // Contract  Owned By
@@ -47,18 +46,18 @@ contract Constants {
   // OpMan     Deployer Self  Admin
   // Hub       Deployer OpMan Admin Sale  VoteTap VoteEnd Web
   // Sale      Deployer OpMan Hub   Admin
-  // Token     Deployer OpMan Hub   Sale  Mvp
+  // Token     Deployer OpMan Hub   Sale  Admin
   // List      Deployer OpMan Hub   Sale  Token
   // Mfund     Deployer OpMan Hub   Sale  Pfund   Admin
   // Pfund     Deployer OpMan Hub   Sale
   // VoteTap   Deployer OpMan Hub   Admin
   // VoteEnd   Deployer OpMan Hub   Admin
-  // Mvp       Deployer OpMan Hub   Admin
   uint256 internal constant DEPLOYER_X       = 0;
   uint256 internal constant OP_MAN_OWNER_X   = 1;
   uint256 internal constant HUB_OWNER_X      = 2;
   uint256 internal constant ADMIN_OWNER_X    = 2;
   uint256 internal constant SALE_ADMIN_OWNER_X  = 3;
+  uint256 internal constant TOKEN_ADMIN_OWNER_X = 4;
   uint256 internal constant MFUND_PFUND_OWNER_X = 4;
   uint256 internal constant MFUND_ADMIN_OWNER_X = 5;
   uint256 internal constant SALE_OWNER_X     = 3;
@@ -66,26 +65,25 @@ contract Constants {
   uint256 internal constant VOTE_END_OWNER_X = 5;
   uint256 internal constant WEB_OWNER_X      = 6;
   uint256 internal constant TOKEN_OWNER_X    = 4;
-  uint256 internal constant MVP_OWNER_X      = 4;
 
   // Managed Operation Indices
-  uint256 internal constant RESUME_MO_X                  =  0; // ResumeMO()
-  uint256 internal constant CHANGE_OWNER_BASE_MO_X       =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
+  uint256 internal constant RESUME_MO_X                   =  0; // ResumeMO()
+  uint256 internal constant CHANGE_OWNER_BASE_MO_X        =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
   // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
-  uint256 internal constant OP_MAN_ADD_CONTRACT_MO_X     =  5; // AddContractMO()
-  uint256 internal constant OP_MAN_ADD_SIGNER_MO_X       =  6; // AddSignerMO()
-  uint256 internal constant OP_MAN_ADD_MAN_OP_MO_X       =  7; // AddManOpMO
-  uint256 internal constant OP_MAN_CHANGE_SIGNER_MO_X    =  8; // ChangeSignerMO()
-  uint256 internal constant OP_MAN_UPDATE_CONTRACT_MO_X  =  9; // UpdateContractMO()
-  uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X    = 10; // UpdateManOpMO()
-  uint256 internal constant HUB_START_SALE_X             =  5; // Hub.StartSaleMO();
-  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X    =  6; // Hub.SoftCapReachedMO()
-  uint256 internal constant HUB_CLOSE_SALE_MO_X          =  7; // Hub.CloseSaleMO()
-  uint256 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X=  8; // Hub.SetTransferToPacioBcStateMO()
-  uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X  =  5; // Sale.SetCapsAndTranchesMO()
-  uint256 internal constant MFUND_SET_PCL_ACCOUNT_MO_X   =  5; // Mfund.SetPclAccountMO()
-  uint256 internal constant MFUND_WITHDRAW_MO_X          =  6; // Mfund.WithdrawMO()
-  uint256 internal constant MVP_TRAN_UNISSUED_TO_PB_MO_X =  5; // Mvp.TransferUnIssuedPIOsToPacioBcMO()
+  uint256 internal constant OP_MAN_ADD_CONTRACT_MO_X       =  5; // AddContractMO()
+  uint256 internal constant OP_MAN_ADD_SIGNER_MO_X         =  6; // AddSignerMO()
+  uint256 internal constant OP_MAN_ADD_MAN_OP_MO_X         =  7; // AddManOpMO
+  uint256 internal constant OP_MAN_CHANGE_SIGNER_MO_X      =  8; // ChangeSignerMO()
+  uint256 internal constant OP_MAN_UPDATE_CONTRACT_MO_X    =  9; // UpdateContractMO()
+  uint256 internal constant OP_MAN_UPDATE_MAN_OP_MO_X      = 10; // UpdateManOpMO()
+  uint256 internal constant HUB_START_SALE_X               =  5; // Hub.StartSaleMO();
+  uint256 internal constant HUB_SOFT_CAP_REACHED_MO_X      =  6; // Hub.SoftCapReachedMO()
+  uint256 internal constant HUB_CLOSE_SALE_MO_X            =  7; // Hub.CloseSaleMO()
+  uint256 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X  =  8; // Hub.SetTransferToPacioBcStateMO()
+  uint256 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  5; // Sale.SetCapsAndTranchesMO()
+  uint256 internal constant MFUND_SET_PCL_ACCOUNT_MO_X     =  5; // Mfund.SetPclAccountMO()
+  uint256 internal constant MFUND_WITHDRAW_MO_X            =  6; // Mfund.WithdrawMO()
+  uint256 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferUnIssuedPIOsToPacioBcMO()
 
     // Time
   uint32 internal constant DAY         = 86400;

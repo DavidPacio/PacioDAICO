@@ -2,12 +2,7 @@
 
 The Pacio Token named PIOE for the Pacio DAICO
 
-Owners:
-0 Deployer
-1 OpMan
-2 Hub
-3 Sale
-4 Mvp
+Owners: 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
 
 Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
@@ -108,12 +103,12 @@ contract Token is EIP20Token, Math {
   // ------------------
   // To be called by the deploy script to set the contract variable, and do the PIOE minting.
   // Can only be called once.
-  // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Mvp
+  // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
   // Owners must first be set by deploy script calls:
   //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Token.ChangeOwnerMO(MVP_OWNER_X, Mvp address)
+  //   Token.ChangeOwnerMO(TOKEN_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
   function Initialise(uint32 vDbId) external IsInitialising {
     iPausedB = false; // make active
@@ -184,33 +179,34 @@ contract Token is EIP20Token, Math {
   // Functions for calling via same name function in Hub()
   // =====================================================
 
-  // Functions for calling from Mvp
-  // ==============================
+  // Functions for calling at MVP Launch Time
+  // ========================================
+
   // Token.TransferIssuedPIOsToPacioBc()
-  // -------------------------------------------
-  // Is called by Mvp.TransferIssuedPIOsToPacioBc() -> here
+  // -----------------------------------
   // For use when transferring issued PIOs to the Pacio Blockchain. Takes the picos out of circulation.
-  // Cannot be called directly - only from the Mvp contract and there only by a non contract caller.
+  // Is to be called by the owner of the PIOs. This will need to be integrated with an import of the PIOs into the Pacio Blockchain
   // Must be in the STATE_TRANSFER_TO_PB_B state for this to run.
-  function TransferIssuedPIOsToPacioBc(address accountA) external IsMvpContractCaller {
+  // Cannot be called by a contract.
+  function TransferIssuedPIOsToPacioBc() external IsNotContractCaller {
     require(pState & STATE_TRANSFER_TO_PB_B > 0, 'Not in Transfer to PB state');
-    uint256 picos = iListC.PicosBalance(accountA);
-    require(picos > 0); // no msg as already checked by Mvp.TransferIssuedPIOsToPacioBc()
-    iListC.TransferIssuedPIOsToPacioBc(accountA); // reverts if a list entry doesn't exist
+    uint256 picos = iListC.PicosBalance(msg.sender);
+    require(picos > 0, "No PIOEs to transfer"); // is also a check for account existing
+    iListC.TransferIssuedPIOsToPacioBc(msg.sender); // reverts if a list entry doesn't exist
     pPicosIssued = subMaxZero(pPicosIssued, picos);
     totalSupply  = subMaxZero(totalSupply,  picos);
     emit TransferIssuedPIOsToPacioBcV(++pTransferToPbId, msg.sender, picos);
     // Does not affect pPicosAvailable or the Sale contract balance as these are issued tokens that are being removed.
   }
 
-  // Token.TransferUnIssuedPIOsToPacioBc()
-  // ---------------------------------------------
+  // Token.TransferUnIssuedPIOsToPacioBcMO()
+  // ---------------------------------------
   // For use when transferring unissued PIOs to the Pacio Blockchain
-  // Is called by Mvp.TransferUnIssuedPIOsToPacioBcMO() -> here to decrement unissued Sale picos
+  // Is to be called by Admin as a managed operation
   // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
-  function TransferUnIssuedPIOsToPacioBc(uint256 vPicos) external IsMvpContractCaller {
+  function TransferUnIssuedPIOsToPacioBcMO(uint256 vPicos) external IsAdminCaller {
     require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
-    require(pState & STATE_CLOSED_COMBO_B > 0, "Sale not closed");
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(TOKEN_TRAN_UNISSUED_TO_PB_MO_X));
     iListC.TransferUnIssuedPIOsToPacioBc(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);
     pPicosAvailable = subMaxZero(pPicosAvailable, vPicos);
