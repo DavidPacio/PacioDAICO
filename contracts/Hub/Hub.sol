@@ -2,11 +2,10 @@
 
 The hub or management contract for the Pacio DAICO
 
-Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
+Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
 
 Calls
-OpMan; Sale; Token; List; Mfund; Pfund;
-VoteTap; VoteEnd djh??
+OpMan; Sale; Token; List; Mfund; Pfund; Poll
 
 djh??
 
@@ -36,8 +35,7 @@ import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
 import "../Funds/I_MfundHub.sol";
 import "../Funds/I_PfundHub.sol";
-//port "../Votes/I_VoteTap.sol";
-//port "../Votes/I_VoteEnd.sol";
+//port "../Poll/I_Poll.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
@@ -83,13 +81,12 @@ contract Hub is OwnedHub, Math {
   // Initialisation/Setup Methods
   // ============================
 
-  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
+  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
   // Owners must first be set by deploy script calls:
   //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Hub.ChangeOwnerMO(ADMIN_OWNER_X,  PCL hw wallet account address as Admin)
   //   Hub.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
-  //   Hub.ChangeOwnerMO(VOTE_TAP_OWNER_X , VoteTap address);
-  //   Hub.ChangeOwnerMO(VOTE_END_OWNER_X , VoteEnd address);
+  //   Hub.ChangeOwnerMO(POLL_OWNER_X , Poll address);
   //   Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()
@@ -143,8 +140,7 @@ contract Hub is OwnedHub, Math {
       pListC.StateChange(vState);
       pMfundC.StateChange(vState);
       pPfundC.StateChange(vState);
-    //pVoteTapC.StateChange(vState); /- These can get state from Hub
-    //pVoteEndC.StateChange(vState); |
+    //pPollC.StateChange(vState); /- Can get state from Hub
       emit StateChangeV(pState, vState);
       pState = vState;
     }
@@ -188,7 +184,7 @@ contract Hub is OwnedHub, Math {
   // ---------------------------------
   // To be called by Admin as a managed op when starting the process of transferring to the Pacio Blockchain with vBit = STATE_TRANSFER_TO_PB_B
   //                                                                        and when the process is finished with vBit = STATE_TRANSFERRED_TO_PB_B
-  function SetTransferToPacioBcStateMO(uint32 vBit) external IsVoteEndContractCaller {
+  function SetTransferToPacioBcStateMO(uint32 vBit) external IsPollContractCaller {
     require((vBit == STATE_TRANSFER_TO_PB_B || vBit == STATE_TRANSFERRED_TO_PB_B)
          && iIsAdminCallerB()
          && pOpManC.IsManOpApproved(HUB_SET_TRAN_TO_PB_STATE_MO_X));
@@ -197,9 +193,9 @@ contract Hub is OwnedHub, Math {
 
   // Hub.TerminateVote()
   // -------------------
-  // Called when a VoteEnd vote has voted to end the project, Mfund funds to be refunded in proportion to Picos held
+  // Called when a Terminate poll has voted to end the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
-  function TerminateVote() external IsVoteEndContractCaller {
+  function TerminateVote() external IsPollContractCaller {
     pSetState(pState |= STATE_TERMINATE_REFUND_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pListC.SetTransfersOkByDefault(false);
@@ -408,7 +404,7 @@ djh??
   // -------------------
   // Checks that accountA is not any of the contracts or Admin
   function pIsAccountOkB(address accountA) private view returns (bool) {
-    for (uint256 j=0; j<NUM_OWNERS; j++) // Checks 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
+    for (uint256 j=0; j<NUM_OWNERS; j++) // Checks 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
       require(accountA != iOwnersYA[j], 'Account conflict');
     // Now defined, self (Hub), Token
     require(accountA != address(0)       // Defined

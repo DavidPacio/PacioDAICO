@@ -18,7 +18,7 @@ contract Constants {
   uint32 internal constant STATE_CLOSED_MANUAL_B     =   32; // 5 Sale closed manually for whatever reason
   uint32 internal constant STATE_TAPS_OK_B           =   64; // 6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
   uint32 internal constant STATE_S_CAP_MISS_REFUND_B =  128; // 7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; // 8 A VoteEnd vote has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; // 8 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
   uint32 internal constant STATE_MFUND_EMPTY_B       =  512; // 9 Mfund is empty as a result of refunds or withdrawals emptying the pot
   uint32 internal constant STATE_PFUND_EMPTY_B       = 1024; // A Pfund is empty as a result of refunds or withdrawals emptying the pot
   uint32 internal constant STATE_TRANSFER_TO_PB_B    = 2048; // B PIOs are being transferred to the Pacio Blockchain
@@ -37,21 +37,19 @@ contract Constants {
   uint256 internal constant LIST_CONTRACT_X     = 4;
   uint256 internal constant MFUND_CONTRACT_X    = 5;
   uint256 internal constant PFUND_CONTRACT_X    = 6;
-  uint256 internal constant VOTE_TAP_CONTRACT_X = 7;
-  uint256 internal constant VOTE_END_CONTRACT_X = 8;
+  uint256 internal constant POLL_CONTRACT_X     = 7;
 
   // Owner Indices
   // Contract  Owned By
-  //           0        1     2     3     4       5       6
+  //           0        1     2     3     4       5
   // OpMan     Deployer Self  Admin
-  // Hub       Deployer OpMan Admin Sale  VoteTap VoteEnd Web
+  // Hub       Deployer OpMan Admin Sale  Poll    Web
   // Sale      Deployer OpMan Hub   Admin
   // Token     Deployer OpMan Hub   Sale  Admin
   // List      Deployer OpMan Hub   Sale  Token
   // Mfund     Deployer OpMan Hub   Sale  Pfund   Admin
   // Pfund     Deployer OpMan Hub   Sale
-  // VoteTap   Deployer OpMan Hub   Admin
-  // VoteEnd   Deployer OpMan Hub   Admin
+  // Poll      Deployer OpMan Hub   Admin
   uint256 internal constant DEPLOYER_X       = 0;
   uint256 internal constant OP_MAN_OWNER_X   = 1;
   uint256 internal constant HUB_OWNER_X      = 2;
@@ -61,9 +59,8 @@ contract Constants {
   uint256 internal constant MFUND_PFUND_OWNER_X = 4;
   uint256 internal constant MFUND_ADMIN_OWNER_X = 5;
   uint256 internal constant SALE_OWNER_X     = 3;
-  uint256 internal constant VOTE_TAP_OWNER_X = 4;
-  uint256 internal constant VOTE_END_OWNER_X = 5;
-  uint256 internal constant WEB_OWNER_X      = 6;
+  uint256 internal constant POLL_OWNER_X     = 4;
+  uint256 internal constant WEB_OWNER_X      = 5;
   uint256 internal constant TOKEN_OWNER_X    = 4;
 
   // Managed Operation Indices
@@ -110,7 +107,7 @@ contract Constants {
   uint32 internal constant LE_P_REFUND_SALE_CLOSE_B   =  16384; // 14 Pfund funds Refund due to not being whitelisted by the time that the sale closes
   uint32 internal constant LE_P_REFUND_ONCE_OFF_B     =  32768; // 15 Pfund funds Refund once off manually for whatever reason
   uint32 internal constant LE_MNP_REFUND_S_CAP_MISS_B =  65536; // 16 Mfund but not presale Refund due to soft cap not being reached
-  uint32 internal constant LE_M_REFUND_TERMINATION_B  = 131072; // 17 Mfund or Presale with picos Refund proportionately according to Picos held following a yes vote for project termination
+  uint32 internal constant LE_M_REFUND_TERMINATION_B  = 131072; // 17 Mfund or Presale with picos Refund proportionately according to Picos held following a vote for project termination
   uint32 internal constant LE_M_REFUND_ONCE_OFF_B     = 262144; // 18 Mfund funds Refunded once off manually for whatever reason including downgrade from whitelisted
   // Combos
   uint32 internal constant LE_M_FUND_PICOS_MEMBER_B   =      76; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B

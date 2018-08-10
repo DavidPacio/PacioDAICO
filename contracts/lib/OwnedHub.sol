@@ -1,6 +1,6 @@
 // lib\OwnedHub.sol
 //
-// Version of Owned for Hub which is owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 VoteTap, 5 VoteEnd, 6 Web
+// Version of Owned for Hub which is owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,16 +9,15 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedHub is Constants {
-  uint256 internal constant NUM_OWNERS = 7;
+  uint256 internal constant NUM_OWNERS = 6;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Admin owner
                                           // 3 Sale  owner
-                                          // 4 VoteTap owner
-                                          // 5 VoteEnd owner
-                                          // 6 Web   owner
+                                          // 4 Poll  owner
+                                          // 5 Web   owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -71,12 +70,8 @@ contract OwnedHub is Constants {
     require(iIsSaleContractCallerB(), "Not required Sale caller");
     _;
   }
-  modifier IsVoteTapContractCaller {
-    require(msg.sender == iOwnersYA[VOTE_TAP_OWNER_X] && pIsContractCallerB(), "Not required VoteTap caller");
-    _;
-  }
-  modifier IsVoteEndContractCaller {
-    require(msg.sender == iOwnersYA[VOTE_END_OWNER_X] && pIsContractCallerB(), "Not required VoteEnd caller");
+  modifier IsPollContractCaller {
+    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsWebOrAdminCaller {
