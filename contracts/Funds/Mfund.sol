@@ -22,7 +22,7 @@ import "../Token/I_TokenMfund.sol";
 contract Mfund is OwnedMfund, Math {
   string  public name = "Pacio DAICO Managed Fund";
   uint256 private pTapRateEtherPm     = 100; // Tap rate in Ether per month starting at 100.                 Can be changed by a POLL_CHANGE_TAP_RATE_N poll. Can be changed to 0 to pause withdrawals
-  uint256 private pSoftCapDispersalPc =  50; // % of fund balance to be dispersed on soft cap being reached. Can be changed by a POLL_CHANGE_S_CAP_WD_PC_N poll
+  uint256 private pSoftCapDispersalPc =  50; // % of fund balance to be dispersed on soft cap being reached. Can be changed by a POLL_CHANGE_S_CAP_DISP_PC_N poll
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pTotalDepositedWei; // Total wei deposited before any withdrawals or refunds. Should == this.balance until the soft cap hit withdrawal
   uint256 private pTerminationPicosIssued; // Token.PicosIssued() when a TerminateRefund starts for proportional calcs

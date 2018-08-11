@@ -37,6 +37,9 @@ contract OwnedPoll is Constants {
   function pIsOpManContractCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
+  function iIsAdminCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[MFUND_ADMIN_OWNER_X] && !pIsContractCallerB();
+  }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
     uint256 codeSize;
@@ -51,7 +54,7 @@ contract OwnedPoll is Constants {
     _;
   }
   modifier IsAdminCaller {
-    require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB(), "Not required Admin caller");
+    require(iIsAdminCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsOpManContractCaller {
@@ -65,6 +68,9 @@ contract OwnedPoll is Constants {
   modifier IsNotContractCaller {
     require(!pIsContractCallerB(), 'No contract callers');
     _;
+  }
+  modifier IsAdminOrWalletCaller {
+    require(iIsAdminCallerB() || !pIsContractCallerB(), 'Not Admin or Wallet caller')
   }
   modifier IsActive {
     require(!iPausedB, "Contract is Paused");

@@ -60,7 +60,6 @@ contract Sale is OwnedSale, Math {
   uint256 private pPicosSoldT3;   // s Picos sold in tranche 3 |
   uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> Pfund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
-  bool    private pUsdHardCapB;   // t True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
                                   // |- i  initialised via setup fn calls
                                   // |- c calculated when pUsdEtherPrice is set/updated
                                   // |- s summed
@@ -195,17 +194,12 @@ contract Sale is OwnedSale, Math {
   function IsHardCapReached() external view returns (bool) {
     return pState & STATE_CLOSED_H_CAP_B > 0;
   }
-  // Sale.HardCapByUsd()
-  function HardCapByUsd() external view returns (bool) {
-    return pUsdHardCapB; // Hard cap check method
-  }
 
   // Events
   // ======
   event InitialiseV(address TokenContract, address ListContract, address MfundContract, address PfundContract);
   event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
                             uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
-  event SetUsdHardCapBV(bool HardCapMethodB);
   event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
@@ -213,7 +207,7 @@ contract Sale is OwnedSale, Math {
   event PrepurchaseDepositV(address indexed Contributor, uint256 Wei);
   event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
   event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
-  event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice, bool UsdHardCapB);
+  event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised, uint256 UsdEtherPrice);
   event TimeUpV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised);
 
   // Initialisation/Setup Methods
@@ -245,12 +239,11 @@ contract Sale is OwnedSale, Math {
                                 uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3) external {
     require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
     // Caps stuff
-    pPicosCapT1  = vPicosCapT1;  // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
-    pPicosCapT2  = vPicosCapT2;  // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
-    pPicosCapT3  = vPicosCapT3;  // Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
+    pPicosCapT1  = vPicosCapT1; // Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
+    pPicosCapT2  = vPicosCapT2; // Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
+    pPicosCapT3  = vPicosCapT3; // Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
     pUsdSoftCap  = vUsdSoftCap; // USD soft cap $8,000,000
     pUsdHardCap  = vUsdHardCap; // USD soft cap $42,300,000
-    pUsdHardCapB = true;        // True: reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap; False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
     // Tranches
     pMinWeiT1      = vMinWeiT1;      // Minimum wei contribution for tranche 1  50 Ether = 50,000,000,000,000,000,000 wei
     pMinWeiT2      = vMinWeiT2;      // Minimum wei contribution for tranche 2   5 Ether =  5,000,000,000,000,000,000 wei
@@ -259,7 +252,6 @@ contract Sale is OwnedSale, Math {
     pPriceCCentsT2 = vPriceCCentsT2; // PIOE price for tranche 2 in centi-cents i.e.  875 for 8.75
     pPriceCCentsT3 = vPriceCCentsT3; // PIOE price for tranche 3 in centi-cents i.e. 1000 for 10.00
     emit SetCapsAndTranchesV(vPicosCapT1, vPicosCapT2, vPicosCapT3, vUsdSoftCap, vUsdHardCap, vMinWeiT1, vMinWeiT2, vMinWeiT3, vPriceCCentsT1, vPriceCCentsT2, vPriceCCentsT3);
-    emit SetUsdHardCapBV(true);
   }
 
   // Sale.SetUsdEtherPrice()
@@ -305,16 +297,6 @@ contract Sale is OwnedSale, Math {
     pStartT = vStartT;
     pEndT   = vEndT;
     emit SetSaleDatesV(vStartT, vEndT);
-  }
-
-  // Sale.SetUsdHardCapB()
-  // ---------------------
-  // Called by Admin to set/unset Sale.pUsdHardCapB:
-  // True:  reaching hard cap is based on USD @ current pUsdEtherPrice vs pUsdHardCap
-  // False: reaching hard cap is based on picos sold vs pico caps for the 3 tranches
-  function SetUsdHardCapB(bool B) external IsAdminCaller {
-    pUsdHardCapB = B;
-    emit SetUsdHardCapBV(B);
   }
 
   // State changing external methods
@@ -371,10 +353,10 @@ contract Sale is OwnedSale, Math {
   // Decides on the tranche, calculates the picos, checks for softcap being reached, or the sale ending via hard cap being reached or time being up
   function pBuy(address senderA, uint256 weiContributed, uint32 bonusCentiPc) private {
     // Which tranche?
-    uint32  tranche = 3;                 // assume 3 to start, the most likely
+    uint32  tranche = 3; // assume 3 to start, the most likely
     uint256 picosPerEth = pPicosPerEthT3;
     if (weiContributed >= pMinWeiT2) {
-      // Tranche 2 or 1 if not filled
+      // Tranche 1 or 2
       if (weiContributed >= pMinWeiT1 && pPicosSoldT1 < pPicosCapT1) {
         tranche = 1;
         picosPerEth = pPicosPerEthT1;
@@ -399,16 +381,11 @@ contract Sale is OwnedSale, Math {
       pPicosSoldT2 += picos;
     else
       pPicosSoldT1 += picos;
-    if (pUsdHardCapB) {
-      // Test for reaching hard cap on basis of USD raised at current Ether price
-      if (usdRaised >= pUsdHardCap)
-        pHardCapReached();
-    }else{
-      // Test for reaching hard cap on basis of tranche pico caps
-      if (pPicosSoldT3 >= pPicosCapT3 && pPicosSoldT2 >= pPicosCapT2 && pPicosSoldT1 >= pPicosCapT1)
-        pHardCapReached();
-    }
-    if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
+    // Test for reaching hard cap on basis of USD raised at current Ether price
+    if (usdRaised >= pUsdHardCap) {
+      pCloseSale(STATE_CLOSED_H_CAP_B);
+      emit HardCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
+    } else if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
       // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then pCloseSale() wouldn't be run. Does allow one tran over time.
       pCloseSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);
@@ -433,16 +410,9 @@ contract Sale is OwnedSale, Math {
     pHubC.SoftCapReachedMO(); // This will cause a StateChange() callback
   }
 
-  // Sale.pHardCapReached()
-  // ----------------------
-  function pHardCapReached() private {
-    // Cap reached so end the sale
-    pCloseSale(STATE_CLOSED_H_CAP_B);
-    emit HardCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice, pUsdHardCapB);
-  }
   // Sale.pCloseSale()
   // -----------------
-  // Called from Buy() for time up and pHardCapReached() for hard cap reached
+  // Called from Buy() for hard cap reached or time up
   function pCloseSale(uint32 vBit) private {
     pHubC.CloseSaleMO(vBit);
   }

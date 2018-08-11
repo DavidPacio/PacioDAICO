@@ -4,8 +4,7 @@ The hub or management contract for the Pacio DAICO
 
 Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
 
-Calls
-OpMan; Sale; Token; List; Mfund; Pfund; Poll
+Calls OpMan; Sale; Token; List; Mfund; Pfund; Poll
 
 djh??
 
@@ -20,7 +19,6 @@ OpMan.ResumeContractMO(HUB_CONTRACT_X) IsConfirmedSigner which is a managed op
 Hub Fallback function
 =====================
 Sending Ether is not allowed
-
 
 */
 
