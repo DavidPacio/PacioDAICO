@@ -1,4 +1,4 @@
-/*  \Poll\Poll.sol started 2018.07.11
+/0*  \Poll\Poll.sol started 2018.07.11
 
 Contract to run Pacio DAICO Polls
 
@@ -24,19 +24,28 @@ import "../lib/OwnedPoll.sol";
 import "../lib/Math.sol";
 
 contract Poll is OwnedPoll, Math {
-  string  public  name = "Pacio Polls";
-  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint32  private pPollState;     // Poll state using the POLL_ bits
+  string public  name = "Pacio Polls";
+  uint32 private pState;                  // DAICO state using the STATE_ bits. Replicated from Hub on a change
+  uint32 private pPollN;                  // Enum of Poll requested or running
+  bool   private pPollRequestedB;         // true if a pPollN poll has been requested, and this is in its confirmation period
+  uint32 private pChangeToValue;          // Value setting is to be changed to if a change poll is approved
+  uint32 private pRequestMembers    =  3; // Number of Members required to request a Poll for it to start automatically
+  uint32 private pRequestDays       =  2; // Days in which a request for a Poll must be confirmed by pRequestMembers Members for it to start, or else to lapse
+  uint32 private pPollRunDays       =  7; // Days for which a poll runs
+  uint32 private pRepeatDays        = 30; // Days which must elapse before any particular poll can be repeated
+  uint32 private pVotingCentiPc     = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
+  uint32 private pVoteValidExTermPc = 25; // Percentage of eligible voting PIOs (yes + no votes) required for a non-termination poll to be valid
+  uint32 private pVotePassExTermPc  = 50; // Percentage of yes vote PIOs to approve a non-termination poll
+  uint32 private pVoteValidTermPc   = 33; // Percentage of eligible voting PIOs (yes + no votes) required for a termination poll to be valid
+  uint32 private pVotePassTermPc    = 75; // Percentage of yes vote PIOs to approve a termination poll
+
+
 
   // View Methods
   // ============
   // Poll.DaicoState()  Should be the same as Hub.DaicoState()
   function DaicoState() external view returns (uint32) {
     return pState;
-  }
-  // Poll.PollState()
-  function PollState() external view returns (uint32) {
-    return pPollState;
   }
 
   // Events

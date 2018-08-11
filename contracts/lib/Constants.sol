@@ -8,21 +8,22 @@ Did not use enums because they can't be used with interface contracts. Would hav
 pragma solidity ^0.4.24;
 
 contract Constants {
-  // State Bits for use with pState                             /- Bit and description
-  // All zero                                        =            Nothing started yet
-  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =    1; // 0 Open for registration, Prepurchase escrow deposits, and white listing
-  uint32 internal constant STATE_OPEN_B              =    2; // 1 Sale is open. Is unset on any of the closes
-  uint32 internal constant STATE_S_CAP_REACHED_B     =    4; // 2 Soft cap reached -> initial draw
-  uint32 internal constant STATE_CLOSED_H_CAP_B      =    8; // 3 Sale closed due to hitting hard cap
-  uint32 internal constant STATE_CLOSED_TIME_UP_B    =   16; // 4 Sale closed due to running out of time
-  uint32 internal constant STATE_CLOSED_MANUAL_B     =   32; // 5 Sale closed manually for whatever reason
-  uint32 internal constant STATE_TAPS_OK_B           =   64; // 6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
-  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =  128; // 7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; // 8 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_MFUND_EMPTY_B       =  512; // 9 Mfund is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_PFUND_EMPTY_B       = 1024; // A Pfund is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_TRANSFER_TO_PB_B    = 2048; // B PIOs are being transferred to the Pacio Blockchain
-  uint32 internal constant STATE_TRANSFERRED_TO_PB_B = 4096; // B All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
+  // State Bits for use with pState                              /- Bit and description
+  // All zero                                        =             Nothing started yet
+  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =    1; //  0 Open for registration, Prepurchase escrow deposits, and white listing
+  uint32 internal constant STATE_OPEN_B              =    2; //  1 Sale is open. Is unset on any of the closes
+  uint32 internal constant STATE_S_CAP_REACHED_B     =    4; //  2 Soft cap reached -> initial draw
+  uint32 internal constant STATE_CLOSED_H_CAP_B      =    8; //  3 Sale closed due to hitting hard cap
+  uint32 internal constant STATE_CLOSED_TIME_UP_B    =   16; //  4 Sale closed due to running out of time
+  uint32 internal constant STATE_CLOSED_MANUAL_B     =   32; //  5 Sale closed manually for whatever reason
+  uint32 internal constant STATE_TAPS_OK_B           =   64; //  6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
+  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =  128; //  7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; //  8 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_MFUND_EMPTY_B       =  512; //  9 Mfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_PFUND_EMPTY_B       = 1024; // 10 Pfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_TRANSFER_TO_PB_B    = 2048; // 11 PIOs are being transferred to the Pacio Blockchain
+  uint32 internal constant STATE_TRANSFERRED_TO_PB_B = 4096; // 12 All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
+  uint32 internal constant STATE_POLL_RUNNING_B      = 8192; // 13 A Poll is running. See the Poll contract for details
 
   // Combos for anding checks
   uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
@@ -87,30 +88,30 @@ contract Constants {
   uint32 internal constant HOUR        =  3600;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
 
-  // Poll Bits                                                         /- bit and bit setting description
-  // Zero                                                                No poll has yet been run requested or run
-  uint32 internal constant POLL_RUNNING_B                =      1; //  0 A poll is running
-  uint32 internal constant POLL_CLOSED_B                 =      2; //  1 A poll has been run, is now closed, and action has been taken if the vote was to approve the poll
-  uint32 internal constant POLL_REQUEST_B                =      4; //  2 The running or closed poll is/was a poll to request a poll, Requires another bit for a POLL_REQUEST_B poll to also be set.
-  uint32 internal constant POLL_CLOSE_TRANCHE_1_B        =      8; //  3 Close tranche 1 of the sale
-  uint32 internal constant POLL_CLOSE_TRANCHE_2_B        =     16; //  4 Close tranche 2 of the sale
-  uint32 internal constant POLL_CLOSE_TRANCHE_3_B        =     32; //  5 Close tranche 3 of the sale
-  uint32 internal constant POLL_CLOSE_TRANCHE_4_B        =     64; //  6 Close tranche 4 of the sale
-  uint32 internal constant POLL_CLOSE_SALE_B             =    128; //  7 Close the sale
-  uint32 internal constant POLL_CHANGE_S_CAP_PIOS_B      =    256; //  8 Change the soft cap PIOs                           /- Not available once soft cap has been reached
-  uint32 internal constant POLL_CHANGE_S_CAP_USD_B       =    512; //  9 Change the soft cap USD                            |
-  uint32 internal constant POLL_CHANGE_S_CAP_WD_PC_B     =   1024; // 10 Change the soft cap reached withdrawal percentage  |
-  uint32 internal constant POLL_CHANGE_H_CAP_PIOS_B      =   2048; // 11 Change the hard cap PIOs   /- Not available once hard cap has been reached
-  uint32 internal constant POLL_CHANGE_H_CAP_USD_B       =   4096; // 12 Change the hard cap USD    |
-  uint32 internal constant POLL_CHANGE_CLOSE_DATE_B      =   8192; // 13 Change the sale close date |
-  uint32 internal constant POLL_CHANGE_TAP_B             =  16384; // 14 Change the Ether per month tap rate. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
-  uint32 internal constant POLL_CHANGE_REQUEST_PASS_PC_B =  32768; // 15 Change the percentage of PIOs in circulation required to vote yes to approve a request poll
-  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_B    =  65536; // 16 Change the days to run for a request poll
-  uint32 internal constant POLL_CHANGE_ALL_XRT_PASS_PC_B = 131072; // 17 Change the percentage of PIOs in circulation required to vote yes to approve all polls except for request and termination one
-  uint32 internal constant POLL_CHANGE_ALL_XRT_DAYS_B    = 262144; // 18 Change the days to run for all polls except for request and termination one
-  uint32 internal constant POLL_CHANGE_TERM_PASS_PC_B    = 524288; // 19 Change the percentage of PIOs in circulation required to vote yes to approve a termination poll
-  uint32 internal constant POLL_CHANGE_TERM_DAYS_B      = 1048576; // 20 Change the days to run for a termination poll
-  uint32 internal constant POLL_TERMINATE_FUNDING_B     = 2097152; // 21 Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
+  // Poll Types
+  uint32 internal constant POLL_REQUEST_N              =  1; // Poll to request a poll, 'voted' on by the number of identical requests within the allowed time, not a separate poll
+  uint32 internal constant POLL_CLOSE_TRANCHE_1_N      =  2; // Close tranche 1 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_2_N      =  3; // Close tranche 2 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_3_N      =  4; // Close tranche 3 of the sale
+  uint32 internal constant POLL_CLOSE_TRANCHE_4_N      =  5; // Close tranche 4 of the sale
+  uint32 internal constant POLL_CLOSE_SALE_N           =  6; // Close the sale
+  uint32 internal constant POLL_CHANGE_S_CAP_PIOS_N    =  7; // Change the soft cap PIOs          /- Not available once soft cap has been reached
+  uint32 internal constant POLL_CHANGE_S_CAP_USD_N     =  8; // Change the soft cap USD           |
+  uint32 internal constant POLL_CHANGE_S_CAP_WD_PC_N   =  9; // Change the soft cap withdrawal %  |
+  uint32 internal constant POLL_CHANGE_H_CAP_PIOS_N    = 10; // Change the hard cap PIOs          /- Not available once hard cap has been reached
+  uint32 internal constant POLL_CHANGE_H_CAP_USD_N     = 11; // Change the hard cap USD           |
+  uint32 internal constant POLL_CHANGE_CLOSE_DATE_N    = 12; // Change the sale close date        |
+  uint32 internal constant POLL_CHANGE_TAP_N           = 13; // Change the Ether per month tap rate. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
+  uint32 internal constant POLL_TERMINATE_FUNDING_N    = 14; // Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
+  uint32 internal constant POLL_CHANGE_REQUEST_NUM_N   = 15; // Change the number of Members required to request a poll for it to start automatically
+  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_N  = 16; // Change the days in which a request for a Poll must be confirmed by Poll.pRequestMembers Members for it to start, or else to lapse
+  uint32 internal constant POLL_CHANGE_POLL_DAYS_N     = 17; // Change the days for which a poll runs
+  uint32 internal constant POLL_CHANGE_REPEAT_DAYS_N   = 18; // Change the days which must elapse before any particular poll can be repeated
+  uint32 internal constant POLL_CHANGE_MAX_VOTE_PC_N   = 19; // Change the CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
+  uint32 internal constant POLL_CHANGE_VALID_XT_PC_N   = 20; // Change the Percentage of eligible voting PIOs (yes + no votes) required for a non-termination poll to be valid
+  uint32 internal constant POLL_CHANGE_PASS_XT_PC_N    = 21; // Change the Percentage of yes vote PIOs to approve a non-termination poll
+  uint32 internal constant POLL_CHANGE_VALID_TERM_PC_N = 22; // Change the Percentage of eligible voting PIOs (yes + no votes) required for a termination poll to be valid
+  uint32 internal constant POLL_CHANGE_PASS_TERM_PC_N  = 23; // Change the Percentage of yes vote PIOs to approve a termination poll
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                             Undefined so can be used a test for an entry existing
