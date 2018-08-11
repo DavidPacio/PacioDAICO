@@ -95,23 +95,23 @@ contract Constants {
   uint32 internal constant POLL_CLOSE_TRANCHE_3_N      =  4; // Close tranche 3 of the sale
   uint32 internal constant POLL_CLOSE_TRANCHE_4_N      =  5; // Close tranche 4 of the sale
   uint32 internal constant POLL_CLOSE_SALE_N           =  6; // Close the sale
-  uint32 internal constant POLL_CHANGE_S_CAP_PIOS_N    =  7; // Change the soft cap PIOs          /- Not available once soft cap has been reached
-  uint32 internal constant POLL_CHANGE_S_CAP_USD_N     =  8; // Change the soft cap USD           |
-  uint32 internal constant POLL_CHANGE_S_CAP_WD_PC_N   =  9; // Change the soft cap withdrawal %  |
-  uint32 internal constant POLL_CHANGE_H_CAP_PIOS_N    = 10; // Change the hard cap PIOs          /- Not available once hard cap has been reached
-  uint32 internal constant POLL_CHANGE_H_CAP_USD_N     = 11; // Change the hard cap USD           |
-  uint32 internal constant POLL_CHANGE_CLOSE_DATE_N    = 12; // Change the sale close date        |
-  uint32 internal constant POLL_CHANGE_TAP_N           = 13; // Change the Ether per month tap rate. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
-  uint32 internal constant POLL_TERMINATE_FUNDING_N    = 14; // Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
-  uint32 internal constant POLL_CHANGE_REQUEST_NUM_N   = 15; // Change the number of Members required to request a poll for it to start automatically
-  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_N  = 16; // Change the days in which a request for a Poll must be confirmed by Poll.pRequestMembers Members for it to start, or else to lapse
-  uint32 internal constant POLL_CHANGE_POLL_DAYS_N     = 17; // Change the days for which a poll runs
-  uint32 internal constant POLL_CHANGE_REPEAT_DAYS_N   = 18; // Change the days which must elapse before any particular poll can be repeated
-  uint32 internal constant POLL_CHANGE_MAX_VOTE_PC_N   = 19; // Change the CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
-  uint32 internal constant POLL_CHANGE_VALID_XT_PC_N   = 20; // Change the Percentage of eligible voting PIOs (yes + no votes) required for a non-termination poll to be valid
-  uint32 internal constant POLL_CHANGE_PASS_XT_PC_N    = 21; // Change the Percentage of yes vote PIOs to approve a non-termination poll
-  uint32 internal constant POLL_CHANGE_VALID_TERM_PC_N = 22; // Change the Percentage of eligible voting PIOs (yes + no votes) required for a termination poll to be valid
-  uint32 internal constant POLL_CHANGE_PASS_TERM_PC_N  = 23; // Change the Percentage of yes vote PIOs to approve a termination poll
+  uint32 internal constant POLL_TERMINATE_FUNDING_N    =  7; // Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Only valid after the sale has closed
+  uint32 internal constant POLL_CHANGE_S_CAP_PIOS_N    =  8; // Change Sale.djh??       the soft cap PIOs      /- Not applicable once soft cap has been reached
+  uint32 internal constant POLL_CHANGE_S_CAP_USD_N     =  9; // Change Sale.pUsdSoftCap the soft cap USD       |
+  uint32 internal constant POLL_CHANGE_H_CAP_PIOS_N    = 10; // Change Sale.djh??       the hard cap PIOs      /- Not applicable once hard cap has been reached
+  uint32 internal constant POLL_CHANGE_H_CAP_USD_N     = 11; // Change Sale.pUsdHardCap the sale hard cap USD  |
+  uint32 internal constant POLL_CHANGE_SALE_END_TIME_N = 12; // Change Sale.pEndT       the sale end time      |
+  uint32 internal constant POLL_CHANGE_S_CAP_DISP_PC_N = 13; // Change Mfund.pSoftCapDispersalPc the soft cap dispersal % - not applicable after soft cap has been reached
+  uint32 internal constant POLL_CHANGE_TAP_RATE_N      = 14; // Change Mfund.pTapRateEtherPm     the Tap rate in Ether per month. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
+  uint32 internal constant POLL_CHANGE_REQUEST_NUM_N   = 15; // Change Poll.pRequestsRequiredToStartPoll    the number of Members required to request a poll for it to start automatically
+  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_N  = 16; // Change Poll.pRequestDays                    the days in which a request for a Poll must be confirmed by Poll.pRequestsRequiredToStartPoll Members for it to start, or else to lapse
+  uint32 internal constant POLL_CHANGE_POLL_DAYS_N     = 17; // Change Poll.pPollRunDays                    the days for which a poll runs
+  uint32 internal constant POLL_CHANGE_REPEAT_DAYS_N   = 18; // Change Poll.pDaysBeforePollRepeat           the days which must elapse before any particular poll can be repeated
+  uint32 internal constant POLL_CHANGE_MAX_VOTE_PC_N   = 19; // Change Poll.pMaxVoteHardCapCentiPc          the CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
+  uint32 internal constant POLL_CHANGE_VALID_XT_PC_N   = 20; // Change Poll.pValidVoteExclTerminationPollPc the Percentage of eligible PIOs voted required for a non-termination poll to be valid
+  uint32 internal constant POLL_CHANGE_PASS_XT_PC_N    = 21; // Change Poll.pPassVoteExclTerminationPollPc  the Percentage of yes votes of PIOs voted to approve a non-termination poll
+  uint32 internal constant POLL_CHANGE_VALID_TERM_PC_N = 22; // Change Poll.pValidVoteTerminationPollPc     the Percentage of eligible PIOs voted required for a termination poll to be valid
+  uint32 internal constant POLL_CHANGE_PASS_TERM_PC_N  = 23; // Change Poll.pPassVoteTerminationPollPc      the Percentage of yes votes of PIOs voted to approve a termination poll
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                             Undefined so can be used a test for an entry existing

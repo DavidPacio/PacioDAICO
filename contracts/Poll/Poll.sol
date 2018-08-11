@@ -26,19 +26,20 @@ import "../lib/Math.sol";
 contract Poll is OwnedPoll, Math {
   string public  name = "Pacio Polls";
   uint32 private pState;                  // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint32 private pPollN;                  // Enum of Poll requested or running
-  bool   private pPollRequestedB;         // true if a pPollN poll has been requested, and this is in its confirmation period
-  uint32 private pChangeToValue;          // Value setting is to be changed to if a change poll is approved
-  uint32 private pRequestMembers    =  3; // Number of Members required to request a Poll for it to start automatically
-  uint32 private pRequestDays       =  2; // Days in which a request for a Poll must be confirmed by pRequestMembers Members for it to start, or else to lapse
-  uint32 private pPollRunDays       =  7; // Days for which a poll runs
-  uint32 private pRepeatDays        = 30; // Days which must elapse before any particular poll can be repeated
-  uint32 private pVotingCentiPc     = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
-  uint32 private pVoteValidExTermPc = 25; // Percentage of eligible voting PIOs (yes + no votes) required for a non-termination poll to be valid
-  uint32 private pVotePassExTermPc  = 50; // Percentage of yes vote PIOs to approve a non-termination poll
-  uint32 private pVoteValidTermPc   = 33; // Percentage of eligible voting PIOs (yes + no votes) required for a termination poll to be valid
-  uint32 private pVotePassTermPc    = 75; // Percentage of yes vote PIOs to approve a termination poll
-
+  uint32 private pPollN;                  // Enum of Poll in progress
+  uint32 private pChangePollCurrentValue; // Current value of a setting to be changed if a change poll is approved
+  uint32 private pChangePollToValue;      // Value setting is to be changed to if a change poll is approved
+  uint32 private pPollStartT;             // Poll start time
+  uint32 private pPollEndT;               // Poll end time
+  uint32 private pRequestsRequiredToStartPoll    =  3; // The number of Members required to request a Poll for it to start automatically
+  uint32 private pRequestDays                    =  2; // Days in which a request for a Poll must be confirmed by pRequestsRequiredToStartPoll Members for it to start, or else to lapse
+  uint32 private pPollRunDays                    =  7; // Days for which a poll runs
+  uint32 private pDaysBeforePollRepeat           = 30; // Days which must elapse before any particular poll can be repeated
+  uint32 private pMaxVoteHardCapCentiPc          = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
+  uint32 private pValidVoteExclTerminationPollPc = 25; // Percentage of eligible PIOs voted required for a non-termination poll to be valid
+  uint32 private pPassVoteExclTerminationPollPc  = 50; // Percentage of yes votes of PIOs voted to approve a non-termination poll
+  uint32 private pValidVoteTerminationPollPc     = 33; // Percentage of eligible PIOs voted required for a termination poll to be valid
+  uint32 private pPassVoteTerminationPollPc      = 75; // Percentage of yes votes of PIOs voted to approve a termination poll
 
 
   // View Methods
@@ -47,11 +48,66 @@ contract Poll is OwnedPoll, Math {
   function DaicoState() external view returns (uint32) {
     return pState;
   }
+  // Poll.PollInProgress()
+  function Poll() external view returns (uint32) {
+    return pPollN;
+  }
+  // Poll.ChangePollCurrentValue()
+  function ChangePollCurrentValue() external view returns (uint32) {
+    return pChangePollCurrentValue;
+  }
+  // Poll.ChangePollToValue()
+  function ChangePollToValue() external view returns (uint32) {
+    return pChangePollToValue;
+  }
+  // Poll.PollStartTime()
+  function PollStartTime() external view returns (uint32) {
+    return pPollStartT;
+  }
+  // Poll.PollEndTime()
+  function PollEndTime() external view returns (uint32) {
+    return pPollEndT;
+  }
+  // Poll.RequestsRequiredToStartPoll()
+  function RequestsRequiredToStartPoll() external view returns (uint32) {
+    return pRequestsRequiredToStartPoll;
+  }
+  // Poll.RequestPollConfirmationDays()
+  function RequestPollConfirmationDays() external view returns (uint32) {
+    return pRequestDays;
+  }
+  // Poll.PollRunDays()
+  function PollRunDays() external view returns (uint32) {
+    return pPollRunDays;
+  }
+  // Poll.DaysBeforePollRepeat()
+  function DaysBeforePollRepeat() external view returns (uint32) {
+    return pDaysBeforePollRepeat;
+  }
+  // Poll.MaxVoteHardCapCentiPc()
+  function MaxVoteHardCapCentiPc() external view returns (uint32) {
+    return pMaxVoteHardCapCentiPc;
+  }
+  // Poll.ValidVoteExclTerminationPollPc()
+  function pValidVoteExclTerminationPc() external view returns (uint32) {
+    return pValidVoteExclTerminationPollPc;
+  }
+  // Poll.PassVoteExclTerminationPollPc()
+  function pPassVoteExclTerminationPc() external view returns (uint32) {
+    return pPassVoteExclTerminationPollPc;
+  }
+  // Poll.ValidVoteTerminationPollPc()
+  function pValidVoteTerminationPc() external view returns (uint32) {
+    return pValidVoteTerminationPollPc;
+  }
+  // Poll.PassVoteTerminationPollPc()
+  function pPassVoteTerminationPc() external view returns (uint32) {
+    return pPassVoteTerminationPollPc;
+  }
 
   // Events
   // ======
-  event     StateChangeV(uint32 PrevState, uint32 NewState);
-  event PollStateChangeV(uint32 PrevState, uint32 NewState);
+  event StateChangeV(uint32 PrevState, uint32 NewState);
 
   // Initialisation/Setup Functions
   // ==============================

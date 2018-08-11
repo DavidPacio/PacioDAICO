@@ -39,12 +39,12 @@ contract Sale is OwnedSale, Math {
   string  public  name = "Pacio DAICO Sale";
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pStartT;        // i Sale start time
-  uint256 private pEndT;          // i Sale end time
+  uint256 private pEndT;          // i Sale end time.   Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
   uint256 private pPicosCapT1;    // i Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
   uint256 private pPicosCapT2;    // i Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
   uint256 private pPicosCapT3;    // i Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
-  uint256 private pUsdSoftCap;    // i USD soft cap $8,000,000
-  uint256 private pUsdHardCap;    // i USD soft cap $42,300,000
+  uint256 private pUsdSoftCap;    // i USD soft cap $8,000,000    Can be changed by a POLL_CHANGE_S_CAP_USD_N poll
+  uint256 private pUsdHardCap;    // i USD hard cap $42,300,000.  Can be changed by a POLL_CHANGE_H_CAP_USD_N poll
   uint256 private pMinWeiT1;      // i Minimum wei contribution for tranche 1  50 Ether = 50,000,000,000,000,000,000 wei
   uint256 private pMinWeiT2;      // i Minimum wei contribution for tranche 2   5 Ether =  5,000,000,000,000,000,000 wei
   uint256 private pMinWeiT3;      // i Minimum wei contribution for tranche 3 0.1 Ether =    100,000,000,000,000,000 wei

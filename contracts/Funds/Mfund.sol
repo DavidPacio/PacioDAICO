@@ -20,14 +20,13 @@ import "../List/I_ListMfund.sol";
 import "../Token/I_TokenMfund.sol";
 
 contract Mfund is OwnedMfund, Math {
-  uint256 private constant INITIAL_TAP_RATE_ETH_PM = 100; // Initial Tap rate in Ether pm
-  uint256 private constant SOFT_CAP_TAP_PC         = 50;  // % of fund balance to be dispersed on soft cap being reached
   string  public name = "Pacio DAICO Managed Fund";
+  uint256 private pTapRateEtherPm     = 100; // Tap rate in Ether per month starting at 100.                 Can be changed by a POLL_CHANGE_TAP_RATE_N poll. Can be changed to 0 to pause withdrawals
+  uint256 private pSoftCapDispersalPc =  50; // % of fund balance to be dispersed on soft cap being reached. Can be changed by a POLL_CHANGE_S_CAP_WD_PC_N poll
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pTotalDepositedWei; // Total wei deposited before any withdrawals or refunds. Should == this.balance until the soft cap hit withdrawal
   uint256 private pTerminationPicosIssued; // Token.PicosIssued() when a TerminateRefund starts for proportional calcs
   address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for taps (withdrawals)
-  uint256 private pTapRateEtherPm;    // Tap rate in Ether pm e.g. 100
   uint256 private pLastWithdrawT;     // Last withdrawal time, 0 before any withdrawals
   uint256 private pDepositId;         // Deposit Id
   uint256 private pWithdrawId;        // Withdrawal Id
@@ -49,12 +48,8 @@ contract Mfund is OwnedMfund, Math {
   function FundWei() external view returns (uint256) {
     return address(this).balance;
   }
-  // Mfund.InitialTapRateEtherPm()
-  function InitialTapRateEtherPm() external pure returns (uint256) {
-    return INITIAL_TAP_RATE_ETH_PM;
-  }
-  // Mfund.CurrentTapRateEtherPm()
-  function CurrentTapRateEtherPm() external view returns (uint256) {
+  // Mfund.TapRateEtherPm()
+  function TapRateEtherPm() external view returns (uint256) {
     return pTapRateEtherPm;
   }
   // Mfund.TapAvailableWei()
@@ -71,7 +66,7 @@ contract Mfund is OwnedMfund, Math {
   }
   // Mfund.SoftCapReachedDispersalPercent()
   function SoftCapReachedDispersalPercent() external pure returns (uint256) {
-    return SOFT_CAP_TAP_PC;
+    return pSoftCapDispersalPc;
   }
   // Mfund.PclAccount()
   function PclAccount() external view returns (address) {
@@ -114,7 +109,6 @@ contract Mfund is OwnedMfund, Math {
   // ------------------
   // Called from the deploy script to initialise the Mfund contract
   function Initialise() external IsInitialising {
-    pTapRateEtherPm = INITIAL_TAP_RATE_ETH_PM; // 100
     pListC = I_ListMfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
   }
 
@@ -144,7 +138,7 @@ contract Mfund is OwnedMfund, Math {
     if (vState & STATE_S_CAP_REACHED_B > 0 && pState & STATE_S_CAP_REACHED_B == 0) {
       // Change of state for Soft Cap being reached
       // Make the soft cap withdrawal
-      pWithdraw(safeMul(address(this).balance, SOFT_CAP_TAP_PC) / 100);
+      pWithdraw(safeMul(address(this).balance, pSoftCapDispersalPc) / 100);
       emit SoftCapReachedV();
     }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
       // Change of state for STATE_TERMINATE_REFUND_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
