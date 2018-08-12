@@ -5,7 +5,8 @@ List of people/addresses to do with Pacio
 Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
 
 djh??
-- add vote count data
+- complete voting stuff
+- expand lookup for the voting members - 2 fns
 
 Member info [Struct order is different to minimise slots used]
 address nextEntryA;    // Address of the next entry     - 0 for the last  one
@@ -38,18 +39,18 @@ contract List is OwnedList, Math {
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   address private pFirstEntryA;   // Address of first entry
   address private pLastEntryA;    // Address of last entry
-  uint256 private pNumEntries;    // Number of list entries        /- no pNum* counts for those effectively counted by Id i.e. RefundId, TransferToPbId
-  uint256 private pNumPfund;      // Number of Pfund list entries  V
-  uint256 private pNumWhite;      // Number of whitelist entries
-  uint256 private pNumMembers;    // Number of Pacio members
-  uint256 private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
-  uint256 private pNumProxies;    // Number of entries with a Proxy set
-  uint256 private pNumDowngraded; // Number downgraded (from whitelist)
+  uint32  private pNumEntries;    // Number of list entries        /- no pNum* counts for those effectively counted by Id i.e. RefundId, TransferToPbId
+  uint32  private pNumPfund;      // Number of Pfund list entries  V
+  uint32  private pNumWhite;      // Number of whitelist entries
+  uint32  private pNumMembers;    // Number of Pacio members
+  uint32  private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
+  uint32  private pNumProxies;    // Number of entries with a Proxy set
+  uint32  private pNumDowngraded; // Number downgraded (from whitelist)
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
 // Struct to hold member data, with a doubly linked list of the List entries to permit traversing
-// Each member requires 6 storage slots.
+// Each entry uses 8 storage slots.
 struct R_List{        // Bytes Storage slot  Comment
   address nextEntryA;    // 20 0 Address of the next entry     - 0 for the last  one
   uint32  bits;          //  4 0 Bit settings
@@ -67,6 +68,10 @@ struct R_List{        // Bytes Storage slot  Comment
   uint256 weiRefunded;   // 32 4 wei refunded
   uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
   uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+  uint32  votes;         //  4 7 Number of time member has voted (Must be a member to vote)
+  uint32  voteT;         //  4 7 Time of last vote
+   int32  vote;          //  4 7 Vote, +ve for yes, -ve for no pMaxVoteHardCapCentiPc
+  uint32  pollId;        //  4 7 Id of last poll voted in
 }
 mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
 
@@ -76,28 +81,28 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function DaicoState() external view returns (uint32) {
     return pState;
   }
-  function NumberOfKnownAccounts() external view returns (uint256) {
+  function NumberOfKnownAccounts() external view returns (uint32) {
     return pNumEntries;
   }
-  function NumberOfManagedFundAccounts() external view returns (uint256) {
+  function NumberOfManagedFundAccounts() external view returns (uint32) {
     return pNumEntries - pNumPfund; // Not the same as the number of with the LE_M_FUND_B bit set due to the sale contract entry plus dormant entries i.e. those whose picos have been transferred or refunded
   }
-  function NumberOfPrepurchaseFundAccounts() external view returns (uint256) {
+  function NumberOfPrepurchaseFundAccounts() external view returns (uint32) {
     return pNumPfund;
   }
-  function NumberOfWhitelistEntries() external view returns (uint256) {
+  function NumberOfWhitelistEntries() external view returns (uint32) {
     return pNumWhite;
   }
-  function NumberOfPacioMembers() external view returns (uint256) {
+  function NumberOfPacioMembers() external view returns (uint32) {
     return pNumMembers;
   }
-  function NumberOfPresaleEntries() external view returns (uint256) {
+  function NumberOfPresaleEntries() external view returns (uint32) {
     return pNumPresale;
   }
-  function NumberOfMembersWithProxy() external view returns (uint256) {
+  function NumberOfMembersWithProxy() external view returns (uint32) {
     return pNumProxies;
   }
-  function NumberOfWhitelistDowngrades() external view returns (uint256) {
+  function NumberOfWhitelistDowngrades() external view returns (uint32) {
     return pNumDowngraded;
   }
   function EntryBits(address accountA) external view returns (uint32) {
@@ -123,6 +128,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   }
   function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
     return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
+  }
+  function LastPollVotedIn(address accountA) external view returns (uint32) {
+    return pListMR[accountA].pollId;
   }
   function IsTransferFromAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
@@ -312,7 +320,11 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       0,                        // uint256 weiContributed;// 32 3 wei contributed
       0,                        // uint256 weiRefunded;   // 32 4 wei refunded
       0,                        // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
-      0);                       // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+      0,                        // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+      0,                        // uint32  votes;         //  4 7 Number of time member has voted (Must be a member to vote)
+      0,                        // uint32  voteT;         //  4 7 Time of last vote
+      0,                        //  int32  vote;          //  4 7 Vote, +ve for yes, -ve for no pMaxVoteHardCapCentiPc
+      0);                       // uint32  pollId;        //  4 7 Id of last poll voted in
     // Update other state vars
     if (++pNumEntries == 1) // Number of list entries
       pFirstEntryA = vEntryA;
@@ -383,9 +395,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     require(rsEntryR.bits & LE_WHITELISTED_B > 0, 'Account not whitelisted'); // Entry is expected to exist and be whitelisted
     if (rsEntryR.downT == 0) { // if not just changing the downgrade date then decrement white and incr downgraded
       if (rsEntryR.bits & LE_MEMBER_B > 0)
-        pNumMembers = subMaxZero(pNumMembers, 1);
+        pNumMembers = decrementMaxZero(pNumMembers);
       rsEntryR.bits &= ~LE_WHITELISTED_MEMBER_B; // unset LE_WHITELISTED_B and LE_MEMBER_B bits
-      pNumWhite = subMaxZero(pNumWhite, 1);
+      pNumWhite = decrementMaxZero(pNumWhite);
       rsEntryR.bits |= LE_DOWNGRADED_B;
       pNumDowngraded++;
     }
@@ -417,7 +429,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       if (proxySetB) {
         // Did have a proxy set
         rsEntryR.bits ^= LE_HAS_PROXY_B; // unset the LE_HAS_PROXY_B bit which we know is set
-        pNumProxies = subMaxZero(pNumProxies, 1);
+        pNumProxies = decrementMaxZero(pNumProxies);
       }
     }else{
       // Set proxy
@@ -452,7 +464,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> Token.Issue() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
       // List.PrepurchaseDeposit() has been run so firstContribT, pNumPfund, weiContributed, contributions have been updated and the LE_P_FUND_B bit set
       rsEntryR.bits &= ~LE_P_FUND_B;        // unset the Pfund bit
-      pNumPfund = subMaxZero(pNumPfund, 1); // decrement pNumPfund
+      pNumPfund = decrementMaxZero(pNumPfund); // decrement pNumPfund
     }else{
       // Cases a and b
       // a. Hub.PresaleIssue() -> Sale.PresaleIssue() -> Token.Issue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
@@ -504,7 +516,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     if ((rsEntryR.picosBalance -= vPicos) == 0) { // There is no need to check this for underflow via a safeSub() call given the IsTransferOK pListMR[frA].picosBalance >= vPicos check
       // frA now has no picos
       if (rsEntryR.bits & LE_MEMBER_B > 0)
-        pNumMembers = subMaxZero(pNumMembers, 1);
+        pNumMembers = decrementMaxZero(pNumMembers);
       rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the toA LE_M_FUND_PICOS_MEMBER_B, LE_PICOS_B and LE_MEMBER_B bits
     }
     // To
@@ -540,8 +552,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       // Pfund refundBit
       require(bits & LE_P_FUND_B > 0, "Invalid list type for Prepurchase Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Prepurchase Refund call");
-      rsEntryR.bits &= ~LE_P_FUND_B;        // unset the prepurchase bit
-      pNumPfund = subMaxZero(pNumPfund, 1); // decrement pNumPfund
+      rsEntryR.bits &= ~LE_P_FUND_B;           // unset the prepurchase bit
+      pNumPfund = decrementMaxZero(pNumPfund); // decrement pNumPfund
     }else{
       // Mfund refund bit
       require(bits & LE_PICOS_B > 0, "Invalid list type for Refund");
@@ -550,7 +562,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       pListMR[pSaleA].picosBalance = safeAdd(pListMR[pSaleA].picosBalance, refundPicos); // transfer the Picos back to the sale contract. Token.Refund() emits a Transfer() event for this.
       rsEntryR.picosBalance = 0;
       if (bits & LE_MEMBER_B > 0)
-        pNumMembers = subMaxZero(pNumMembers, 1);
+        pNumMembers = decrementMaxZero(pNumMembers);
       rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the frA LE_M_FUND_B, LE_PICOS_B and LE_MEMBER_B bits
     }
     rsEntryR.refundT = uint32(now);
@@ -569,8 +581,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
          && rsEntryR.bits > 0);                 // |
     rsEntryR.picosBalance = 0;
     rsEntryR.bits |= LE_TRANSFERRED_TO_PB_B;
-    if (rsEntryR.bits & LE_MEMBER_B > 0)    pNumMembers = subMaxZero(pNumMembers, 1);
-    if (rsEntryR.bits & LE_HAS_PROXY_B > 0) pNumProxies = subMaxZero(pNumProxies, 1);
+    if (rsEntryR.bits & LE_MEMBER_B > 0)    pNumMembers = decrementMaxZero(pNumMembers);
+    if (rsEntryR.bits & LE_HAS_PROXY_B > 0) pNumProxies = decrementMaxZero(pNumProxies);
     rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the frA LE_M_FUND_B, LE_PICOS_B and LE_MEMBER_B bits
     // Token.TransferIssuedPIOsToPacioBc() emits TransferIssuedPIOsToPacioBcV(++pTransferToPbId, accountA, picos);
   }

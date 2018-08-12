@@ -37,6 +37,12 @@ contract Math {
     z = x <= y ? 0 : x - y;
   }
 
+  // decrementMaxZero(x, y)
+  // Pacio addition to avoid throwing if a subtraction goes below zero and return 0 in that case.
+  function decrementMaxZero(uint32 x) internal pure returns (uint32 z) {
+    z = x == 0 ? 0 : --x;
+  }
+
   // Min(x, y)
   function Min(uint256 x, uint256 y) internal pure returns (uint256 z) {
     z = x <= y ? x : y;

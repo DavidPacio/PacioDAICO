@@ -65,7 +65,7 @@ contract Mfund is OwnedMfund, Math {
     return pTerminationPicosIssued;
   }
   // Mfund.SoftCapReachedDispersalPercent()
-  function SoftCapReachedDispersalPercent() external pure returns (uint256) {
+  function SoftCapReachedDispersalPercent() external view returns (uint256) {
     return pSoftCapDispersalPc;
   }
   // Mfund.PclAccount()
