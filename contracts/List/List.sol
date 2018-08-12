@@ -103,6 +103,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function EntryBits(address accountA) external view returns (uint32) {
     return pListMR[accountA].bits;
   }
+  function IsMember(address accountA) external view returns (bool) {
+    return pListMR[accountA].bits & LE_MEMBER_B > 0;
+  }
   function IsPrepurchase(address accountA) external view returns (bool) {
     return pListMR[accountA].bits & LE_P_FUND_B > 0;
   }

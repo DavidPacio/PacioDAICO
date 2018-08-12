@@ -70,7 +70,8 @@ contract OwnedPoll is Constants {
     _;
   }
   modifier IsAdminOrWalletCaller {
-    require(iIsAdminCallerB() || !pIsContractCallerB(), 'Not Admin or Wallet caller')
+    require(iIsAdminCallerB() || !pIsContractCallerB(), 'Not Admin or Wallet caller');
+    _;
   }
   modifier IsActive {
     require(!iPausedB, "Contract is Paused");

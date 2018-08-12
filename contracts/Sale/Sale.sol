@@ -38,8 +38,8 @@ import "../Funds/I_PfundSale.sol";
 contract Sale is OwnedSale, Math {
   string  public  name = "Pacio DAICO Sale";
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint256 private pStartT;        // i Sale start time
-  uint256 private pEndT;          // i Sale end time.   Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
+  uint256 private pSaleStartT;    // i Sale start time
+  uint256 private pSaleEndT;      // i Sale end time.   Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
   uint256 private pPicosCapT1;    // i Hard cap for the sale tranche 1  32 million PIOEs =  32,000,000, 000,000,000,000 picos
   uint256 private pPicosCapT2;    // i Hard cap for the sale tranche 2  32 million PIOEs =  32,000,000, 000,000,000,000 picos
   uint256 private pPicosCapT3;    // i Hard cap for the sale tranche 3 350 million PIOEs = 350,000,000, 000,000,000,000 picos
@@ -59,6 +59,7 @@ contract Sale is OwnedSale, Math {
   uint256 private pPicosSoldT2;   // s Picos sold in tranche 2 |
   uint256 private pPicosSoldT3;   // s Picos sold in tranche 3 |
   uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> Pfund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
+  uint256 private pUsdRaised;     // c pWeiRaised @ current pUsdEtherPrice = pWeiRaised * pUsdEtherPrice / 10**18
   uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
                                   // |- i  initialised via setup fn calls
                                   // |- c calculated when pUsdEtherPrice is set/updated
@@ -82,21 +83,21 @@ contract Sale is OwnedSale, Math {
   function DaicoState() external view returns (uint32) {
     return pState;
   }
-  // Sale.StartTime()
-  function StartTime() external view returns (uint32) {
-    return uint32(pStartT);
+  // Sale.SaleStartTime()
+  function SaleStartTime() external view returns (uint32) {
+    return uint32(pSaleStartT);
   }
-  // Sale.EndTime()
-  function EndTime() external view returns (uint32) {
-    return uint32(pEndT);
+  // Sale.SaleEndTime()
+  function SaleEndTime() external view returns (uint32) {
+    return uint32(pSaleEndT);
   }
   // Sale.UsdSoftCap()
-  function UsdSoftCap() external view returns (uint256) {
-    return pUsdSoftCap;  // USD soft cap $8,000,000
+  function UsdSoftCap() external view returns (uint32) {
+    return uint32(pUsdSoftCap); // USD soft cap $8,000,000
   }
   // Sale.UsdHardCap()
-  function UsdHardCap() external view returns (uint256) {
-    return pUsdHardCap;  // USD hard cap $42,300,000
+  function UsdHardCap() external view returns (uint32) {
+    return uint32(pUsdHardCap); // USD hard cap $42,300,000
   }
   // Sale.PicosCapTranche1()
   function PicosCapTranche1() external view returns (uint256) {
@@ -170,6 +171,10 @@ contract Sale is OwnedSale, Math {
   function WeiRaised() external view returns (uint256) {
     return pWeiRaised;
   }
+  // Sale.UsdRaised()
+  function UsdRaised() external view returns (uint32) {
+    return uint32(pUsdRaised);
+  }
   // Sale.FundWei()
   function FundWei() external view returns (uint256) {
     return pMfundC.FundWei();
@@ -200,7 +205,7 @@ contract Sale is OwnedSale, Math {
   event InitialiseV(address TokenContract, address ListContract, address MfundContract, address PfundContract);
   event SetCapsAndTranchesV(uint256 PicosCap1, uint256 PicosCap2, uint256 PicosCap3, uint256 UsdSoftCap, uint256 UsdHardCap,
                             uint256 MinWei1, uint256 MinWei2, uint256 MinWei3, uint256 PioePriceCCents1, uint256 PioePriceCCents2, uint256 vPriceCCentsT3);
-  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3);
+  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3, uint256 UsdRaised);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
@@ -223,10 +228,10 @@ contract Sale is OwnedSale, Math {
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
     I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
-    pHubC     = I_Hub(iOwnersYA[HUB_OWNER_X]);
-    pTokenC   = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
-    pListC    = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
-    pMfundC  = I_MfundSale(opManC.ContractXA(MFUND_CONTRACT_X));
+    pHubC   = I_Hub(iOwnersYA[HUB_OWNER_X]);
+    pTokenC = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
+    pListC  = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
+    pMfundC = I_MfundSale(opManC.ContractXA(MFUND_CONTRACT_X));
     pPfundC = I_PfundSale(opManC.ContractXA(PFUND_CONTRACT_X));
     emit InitialiseV(pTokenC, pListC, pMfundC, pPfundC);
   //iInitialisingB = false; No. Leave in initialising state
@@ -259,11 +264,12 @@ contract Sale is OwnedSale, Math {
   // Called by the deploy script when initialising or manually by Admin on significant Ether price movement to set the price
   function SetUsdEtherPrice(uint256 vUsdEtherPrice) external {
     require(iIsInitialisingB() || iIsAdminCallerB());
-    pUsdEtherPrice = vUsdEtherPrice; // 500
+    pUsdEtherPrice = vUsdEtherPrice; // e.g. 500
+    pUsdRaised     = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     pPicosPerEthT1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT1   16 = 12 (picos per Pioe) + 4 from pPriceCCentsT1 -> $s = 6,666,666,666,666,666
     pPicosPerEthT2 = pUsdEtherPrice * 10**16 / pPriceCCentsT2; // Picos per Ether for tranche 2
     pPicosPerEthT3 = pUsdEtherPrice * 10**16 / pPriceCCentsT3; // Picos per Ether for tranche 3  // 5,000,000,000,000,000 for ETH = $500 and target PIOE price = $0.10
-    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthT1, pPicosPerEthT2, pPicosPerEthT3);
+    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthT1, pPicosPerEthT2, pPicosPerEthT3, pUsdRaised);
   }
 
   // Sale.EndInitialise()
@@ -280,7 +286,7 @@ contract Sale is OwnedSale, Math {
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
-    require(pStartT == 0); // sale hasn't started yet
+    require(pSaleStartT == 0); // check that sale hasn't started yet
     pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
     pWeiRaised = safeAdd(pWeiRaised, vWei);
     pPicosPresale += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
@@ -294,8 +300,8 @@ contract Sale is OwnedSale, Math {
   // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
   // Hub.SetSaleDates() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
   function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
-    pStartT = vStartT;
-    pEndT   = vEndT;
+    pSaleStartT = vStartT;
+    pSaleEndT   = vEndT;
     emit SetSaleDatesV(vStartT, vEndT);
   }
 
@@ -328,7 +334,7 @@ contract Sale is OwnedSale, Math {
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
     require(bits > 0, 'Account not registered');
     require(bits & LE_NO_SEND_FUNDS_COMBO_B == 0, 'Sending not allowed');
-    if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pStartT)
+    if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pSaleStartT)
       // Sale hasn't started yet but the time come
       pHubC.StartSaleMO(); // changes state to STATE_OPEN_B
     if (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0) {
@@ -371,9 +377,9 @@ contract Sale is OwnedSale, Math {
       picos += safeMul(picos, bonusCentiPc) / 10000;
     pWeiRaised = safeAdd(pWeiRaised, weiContributed);
     pTokenC.Issue(senderA, picos, weiContributed); // which calls List.Issue()
-    uint256 usdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
+    pUsdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     emit SaleV(senderA, picos, weiContributed, tranche, pUsdEtherPrice, picosPerEth, bonusCentiPc);
-    if (pState & STATE_S_CAP_REACHED_B == 0 && usdRaised >= pUsdSoftCap)
+    if (pState & STATE_S_CAP_REACHED_B == 0 && pUsdRaised >= pUsdSoftCap)
       pSoftCapReached();
     if (tranche == 3)
       pPicosSoldT3 += picos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
@@ -382,10 +388,10 @@ contract Sale is OwnedSale, Math {
     else
       pPicosSoldT1 += picos;
     // Test for reaching hard cap on basis of USD raised at current Ether price
-    if (usdRaised >= pUsdHardCap) {
+    if (pUsdRaised >= pUsdHardCap) {
       pCloseSale(STATE_CLOSED_H_CAP_B);
       emit HardCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised, pUsdEtherPrice);
-    } else if (now >= pEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
+    } else if (now >= pSaleEndT && (pState & STATE_CLOSED_H_CAP_B == 0)) {
       // Time is up wo hard cap having been reached. Do this check after processing rather than doing an initial revert on the condition being met as then pCloseSale() wouldn't be run. Does allow one tran over time.
       pCloseSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pWeiRaised);

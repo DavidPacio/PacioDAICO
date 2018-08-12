@@ -38,6 +38,7 @@ import "../Poll/I_Poll.sol";
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
   uint32     private pState;  // DAICO state using the STATE_ bits. Passed through to Sale, Token, Mfund, and Pfund on change
+  uint32     private pPollN;  // Enum of Poll in progress, if any
   I_OpMan    private pOpManC; // the OpMan contract
   I_Sale     private pSaleC;  // the Sale contract
   I_TokenHub private pTokenC; // the Token contract
@@ -71,11 +72,14 @@ contract Hub is OwnedHub, Math {
   event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract, address PollContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
+  event StartSaleV();
   event SoftCapReachedV();
-  event EndSaleV();
+  event CloseSaleV();
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
   event PfundRefundingCompleteV();
   event MfundRefundingCompleteV();
+  event PollStartV(uint32 PollN);
+  event PollEndV(uint32 PollN);
 
   // Initialisation/Setup Methods
   // ============================
@@ -119,7 +123,7 @@ contract Hub is OwnedHub, Math {
   // ------------------
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
-  // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pStartT comes through, or here on a restart after a close.
+  // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
@@ -129,7 +133,7 @@ contract Hub is OwnedHub, Math {
     emit SetSaleDatesV(vStartT, vEndT);
   }
 
-  // Hub.pSetState()
+  // Hub.pSetState() private
   // ---------------
   // Called to change state and to replicate the change.
   // Any setting/unsetting must be done by the calling function. This does =
@@ -148,12 +152,12 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSaleMO()
   // -----------------
-  // Is called from Sale.Buy() when the first buy arrives after the sale pStartT
+  // Is called from Sale.Buy() when the first buy arrives after the sale pSaleStartT
   // Can be called manually by Admin as a managed op if necessary.
   function StartSaleMO() external {
     require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
     pSetState(STATE_OPEN_B);
-    emit SoftCapReachedV();
+    emit StartSaleV();
   }
 
   // Hub.SoftCapReachedMO()
@@ -181,18 +185,23 @@ contract Hub is OwnedHub, Math {
     if (pState & STATE_S_CAP_REACHED_B > 0)
       bitsToSet |= STATE_S_CAP_REACHED_B | STATE_TAPS_OK_B; // leave STATE_S_CAP_REACHED_B set and also set STATE_TAPS_OK_B
     pSetState(bitsToSet);
-    emit EndSaleV();
+    emit CloseSaleV();
   }
 
-  // Hub.SetTransferToPacioBcStateMO()
-  // ---------------------------------
-  // To be called by Admin as a managed op when starting the process of transferring to the Pacio Blockchain with vBit = STATE_TRANSFER_TO_PB_B
-  //                                                                        and when the process is finished with vBit = STATE_TRANSFERRED_TO_PB_B
-  function SetTransferToPacioBcStateMO(uint32 vBit) external IsPollContractCaller {
-    require((vBit == STATE_TRANSFER_TO_PB_B || vBit == STATE_TRANSFERRED_TO_PB_B)
-         && iIsAdminCallerB()
-         && pOpManC.IsManOpApproved(HUB_SET_TRAN_TO_PB_STATE_MO_X));
-    pSetState(pState |= vBit);
+  // Hub.PollStartEnd()
+  // ----------------
+  // Called from Poll to start/end a poll, start when vPollN is set, end when vPollN is 0
+  function PollStartEnd(uint32 vPollN) external IsPollContractCaller {
+    require(vPollN >= 0 && vPollN <= NUM_POLLS); // range check of vPollN. Should be ok if called from Poll as intended so no fail msg
+    if (vPollN > 0) {
+      pSetState(pState |= STATE_POLL_RUNNING_B);
+      pPollN = vPollN;
+      emit PollStartV(pPollN);
+    }else{
+      pSetState(pState &= ~STATE_POLL_RUNNING_B);
+      emit PollEndV(pPollN);
+      pPollN = 0;
+    }
   }
 
   // Hub.TerminateVote()
@@ -204,6 +213,17 @@ contract Hub is OwnedHub, Math {
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pListC.SetTransfersOkByDefault(false);
   }
+
+  // Hub.SetTransferToPacioBcStateMO()
+  // ---------------------------------
+  // To be called by Admin as a managed op when starting the process of transferring to the Pacio Blockchain with vBit = STATE_TRANSFER_TO_PB_B
+  //                                                                        and when the process is finished with vBit = STATE_TRANSFERRED_TO_PB_B
+  function SetTransferToPacioBcStateMO(uint32 vBit) external IsAdminCaller {
+    require((vBit == STATE_TRANSFER_TO_PB_B || vBit == STATE_TRANSFERRED_TO_PB_B)
+         && pOpManC.IsManOpApproved(HUB_SET_TRAN_TO_PB_STATE_MO_X));
+    pSetState(pState |= vBit);
+  }
+
 
   // Hub.Whitelist()
   // ---------------

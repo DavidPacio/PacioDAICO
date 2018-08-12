@@ -49,8 +49,8 @@ contract Mfund is OwnedMfund, Math {
     return address(this).balance;
   }
   // Mfund.TapRateEtherPm()
-  function TapRateEtherPm() external view returns (uint256) {
-    return pTapRateEtherPm;
+  function TapRateEtherPm() external view returns (uint32) {
+    return uint32(pTapRateEtherPm);
   }
   // Mfund.TapAvailableWei()
   function TapAvailableWei() external view returns (uint256) {

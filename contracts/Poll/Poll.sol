@@ -1,10 +1,15 @@
-/0*  \Poll\Poll.sol started 2018.07.11
+/*  \Poll\Poll.sol started 2018.07.11
 
 Contract to run Pacio DAICO Polls
 
 Owned by Deployer, OpMan, Hub, Admin
 
 djh??
+web/admin fn to check for end of poll
+
+Differences from Abyss
+- one contract not a new one for each poll
+- djh??
 
 Pause/Resume
 ============
@@ -22,12 +27,16 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedPoll.sol";
 import "../lib/Math.sol";
+import "../Hub/I_HubPoll.sol";
+import "../Sale/I_SalePoll.sol";
+import "../List/I_ListPoll.sol";
+import "../Funds/I_MfundPoll.sol";
 
 contract Poll is OwnedPoll, Math {
   string public  name = "Pacio Polls";
   uint32 private pState;                  // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint32 private pPollN;                  // Enum of Poll in progress
-  uint32 private pNumPollRequests;        // Number of poll requests which needs to reach pRequestsRequiredToStartPoll for the requested poll to start
+  uint32 private pPollN;                  // Enum of Poll in progress, including when a request 'poll' is running though a request poll does not result in a state change
+  uint32 private pNumPollRequests;        // Number of poll requests received which needs to reach pRequestsRequiredToStartPoll for the requested poll to start
   uint32 private pChangePollCurrentValue; // Current value of a setting to be changed if a change poll is approved
   uint32 private pChangePollToValue;      // Value setting is to be changed to if a change poll is approved
   uint32 private pPollStartT;             // Poll start time
@@ -37,11 +46,20 @@ contract Poll is OwnedPoll, Math {
   uint32 private pPollRunDays                    =  7; // Days for which a poll runs
   uint32 private pDaysBeforePollRepeat           = 30; // Days which must elapse before any particular poll can be repeated
   uint32 private pMaxVoteHardCapCentiPc          = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
-  uint32 private pValidVoteExclTerminationPollPc = 25; // Percentage of eligible PIOs voted required for a non-termination poll to be valid
+  uint32 private pValidVoteExclTerminationPollPc = 25; // Percentage of eligible PIOs to be voted for a non-termination poll to be valid
   uint32 private pPassVoteExclTerminationPollPc  = 50; // Percentage of yes votes of PIOs voted to approve a non-termination poll
-  uint32 private pValidVoteTerminationPollPc     = 33; // Percentage of eligible PIOs voted required for a termination poll to be valid
+  uint32 private pValidVoteTerminationPollPc     = 33; // Percentage of eligible PIOs to be voted for a termination poll to be valid
   uint32 private pPassVoteTerminationPollPc      = 75; // Percentage of yes votes of PIOs voted to approve a termination poll
-
+  I_HubPoll   private pHubC;   // the Hub contract   /- Poll makes state changing calls so these contracts so they need to have Poll as an owner
+  I_SalePoll  private pSaleC;  // the Sale contract  |
+  I_ListPoll  private pListC;  // the List contract  |
+  I_MfundPoll private pMfundC; // the Mfund contract |
+  uint32[NUM_POLLS] private pPrevPollEndTA; // Array of poll end times
+  struct R_Vote {   // /- bytes - only 1/4 slot!
+    uint32  voteT;  // 4
+    int32   vote;   // 4 + for yes, -ve for no
+  }
+  mapping(address => R_Vote) private pVotesMR; // Mapping of votes cast indexed by address of voter
 
   // View Methods
   // ============
@@ -50,8 +68,12 @@ contract Poll is OwnedPoll, Math {
     return pState;
   }
   // Poll.PollInProgress()
-  function Poll() external view returns (uint32) {
+  function PollInProgress() external view returns (uint32) {
     return pPollN;
+  }
+  // Poll.NumberOfCurrentPollRequests()
+  function NumberOfCurrentPollRequests() external view returns (uint32) {
+    return pNumPollRequests;
   }
   // Poll.ChangePollCurrentValue()
   function ChangePollCurrentValue() external view returns (uint32) {
@@ -90,25 +112,35 @@ contract Poll is OwnedPoll, Math {
     return pMaxVoteHardCapCentiPc;
   }
   // Poll.ValidVoteExclTerminationPollPc()
-  function pValidVoteExclTerminationPc() external view returns (uint32) {
+  function ValidVoteExclTerminationPc() external view returns (uint32) {
     return pValidVoteExclTerminationPollPc;
   }
   // Poll.PassVoteExclTerminationPollPc()
-  function pPassVoteExclTerminationPc() external view returns (uint32) {
+  function PassVoteExclTerminationPc() external view returns (uint32) {
     return pPassVoteExclTerminationPollPc;
   }
   // Poll.ValidVoteTerminationPollPc()
-  function pValidVoteTerminationPc() external view returns (uint32) {
+  function ValidVoteTerminationPc() external view returns (uint32) {
     return pValidVoteTerminationPollPc;
   }
   // Poll.PassVoteTerminationPollPc()
-  function pPassVoteTerminationPc() external view returns (uint32) {
+  function PassVoteTerminationPc() external view returns (uint32) {
     return pPassVoteTerminationPollPc;
+  }
+  // Poll.VoteCast()
+  function VoteCast(address voterA) external view returns (uint32 voteT, int32 vote, uint256 picosHeld) {
+    R_Vote storage srVoteR = pVotesMR[voterA];
+    return (srVoteR.voteT, srVoteR.vote, pListC.PicosBalance(voterA));
   }
 
   // Events
   // ======
+  event InitialiseV(address HubContract, address ListContract, address MfundContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
+  event PollRequestV(uint32 RequestedPollN, uint32 ChangeToValue);
+  event PollRequestTimeoutV(uint32 RequestedPollN);
+  event PollStartV(uint32 PollN);
+  event PollEndV(uint32 PollN);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -122,10 +154,15 @@ contract Poll is OwnedPoll, Math {
   // -----------------
   // Called from the deploy script to initialise the Poll contract
   function Initialise() external IsInitialising {
+    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    pHubC   = I_HubPoll(iOwnersYA[HUB_OWNER_X]);
+    pSaleC  = I_SalePoll(opManC.ContractXA(SALE_CONTRACT_X));
+    pListC  = I_ListPoll(opManC.ContractXA(LIST_CONTRACT_X));
+    pMfundC = I_MfundPoll(opManC.ContractXA(MFUND_CONTRACT_X));
+    emit InitialiseV(pHubC, pListC, pMfundC);
     iPausedB       =         // make Poll active
     iInitialisingB = false;
   }
-
 
   // Modifier functions
   // ==================
@@ -144,8 +181,12 @@ contract Poll is OwnedPoll, Math {
   // Poll.RequestPoll()
   // ------------------
   // Called by Admin or Members to request a poll
-  //
+  // A successful request by Admin results in an immediate start.
+  // A successful request by a Member results in pPollN being set but does not result in a state change until the request is confirmed
   function RequestPoll(uint32 vRequestedPollN, uint32 vChangeToValue) external IsAdminOrWalletCaller returns (bool) {
+    require(vRequestedPollN > 0 && vRequestedPollN <= NUM_POLLS, 'Invalid Poll Request'); // range check of vRequestedPollN
+    uint32 now32T = uint32(now);
+    require(now32T - pPrevPollEndTA[vRequestedPollN-1] >= pDaysBeforePollRepeat * DAY, 'Too soon after previous poll'); // repeat days check
     if (pPollN > 0)
       pCheckForEndOfPoll();
     require(pPollN == 0, 'Poll already in progress');
@@ -155,75 +196,142 @@ contract Poll is OwnedPoll, Math {
     // POLL_CLOSE_SALE_N            c Close the sale
     // POLL_CHANGE_S_CAP_USD_N     sc Change Sale.pUsdSoftCap the soft cap USD
     // POLL_CHANGE_H_CAP_USD_N      c Change Sale.pUsdHardCap the sale hard cap USD
-    // POLL_CHANGE_SALE_END_TIME_N  c Change Sale.pEndT       the sale end time
+    // POLL_CHANGE_SALE_END_TIME_N  c Change Sale.pSaleEndT       the sale end time
     // POLL_CHANGE_S_CAP_DISP_PC_N sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
     if (pState & STATE_CLOSED_COMBO_B > 0)
       require(vRequestedPollN > POLL_CHANGE_S_CAP_DISP_PC_N, 'inapplicable Poll'); // All polls up to POLL_CHANGE_S_CAP_DISP_PC_N are inapplicable after close
     if (pState & STATE_S_CAP_REACHED_B > 0)
-      require(vRequestedPollN != POLL_CHANGE_S_CAP_USD_N && vRequestedPollN != POLL_CHANGE_S_CAP_DISP_PC_N), 'inapplicable Poll');
-    // Poll repeat days check djh??
-  uint32 private pDaysBeforePollRepeat           = 30; // Days which must elapse before any particular poll can be repeated
-    // Poll sense checks djh??
+      require(vRequestedPollN != POLL_CHANGE_S_CAP_USD_N && vRequestedPollN != POLL_CHANGE_S_CAP_DISP_PC_N, 'inapplicable Poll');
+    if (pNumPollRequests == 0) {
+      // First request
+      // Get currentValue and do sense checks for change poll requests
+      if (vRequestedPollN > POLL_CLOSE_SALE_N && vRequestedPollN < POLL_TERMINATE_FUNDING_N) {
+        uint32 currentValue;
+        bool   okB = true;
+        if (vRequestedPollN == POLL_CHANGE_S_CAP_USD_N) {
+          // Soft Cap USD
+          currentValue = pSaleC.UsdSoftCap();
+          okB = vChangeToValue >= pSaleC.UsdRaised() && vChangeToValue < pSaleC.UsdHardCap();
+        }else if (vRequestedPollN == POLL_CHANGE_H_CAP_USD_N) {
+          // Hard Cap USD
+          currentValue = pSaleC.UsdHardCap();
+          okB = vChangeToValue >= pSaleC.UsdRaised() && vChangeToValue > pSaleC.UsdSoftCap();
+        }else if (vRequestedPollN == POLL_CHANGE_SALE_END_TIME_N) {
+          // Sale End Time
+          currentValue = pSaleC.SaleEndTime();
+          okB = vChangeToValue > now32T && vChangeToValue > pSaleC.SaleStartTime();
+        }else if (vRequestedPollN == POLL_CHANGE_S_CAP_DISP_PC_N) {
+          // Soft Cap Reached Dispersal %
+          currentValue = pMfundC.SoftCapReachedDispersalPercent();
+          okB = vChangeToValue <= 100;
+        }else if (vRequestedPollN == POLL_CHANGE_TAP_RATE_N) {
+          // Tap rate Ether pm
+          currentValue = pMfundC.TapRateEtherPm();
+          // no sense check
+        }else if (vRequestedPollN == POLL_CHANGE_REQUEST_NUM_N) {
+          // 3 The number of Members required to request a Poll for it to start automatically
+          currentValue = pRequestsRequiredToStartPoll;
+          okB = vChangeToValue >= 1 && vChangeToValue <= 10;
+        }else if (vRequestedPollN == POLL_CHANGE_REQUEST_DAYS_N) {
+          // 2 Days in which a request for a Poll must be confirmed by pRequestsRequiredToStartPoll Members for it to start, or else to lapse
+          currentValue = pPollRequestConfirmDays;
+          okB = vChangeToValue >= 1 && vChangeToValue <= 14;
+        }else if (vRequestedPollN == POLL_CHANGE_POLL_DAYS_N) {
+          // 7 Days for which a poll runs
+          currentValue = pPollRunDays;
+          okB = vChangeToValue >= 1 && vChangeToValue <= 30;
+        }else if (vRequestedPollN == POLL_CHANGE_REPEAT_DAYS_N) {
+          // 30 Days which must elapse before any particular poll can be repeated
+          currentValue = pDaysBeforePollRepeat;
+          okB = vChangeToValue >= 7 && vChangeToValue <= 90;
+        }else if (vRequestedPollN == POLL_CHANGE_MAX_VOTE_PC_N) {
+          // 50 CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
+          currentValue = pMaxVoteHardCapCentiPc;
+          okB = vChangeToValue > 0 && vChangeToValue <= 100;
+        }else if (vRequestedPollN == POLL_CHANGE_VALID_XT_PC_N) {
+          // 25 Percentage of eligible PIOs to be voted for a non-termination poll to be valid
+          currentValue = pValidVoteExclTerminationPollPc;
+          okB = vChangeToValue > 0 && vChangeToValue <= 50;
+        }else if (vRequestedPollN == POLL_CHANGE_PASS_XT_PC_N) {
+          // 50 Percentage of yes votes of PIOs voted to approve a non-termination poll
+          currentValue = pPassVoteExclTerminationPollPc;
+          okB = vChangeToValue > 0 && vChangeToValue <= 75;
+        }else if (vRequestedPollN == POLL_CHANGE_VALID_TERM_PC_N) {
+          // 33 Percentage of eligible PIOs to be voted for a termination poll to be valid
+          currentValue = pValidVoteTerminationPollPc;
+          okB = vChangeToValue > 0 && vChangeToValue <= 50;
+        }else{
+          // POLL_CHANGE_PASS_TERM_PC_N)
+          // 75 Percentage of yes votes of PIOs voted to approve a termination poll
+          currentValue = pPassVoteTerminationPollPc;
+          okB = vChangeToValue > 50 && vChangeToValue <= 100;
+        }
+        if (vChangeToValue == currentValue)
+          revert('No change requested');
+        if (!okB)
+          revert('Change requested out of range or not sensible');
+        pChangePollCurrentValue = currentValue;
+      }
+      pPollN = vRequestedPollN;
+      pChangePollToValue = vChangeToValue;
+      pPollStartT = now32T;
+      pPollEndT                =
+      pPrevPollEndTA[pPollN-1] = pPollStartT + pPollRequestConfirmDays * DAY;
+    }
     if (iIsAdminCallerB()) {
       // Admin caller with no current poll and poll is ok so start it
-      pStartPoll(vRequestedPollN, vChangeToValue);
-    } else if (!iIsContractCallerB()) {
-      if (pNumPollRequests ? 0)
+      pStartPoll();
+    } else {
+      // is Not contract caller - must be a member
+      require(pListC.IsMember(msg.sender), 'Not a Pacio Member');
+      if (pNumPollRequests > 0) {
+        // second or subsequent request
         // Check that this request is the same as the pending one
         require(vRequestedPollN == pPollN && vChangeToValue == pChangePollToValue, 'Different poll request pending');
-      if (++pNumPollRequests == pRequestsRequiredToStartPoll),  'Poll already in progress');
-        pStartPoll(vRequestedPollN, vChangeToValue);
-    }else
-      revert('Not Admin or Member caller');
+        // And is from a different member
+        require(pVotesMR[msg.sender].voteT == 0, 'Already voted');
+      }else
+        delete pVotesMR;
+      emit PollRequestV(vRequestedPollN, vChangeToValue);
+      if (++pNumPollRequests == pRequestsRequiredToStartPoll)
+        pStartPoll();
+    }
     return true;
   }
 
-  function pStartPoll(uint32 vRequestedPollN, uint32 vChangeToValue) private {
+  // Poll.pStartPoll() private
+  // -----------------
+  function pStartPoll() private {
     pPollStartT = uint32(now);
-    pEndT = pPollStartT +   uint32 private pPollRunDays                    =  7; // Days for which a poll runs
-
+    pPollEndT                =
+    pPrevPollEndTA[pPollN-1] = pPollStartT + pPollRunDays * DAY;
+    pNumPollRequests = 0;
+    delete pVotesMR;
+    pHubC.PollStartEnd(pPollN);
+    emit PollStartV(pPollN);
   }
 
+  // Poll.pCheckForEndOfPoll() private
+  // -------------------------
   function pCheckForEndOfPoll() private {
-
+    if (uint32(now) < pPollEndT)
+      return;
+    if (pNumPollRequests > 0) {
+      // Was a Member initiated Poll Request
+      emit PollRequestTimeoutV(pPollN);
+    }else{
+      // Was a running poll
+      pHubC.PollStartEnd(0);
+      emit PollEndV(pPollN);
+      // djh?? to be completed
+    }
+    // Poll has finished
+    pPollN      =
+    pPollStartT =
+    pPollEndT   =
+    pChangePollCurrentValue =
+    pChangePollToValue      = 0;
   }
-
-
-  //                                                            /--- Not applicable after soft cap hit
-  // Poll Types                                                 | /- Not applicable after sale close
-  uint32 internal constant POLL_CLOSE_SALE_N           =  1; //  c Close the sale
-  uint32 internal constant POLL_CHANGE_S_CAP_USD_N     =  2; // sc Change Sale.pUsdSoftCap the soft cap USD
-  uint32 internal constant POLL_CHANGE_H_CAP_USD_N     =  3; //  c Change Sale.pUsdHardCap the sale hard cap USD
-  uint32 internal constant POLL_CHANGE_SALE_END_TIME_N =  4; //  c Change Sale.pEndT       the sale end time
-  uint32 internal constant POLL_CHANGE_S_CAP_DISP_PC_N =  5; // sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
-  uint32 internal constant POLL_CHANGE_TAP_RATE_N      =  6; //    Change Mfund.pTapRateEtherPm     the Tap rate in Ether per month. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
-  uint32 internal constant POLL_CHANGE_REQUEST_NUM_N   =  7; //    Change Poll.pRequestsRequiredToStartPoll    the number of Members required to request a poll for it to start automatically
-  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_N  =  8; //    Change Poll.pPollRequestConfirmDays                    the days in which a request for a Poll must be confirmed by Poll.pRequestsRequiredToStartPoll Members for it to start, or else to lapse
-  uint32 internal constant POLL_CHANGE_POLL_DAYS_N     =  9; //    Change Poll.pPollRunDays                    the days for which a poll runs
-  uint32 internal constant POLL_CHANGE_REPEAT_DAYS_N   = 10; //    Change Poll.pDaysBeforePollRepeat           the days which must elapse before any particular poll can be repeated
-  uint32 internal constant POLL_CHANGE_MAX_VOTE_PC_N   = 11; //    Change Poll.pMaxVoteHardCapCentiPc          the CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
-  uint32 internal constant POLL_CHANGE_VALID_XT_PC_N   = 12; //    Change Poll.pValidVoteExclTerminationPollPc the Percentage of eligible PIOs voted required for a non-termination poll to be valid
-  uint32 internal constant POLL_CHANGE_PASS_XT_PC_N    = 13; //    Change Poll.pPassVoteExclTerminationPollPc  the Percentage of yes votes of PIOs voted to approve a non-termination poll
-  uint32 internal constant POLL_CHANGE_VALID_TERM_PC_N = 14; //    Change Poll.pValidVoteTerminationPollPc     the Percentage of eligible PIOs voted required for a termination poll to be valid
-  uint32 internal constant POLL_CHANGE_PASS_TERM_PC_N  = 15; //    Change Poll.pPassVoteTerminationPollPc      the Percentage of yes votes of PIOs voted to approve a termination poll
-  uint32 internal constant POLL_TERMINATE_FUNDING_N    = 16; //    Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Applicable only after the sale has closed.
-
-  uint32 private pPollN;                  // Enum of Poll in progress
-  uint32 private pNumPollRequests;        // Number of poll requests which needs to reach pRequestsRequiredToStartPoll for the requested poll to start
-  uint32 private pChangePollCurrentValue; // Current value of a setting to be changed if a change poll is approved
-  uint32 private pChangePollToValue;      // Value setting is to be changed to if a change poll is approved
-  uint32 private pPollStartT;             // Poll start time
-  uint32 private pPollEndT;               // Poll end time
-  uint32 private pRequestsRequiredToStartPoll    =  3; // The number of Members required to request a Poll for it to start automatically
-  uint32 private pPollRequestConfirmDays         =  2; // Days in which a request for a Poll must be confirmed by pRequestsRequiredToStartPoll Members for it to start, or else to lapse
-  uint32 private pPollRunDays                    =  7; // Days for which a poll runs
-  uint32 private pDaysBeforePollRepeat           = 30; // Days which must elapse before any particular poll can be repeated
-  uint32 private pMaxVoteHardCapCentiPc          = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
-  uint32 private pValidVoteExclTerminationPollPc = 25; // Percentage of eligible PIOs voted required for a non-termination poll to be valid
-  uint32 private pPassVoteExclTerminationPollPc  = 50; // Percentage of yes votes of PIOs voted to approve a non-termination poll
-  uint32 private pValidVoteTerminationPollPc     = 33; // Percentage of eligible PIOs voted required for a termination poll to be valid
-  uint32 private pPassVoteTerminationPollPc      = 75; // Percentage of yes votes of PIOs voted to approve a termination poll
-
 
   // Poll Fallback function
   // ======================
