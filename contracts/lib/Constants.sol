@@ -88,7 +88,7 @@ contract Constants {
   uint32  internal constant DAY        = 86400;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
   //                                                            /--- Not applicable after soft cap hit
-  // Poll Types                                                 | /- Not applicable after sale close
+  // Poll 'Enums'                                               |/- Not applicable after sale close
   uint32 internal constant POLL_CLOSE_SALE_N           =  1; //  c Close the sale
   uint32 internal constant POLL_CHANGE_S_CAP_USD_N     =  2; // sc Change Sale.pUsdSoftCap the soft cap USD
   uint32 internal constant POLL_CHANGE_H_CAP_USD_N     =  3; //  c Change Sale.pUsdHardCap the sale hard cap USD
@@ -108,7 +108,7 @@ contract Constants {
   uint32 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
 
   // List Entry Bits                                                /- bit and bit setting description
-  // Zero                                                             Undefined so can be used a test for an entry existing
+  // Zero                                                           | Undefined so can be used a test for an entry existing
   uint32 internal constant LE_REGISTERED_B            =      1; //  0 Entry has been registered with addedT set but nothing more
   uint32 internal constant LE_SALE_CONTRACT_B         =      2; //  1 Is the Sale Contract entry - where the minted PIOs are held. Has dbId == 1
   uint32 internal constant LE_M_FUND_B                =      4; //  2 Mfund funded whitelisted with picos entry as a result of funds and picos via Sale.Buy() or a Pfund to Mfund transfer or the whitelisting of a presale entry
