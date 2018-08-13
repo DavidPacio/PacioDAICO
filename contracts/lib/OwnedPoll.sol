@@ -1,6 +1,6 @@
 // \lib\OwnedPoll.sol
 
-// Version of Owned for Poll which is owned by Deployer, OpMan, Hub, and Admin
+// Version of Owned for Poll which is owned by Deployer OpMan Hub Admin
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -38,7 +38,7 @@ contract OwnedPoll is Constants {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[MFUND_ADMIN_OWNER_X] && !pIsContractCallerB();
+    return msg.sender == iOwnersYA[POLL_ADMIN_OWNER_X] && !pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)

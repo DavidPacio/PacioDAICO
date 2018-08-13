@@ -87,9 +87,9 @@ contract Hub is OwnedHub, Math {
   // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
   // Owners must first be set by deploy script calls:
   //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
-  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X,  PCL hw wallet account address as Admin)
-  //   Hub.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
-  //   Hub.ChangeOwnerMO(POLL_OWNER_X , Poll address);
+  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address);
   //   Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()

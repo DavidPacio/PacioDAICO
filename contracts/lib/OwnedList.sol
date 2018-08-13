@@ -1,6 +1,6 @@
 // lib\OwnedList.sol
 //
-// Version of Owned for List which is owned by Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+// Version of Owned for List which is owned by Deployer OpMan Hub Sale Poll Token
 // Is NOT pausable
 
 pragma solidity ^0.4.24;
@@ -9,13 +9,14 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedList is Constants {
-  uint256 internal constant NUM_OWNERS = 5;
+  uint256 internal constant NUM_OWNERS = 6;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan  owner
                                           // 2 Hub    owner
                                           // 3 Sale   owner
-                                          // 4 Token  owner
+                                          // 4 Poll   owner
+                                          // 5 Token  owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -57,6 +58,10 @@ contract OwnedList is Constants {
   }
   modifier IsSaleContractCaller {
     require(msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB(), "Not required Sale caller");
+    _;
+  }
+  modifier IsPollContractCaller {
+    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsTokenContractCaller {

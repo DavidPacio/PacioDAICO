@@ -2,11 +2,7 @@
 
 The Sale contract for the Pacio DAICO
 
-Owners:
-0 Deployer
-1 OpMan
-2 Hub
-3 Admin
+Owners: Deployer OpMan Hub Admin Poll
 
 Pause/Resume
 ============
@@ -71,10 +67,10 @@ contract Sale is OwnedSale, Math {
                                   // |- t initialised to true but can be changed manually
                                   // |- f initialised to false
   I_ListSale  private pListC;  // the List contract   -  read only use so List does not need to have Sale as an owner
-  I_Hub       private pHubC;   // the Hub contract   /- make state changing calls so these contracts need to have Sale as an owner
-  I_TokenSale private pTokenC; // the Token contract |
-  I_MfundSale private pMfundC; // the Mfund contract |
-  I_PfundSale private pPfundC; // the Pfund contract |
+  I_Hub       private pHubC;   // the Hub contract   /- Sale makes state changing calls to these contracts so they need to have Sale as an owner. Hub does.
+  I_TokenSale private pTokenC; // the Token contract |  Token is owned by Deployer OpMan Hub   Sale  Admin        so includes Sale
+  I_MfundSale private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub   Sale  Pfund  Admin so includes Sale
+  I_PfundSale private pPfundC; // the Pfund contract |  Pfund is owned by Deployer OpMan Hub   Sale               so includes Sale
 
   // No constructor
   // ==============
@@ -228,11 +224,12 @@ contract Sale is OwnedSale, Math {
 
   // Initialisation/Setup Methods
   // ============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
+  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin, 4 Poll
   // Owners must first be set by deploy script calls:
   //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Sale.ChangeOwnerMO(SALE_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Sale.ChangeOwnerMO(POLL_OWNER_X, Poll address)
 
   // Sale.Initialise()
   // -----------------

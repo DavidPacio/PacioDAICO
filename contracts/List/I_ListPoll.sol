@@ -10,6 +10,7 @@ interface I_ListPoll {
   function NumberOfPacioMembers() external view returns (uint32);
   function IsMember(address accountA) external view returns (bool);
   function PicosBalance(address accountA) external view returns (uint256);
-  function LastPollVotedIn(address accountA) external view returns (uint32);
+  function SetMaxVotePerMember(uint256 pMaxPicosVote) external;
+  function Vote(address voterA, uint32 vPollId, uint32 vVoteActionN) external returns (int32 piosVoted);
 }
 // End I_ListPoll interface

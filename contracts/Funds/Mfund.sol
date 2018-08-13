@@ -2,7 +2,7 @@
 
 Managed fund for PIO purchases or transfers in the Pacio DAICO
 
-Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Pfund, 5 Admin
+Owned by Deployer OpMan Hub Sale Poll Pfund Admin
 
 Pause/Resume
 ============
@@ -97,11 +97,12 @@ contract Mfund is OwnedMfund, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Pfund, 5 Admin
+  // Owned by Deployer OpMan Hub Sale Poll Pfund Admin
   // Owners must first be set by deploy script calls:
   //   Mfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Mfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Mfund.ChangeOwnerMO(POLL_OWNER_X, Poll address)
   //   Mfund.ChangeOwnerMO(MFUND_PFUND_OWNER_X, Pfund address)
   //   Mfund.ChangeOwnerMO(MFUND_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 

@@ -2,7 +2,7 @@
 
 Contract to run Pacio DAICO Polls
 
-Owned by Deployer, OpMan, Hub, Admin
+Owned by Deployer OpMan Hub Admin
 
 djh??
 - update pPollId
@@ -46,19 +46,19 @@ contract Poll is OwnedPoll, Math {
   uint32 private pChangePollToValue;      // Value setting is to be changed to if a change poll is approved
   uint32 private pPollStartT;             // Poll start time
   uint32 private pPollEndT;               // Poll end time
-  uint32 private pRequestsToStartPoll        =  3; // The number of Members required to request a Poll for it to start automatically
-  uint32 private pPollRequestConfirmDays     =  2; // Days in which a request for a Poll must be confirmed by pRequestsToStartPoll Members for it to start, or else to lapse
-  uint32 private pPollRunDays                =  7; // Days for which a poll runs
-  uint32 private pDaysBeforePollRepeat       = 30; // Days which must elapse before any particular poll can be repeated
-  uint32 private pMaxVoteHardCapCentiPc      = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
-  uint32 private pValidMembersExclTermPollPc = 25; // Percentage of Members to vote for a non-termination poll to be valid
-  uint32 private pPassVoteExclTermPollPc     = 50; // Percentage of yes votes of PIOs voted to approve a non-termination poll
-  uint32 private pValidMembersTermPollPc     = 33; // Percentage of Members to vote for a termination poll to be valid
-  uint32 private pPassVoteTermPollPc         = 75; // Percentage of yes votes of PIOs voted to approve a termination poll
-  I_HubPoll   private pHubC;   // the Hub contract   /- Poll makes state changing calls so these contracts so they need to have Poll as an owner
-  I_SalePoll  private pSaleC;  // the Sale contract  |
-  I_ListPoll  private pListC;  // the List contract  |
-  I_MfundPoll private pMfundC; // the Mfund contract |
+  uint32 private pRequestsToStartPoll         =  3; // Number of Members required to request a Poll for it to start automatically
+  uint32 private pPollRequestConfirmDays      =  2; // Days in which a request for a Poll must be confirmed by pRequestsToStartPoll Members for it to start, or else to lapse
+  uint32 private pPollRunDays                 =  7; // Days for which a poll runs
+  uint32 private pDaysBeforePollRepeat        = 30; // Days which must elapse before any particular poll can be repeated
+  uint32 private pMaxVoteHardCapCentiPc       = 50; // CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
+  uint32 private pValidMemsExclRrrTermPollsPc = 25; // Percentage of Members to vote for polls other than Release reserve & restart and Termination ones to be valid
+  uint32 private pPassVoteExclRrrTermPollsPc  = 50; // Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
+  uint32 private pValidMemsRrrTermPollsPc     = 33; // Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
+  uint32 private pPassVoteRrrTermPollsPc      = 75; // Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
+  I_HubPoll   private pHubC;   // the Hub contract   /- Poll makes state changing calls to these contracts so they need to have Poll as an owner. Hub does.
+  I_SalePoll  private pSaleC;  // the Sale contract  |  Sale is owned by Deployer OpMan Hub  Admin                so includes Poll   <-- add Poll
+  I_ListPoll  private pListC;  // the List contract  |  List is owned by Deployer OpMan Hub   Sale  Token         so includes Poll   <-- add Poll
+  I_MfundPoll private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub   Sale  Pfund  Admin so includes Poll   <-- add Poll
   uint32[NUM_POLLS] private pPrevPollEndTA; // Array of poll end times
 
   // View Methods
@@ -113,19 +113,19 @@ contract Poll is OwnedPoll, Math {
   }
   // Poll.ValidVoteExclTerminationPollPc()
   function ValidVoteExclTerminationPc() external view returns (uint32) {
-    return pValidMembersExclTermPollPc;
+    return pValidMemsExclRrrTermPollsPc;
   }
   // Poll.PassVoteExclTerminationPollPc()
   function PassVoteExclTerminationPc() external view returns (uint32) {
-    return pPassVoteExclTermPollPc;
+    return pPassVoteExclRrrTermPollsPc;
   }
   // Poll.ValidVoteTerminationPollPc()
   function ValidVoteTerminationPc() external view returns (uint32) {
-    return pValidMembersTermPollPc;
+    return pValidMemsRrrTermPollsPc;
   }
   // Poll.PassVoteTerminationPollPc()
   function PassVoteTerminationPc() external view returns (uint32) {
-    return pPassVoteTermPollPc;
+    return pPassVoteRrrTermPollsPc;
   }
   // // Poll.VoteCast()
   // function VoteCast(address voterA) external view returns (uint32 voteT, int32 vote, uint256 picosHeld) {
@@ -144,11 +144,11 @@ contract Poll is OwnedPoll, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin
+  // Owned by Deployer OpMan Hub Admin
   // Owners must first be set by deploy script calls:
   //   Poll.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Poll.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
-  //   Poll.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Poll.ChangeOwnerMO(POLL_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // Poll.Initialise()
   // -----------------
@@ -159,9 +159,18 @@ contract Poll is OwnedPoll, Math {
     pSaleC  = I_SalePoll(opManC.ContractXA(SALE_CONTRACT_X));
     pListC  = I_ListPoll(opManC.ContractXA(LIST_CONTRACT_X));
     pMfundC = I_MfundPoll(opManC.ContractXA(MFUND_CONTRACT_X));
+    pSetMaxVotePerMember();
     emit InitialiseV(pHubC, pListC, pMfundC);
     iPausedB       =         // make Poll active
     iInitialisingB = false;
+  }
+
+  // pSetMaxVotePerMember() private
+  // ----------------------
+  // Called from Initialise() and djh?? to set List.pMaxPicosVote
+  function pSetMaxVotePerMember() private {
+    // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
+    pListC.SetMaxVotePerMember(safeMul(safeMul(uint256(pSaleC.PioHardCap()), 10*12), pMaxVoteHardCapCentiPc) / 100);
   }
 
   // Modifier functions
@@ -258,23 +267,26 @@ contract Poll is OwnedPoll, Math {
           // 50 CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member. 50 = 0.5%
           currentValue = pMaxVoteHardCapCentiPc;
           okB = vChangeToValue > 0 && vChangeToValue <= 100;
-        }else if (vRequestedPollN == POLL_CHANGE_VALID_MEMS_XTERM_PC_N) {
-          // 25 Percentage of Members to vote for a non-termination poll to be valid
-          currentValue = pValidMembersExclTermPollPc;
+        }else if (vRequestedPollN == POLL_CHANGE_VALID_MEMS_XRT_PC_N) {
+          // 25 Percentage of Members to vote for polls other than Release reserve & restart and Termination ones to be valid
+          currentValue = pValidMemsExclRrrTermPollsPc;
           okB = vChangeToValue > 0 && vChangeToValue <= 50;
-        }else if (vRequestedPollN == POLL_CHANGE_PASS_XT_PC_N) {
-          // 50 Percentage of yes votes of PIOs voted to approve a non-termination poll
-          currentValue = pPassVoteExclTermPollPc;
+        }else if (vRequestedPollN == POLL_CHANGE_PASS_XRT_PC_N) {
+          // 50 Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
+          currentValue = pPassVoteExclRrrTermPollsPc;
           okB = vChangeToValue > 0 && vChangeToValue <= 75;
-        }else if (vRequestedPollN == POLL_CHANGE_VALID_MEMS_TERM_PC_N) {
-          // 33 Percentage of Members to vote for a termination poll to be valid
-          currentValue = pValidMembersTermPollPc;
+        }else if (vRequestedPollN == POLL_CHANGE_VALID_MEMS_RT_PC_N) {
+          // 33 Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
+          currentValue = pValidMemsRrrTermPollsPc;
           okB = vChangeToValue > 0 && vChangeToValue <= 50;
-        }else{
-          // POLL_CHANGE_PASS_TERM_PC_N)
-          // 75 Percentage of yes votes of PIOs voted to approve a termination poll
-          currentValue = pPassVoteTermPollPc;
+        }else if (vRequestedPollN == POLL_CHANGE_PASS_RT_PC_N) {
+          // 75 Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
+          currentValue = pPassVoteRrrTermPollsPc;
           okB = vChangeToValue > 50 && vChangeToValue <= 100;
+        }else{
+          // Release some of the PIOs held in reserve and restart the DAICO
+          // currentValue = 0;
+          okB = vChangeToValue >= 1000000 && vChangeToValue <= 500000000; // 1 to 500 million - deliberately wide range check as lots of other info would need to be specified for a proposed release and restart
         }
         if (vChangeToValue == currentValue)
           revert('No change requested');
@@ -288,25 +300,20 @@ contract Poll is OwnedPoll, Math {
       pPollEndT                =
       pPrevPollEndTA[pPollN-1] = pPollStartT + pPollRequestConfirmDays * DAY;
     }
-    if (iIsAdminCallerB()) {
-      // Admin caller with no current poll and poll is ok so start it
-      pStartPoll();
-    } else {
-      // is Not contract caller - must be a member
-      require(pListC.IsMember(msg.sender), 'Not a Pacio Member');
-      if (pNumPollRequests > 0) {
+    if (!iIsAdminCallerB()) {
+      // Is not Admin caller so is a wallet caller - must be a member
+      if (pNumPollRequests > 0)
         // second or subsequent request
         // Check that this request is the same as the pending one
         require(vRequestedPollN == pPollN && vChangeToValue == pChangePollToValue, 'Different poll request pending');
-        // And is from a different member
-        require(pPollId > pListC.LastPollVotedIn(msg.sender), 'Already voted');
-      }
+      require(pListC.Vote(msg.sender, pPollId, VOTE_YES_N) != 0, 'Vote not valid'); // checks that msg.sender is a member who hasn't already voted
       emit PollRequestV(vRequestedPollN, vChangeToValue);
       if (++pNumPollRequests == pRequestsToStartPoll)
         pStartPoll();
     }
+    pStartPoll();
     return true;
-  }
+  } // end RequestPoll()
 
   // Poll.pStartPoll() private
   // -----------------

@@ -2,7 +2,7 @@
 
 List of people/addresses to do with Pacio
 
-Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+Owned by Deployer OpMan Hub Sale Poll Token
 
 djh??
 - complete voting stuff
@@ -46,6 +46,7 @@ contract List is OwnedList, Math {
   uint32  private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
   uint32  private pNumProxies;    // Number of entries with a Proxy set
   uint32  private pNumDowngraded; // Number downgraded (from whitelist)
+  uint256 private pMaxPicosVote;  // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
@@ -99,11 +100,14 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function NumberOfPresaleEntries() external view returns (uint32) {
     return pNumPresale;
   }
-  function NumberOfMembersWithProxy() external view returns (uint32) {
-    return pNumProxies;
-  }
   function NumberOfWhitelistDowngrades() external view returns (uint32) {
     return pNumDowngraded;
+  }
+  function NumberOfMembersWithProxyAppointed() external view returns (uint32) {
+    return pNumProxies;
+  }
+  function MaxPiosVotePerMember() external view returns (uint32) {
+    return uint32(pMaxPicosVote / 10**12);
   }
   function EntryBits(address accountA) external view returns (uint32) {
     return pListMR[accountA].bits;
@@ -129,9 +133,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
     return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
   }
-  function LastPollVotedIn(address accountA) external view returns (uint32) {
-    return pListMR[accountA].pollId;
-  }
+  // function LastPollVotedIn(address accountA) external view returns (uint32) {
+  //   return pListMR[accountA].pollId;
+  // }
   function IsTransferFromAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
   }
@@ -214,11 +218,12 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Token
+  // Owned by Deployer OpMan Hub Sale Poll Token
   // Owners must first be set by deploy script calls:
   //   List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
   //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
   //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
+  //   List.ChangeOwnerMO(POLL_OWNER_X,   Poll address)
   //   List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
 
   // List.Initialise()
@@ -571,8 +576,42 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     // Token.Refund() emits RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
   }
 
+  // List.SetMaxVotePerMember()
+  // --------------------------
+  // Called from Poll.pSetMaxVotePerMember() to set pMaxPicosVote
+  function SetMaxVotePerMember(uint256 vMaxPicosVote) external IsPollContractCaller {
+     pMaxPicosVote = vMaxPicosVote; // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
+  }
+
+  // List.Vote()
+  // -----------
+  // Called from Poll.RequestPoll() and Poll.pVote() to make or revoke a vote in a current poll
+  // Needs to be a member
+  function Vote(address voterA, uint32 vPollId, uint32 vVoteActionN) external IsPollContractCaller returns (int32 piosVoted)  {
+    R_List storage rsEntryR = pListMR[voterA];
+    if (rsEntryR.bits & LE_MEMBER_B > 0) { // Is a Member
+      if (vVoteActionN == VOTE_REVOKE_N) {
+        // Previous vote being revoked
+        if (rsEntryR.pollId == vPollId && rsEntryR.vote != 0) {
+          // has voted in the current poll && vote hasn't already been revoked
+          piosVoted = rsEntryR.vote;
+          rsEntryR.vote = 0;
+        }
+      } else if (vVoteActionN == VOTE_YES_N || vVoteActionN == VOTE_NO_N) {
+        // Yes or No VOTE_YES_N, VOTE_NO_N
+        rsEntryR.voteT = uint32(now);
+        rsEntryR.votes++;
+        rsEntryR.pollId = vPollId;
+        piosVoted = int32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
+        if (vVoteActionN == VOTE_NO_N)
+          piosVoted = -piosVoted;
+        rsEntryR.vote = piosVoted;
+      }
+    }
+
+  }
   // List.TransferIssuedPIOsToPacioBc()
-  // ------------------------------------------
+  // ----------------------------------
   // For use when transferring issued PIOs to the Pacio blockchain
   // Is called by Token.TransferIssuedPIOsToPacioBc()
   function TransferIssuedPIOsToPacioBc(address accountA) external IsTokenContractCaller {

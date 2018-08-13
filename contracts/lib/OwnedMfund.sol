@@ -1,6 +1,6 @@
 // lib\OwnedMfund.sol
 //
-// Version of Owned for Mfund which is owned by Deployer, OpMan, Hub, Sale, Pfund, Admin
+// Version of Owned for Mfund which is owned by Deployer OpMan Hub Sale Poll Pfund Admin
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,15 +9,16 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedMfund is Constants {
-  uint256 internal constant NUM_OWNERS = 6;
+  uint256 internal constant NUM_OWNERS = 7;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Hub owner
                                           // 3 Sale  owner
-                                          // 4 Pfund owner
-                                          // 5 Admin owner
+                                          // 4 Poll owner
+                                          // 5 Pfund owner
+                                          // 6 Admin owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -71,6 +72,10 @@ contract OwnedMfund is Constants {
   }
   modifier IsSaleContractCaller {
     require(iIsSaleContractCallerB(), "Not required Sale caller");
+    _;
+  }
+  modifier IsPollContractCaller {
+    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsAdminCaller {

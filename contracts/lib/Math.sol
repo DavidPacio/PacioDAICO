@@ -48,4 +48,9 @@ contract Math {
     z = x <= y ? x : y;
   }
 
+  // Min32(x, y)
+  function Min32(uint32 x, uint32 y) internal pure returns (uint32 z) {
+    z = x <= y ? x : y;
+  }
+
 } // End Math Contract

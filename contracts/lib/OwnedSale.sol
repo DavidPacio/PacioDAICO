@@ -1,6 +1,6 @@
 // lib\OwnedSale.sol
 //
-// Version of Owned for Sale which is owned by Deployer, OpMan, Hub, Admin
+// Version of Owned for Sale which is owned by Deployer, OpMan, Hub, Admin, Poll
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,13 +9,14 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedSale is Constants {
-  uint256 internal constant NUM_OWNERS = 4;
+  uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
   address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
                                           // 1 OpMan owner
                                           // 2 Hub owner
                                           // 3 Admin owner
+                                          // 4 Poll owner
                                           // |- owner X
   // Constructor NOT payable
   // -----------
@@ -63,6 +64,10 @@ contract OwnedSale is Constants {
   }
   modifier IsAdminCaller {
     require(iIsAdminCallerB(), "Not required Admin caller");
+    _;
+  }
+  modifier IsPollContractCaller {
+    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsActive {
