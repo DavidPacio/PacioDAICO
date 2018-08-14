@@ -2,7 +2,7 @@
 
 The Pacio Token named PIOE for the Pacio DAICO
 
-Owners: 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
+Owners: Deployer OpMan Hub Sale Admin
 
 Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
@@ -103,7 +103,7 @@ contract Token is EIP20Token, Math {
   // ------------------
   // To be called by the deploy script to set the contract variable, and do the PIOE minting.
   // Can only be called once.
-  // Owners 0 Deployer, 1 OpMan, 2 Hub, 3 Sale, 4 Admin
+  // Owners Deployer OpMan Hub Sale Admin
   // Owners must first be set by deploy script calls:
   //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)

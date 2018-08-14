@@ -114,9 +114,10 @@ contract Constants {
   uint8 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
 
   // Vote 'Enum'
-  uint8 internal constant VOTE_YES_N    =  1; // Vote Yes
-  uint8 internal constant VOTE_NO_N     =  2; // Vote No
-  uint8 internal constant VOTE_REVOKE_N =  3; // Revoke previous vote in the current poll
+  uint8 internal constant VOTE_YES_N         =  1; // Vote Yes /- also used for the result of a poll
+  uint8 internal constant VOTE_NO_N          =  2; // Vote No  |
+  uint8 internal constant VOTE_REVOKE_N      =  3; // Revoke previous vote in the current poll
+  uint8 internal constant VOTE_RESULT_INVALID = 4; // Poll result was invalid due to insufficient members voting
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                           | Undefined so can be used a test for an entry existing

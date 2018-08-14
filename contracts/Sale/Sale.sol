@@ -68,9 +68,9 @@ contract Sale is OwnedSale, Math {
                                   // |- f initialised to false
   I_ListSale  private pListC;  // the List contract   -  read only use so List does not need to have Sale as an owner
   I_Hub       private pHubC;   // the Hub contract   /- Sale makes state changing calls to these contracts so they need to have Sale as an owner. Hub does.
-  I_TokenSale private pTokenC; // the Token contract |  Token is owned by Deployer OpMan Hub   Sale  Admin        so includes Sale
-  I_MfundSale private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub   Sale  Pfund  Admin so includes Sale
-  I_PfundSale private pPfundC; // the Pfund contract |  Pfund is owned by Deployer OpMan Hub   Sale               so includes Sale
+  I_TokenSale private pTokenC; // the Token contract |  Token is owned by Owners Deployer OpMan Hub Sale Admin     so includes Sale
+  I_MfundSale private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub Sale Poll Pfund Admin so includes Sale
+  I_PfundSale private pPfundC; // the Pfund contract |  Pfund is owned by Deployer, OpMan, Hub, Sale               so includes Sale
 
   // No constructor
   // ==============

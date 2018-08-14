@@ -57,9 +57,9 @@ contract Poll is OwnedPoll, Math {
   uint32 private pValidMemsRrrTermPollsPc     = 33; // Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
   uint32 private pPassVoteRrrTermPollsPc      = 75; // Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
   I_HubPoll   private pHubC;   // the Hub contract   /- Poll makes state changing calls to these contracts so they need to have Poll as an owner. Hub does.
-  I_SalePoll  private pSaleC;  // the Sale contract  |  Sale is owned by Deployer OpMan Hub  Admin                so includes Poll   <-- add Poll
-  I_ListPoll  private pListC;  // the List contract  |  List is owned by Deployer OpMan Hub   Sale  Token         so includes Poll   <-- add Poll
-  I_MfundPoll private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub   Sale  Pfund  Admin so includes Poll   <-- add Poll
+  I_SalePoll  private pSaleC;  // the Sale contract  |  Sale  is owned by Deployer OpMan Hub Admin Poll            so includes Poll
+  I_ListPoll  private pListC;  // the List contract  |  List  is owned by Deployer OpMan Hub Sale Poll Token       so includes Poll
+  I_MfundPoll private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub Sale Poll Pfund Admin so includes Poll
   uint32[NUM_POLLS] private pPollEndTA; // Array of poll end times
 
   // View Methods
@@ -156,10 +156,9 @@ contract Poll is OwnedPoll, Math {
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event        PollRequestV(uint32 indexed PollId, address Member, uint8 RequestedPollN, uint32 ChangeToValue, uint32 NumMembersVoted);
   event PollRequestTimeoutV(uint32 indexed PollId, uint8 RequestedPollN);
-  // djh?? PollTimeOut
   event          PollStartV(uint32 indexed PollId, uint32 PollN);
-  event            PollEndV(uint32 indexed PollId, uint32 PollN);
   event               VoteV(uint32 indexed PollId, address indexed voterA, uint8 VoteN, int32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
+  event            PollEndV(uint32 indexed PollId, uint32 PollN, uint32 NumMembersVoted, uint32 PiosVotedYes, uint32 PiosVotedNo, uint32 ValidMembersPc, uint32 PassVotePc, uint8 PollResultN);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -369,15 +368,35 @@ contract Poll is OwnedPoll, Math {
   function pCheckForEndOfPoll() private {
     if (pPollStartT == 0 || uint32(now) < pPollEndT)
       return; // no current poll or poll is still running
+    // Time is up - poll has ended
     if (pPollRequestB) {
       // Was a Member initiated Poll Request
       emit PollRequestTimeoutV(pPollId, pPollN);
     }else{
       // Was a running poll
       pHubC.PollStartEnd(pPollId, 0);
-      emit PollEndV(pPollId, pPollN);
-      // djh?? to be completed
-     // Call pSetMaxVotePerMember if pMaxVoteHardCapCentiPc changes to set List.pMaxPicosVote
+      uint32 validMemsPc; // Percentage of Members to vote for poll to be valid
+      uint32 passVotePc;  // Percentage of yes votes of PIOs voted to approve poll
+      uint8  pollResultN; // Poll result: VOTE_YES_N | VOTE_NO_N | VOTE_RESULT_INVALID
+      if (pPollN < POLL_RELEASE_RESERVE_PIOS_N) {
+        // polls other than Release reserve & restart and Termination ones
+        validMemsPc = pValidMemsExclRrrTermPollsPc; // Percentage of Members to vote for polls other than Release reserve & restart and Termination ones to be valid
+        passVotePc  = pPassVoteExclRrrTermPollsPc;  // Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
+      }else{
+        // Release reserve & restart or Termination poll
+        validMemsPc = pValidMemsRrrTermPollsPc; // Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
+        passVotePc  = pPassVoteRrrTermPollsPc;  // Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
+      }
+      if (pNumMembersVoted < pListC.NumberOfPacioMembers() * validMemsPc / 100)
+        pollResultN = VOTE_RESULT_INVALID; // Poll result was invalid due to insufficient members voting
+      else if (pPiosVotedYes >= uint32(uint256(pPiosVotedYes + pPiosVotedNo) * passVotePc / 100))  // largest uint32 4,294,967,295 could overflow   1,000,000,000 * 75
+        pollResultN = VOTE_YES_N;
+      else
+        pollResultN = VOTE_NO_N;
+      emit PollEndV(pPollId, pPollN, pNumMembersVoted, pPiosVotedYes, pPiosVotedNo, validMemsPc, passVotePc, pollResultN);
+
+      // djh?? Up to here
+      // Call pSetMaxVotePerMember if pMaxVoteHardCapCentiPc changes to set List.pMaxPicosVote
 
     }
     // Poll has finished
@@ -458,7 +477,7 @@ contract Poll is OwnedPoll, Math {
       piosVoted = -piosVoted;
       pPiosVotedNo = pPiosVotedNo > uint32(piosVoted) ? pPiosVotedNo - uint32(piosVoted) : 0;
     }
-    pNumMembersVoted--;
+    pNumMembersVoted = decrementMaxZero(pNumMembersVoted);
     pCheckForEndOfPoll();
   }
 
