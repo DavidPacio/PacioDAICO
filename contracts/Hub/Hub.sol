@@ -38,7 +38,7 @@ import "../Poll/I_Poll.sol";
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
   uint32     private pState;  // DAICO state using the STATE_ bits. Passed through to Sale, Token, Mfund, and Pfund on change
-  uint32     private pPollN;  // Enum of Poll in progress, if any
+  uint8      private pPollN;  // Enum of Poll in progress, if any
   I_OpMan    private pOpManC; // the OpMan contract
   I_Sale     private pSaleC;  // the Sale contract
   I_TokenHub private pTokenC; // the Token contract
@@ -78,8 +78,8 @@ contract Hub is OwnedHub, Math {
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
   event PfundRefundingCompleteV();
   event MfundRefundingCompleteV();
-  event PollStartV(uint32 PollN);
-  event PollEndV(uint32 PollN);
+  event PollStartV(uint32 PollId, uint8 PollN);
+  event   PollEndV(uint32 PollId, uint8 PollN);
 
   // Initialisation/Setup Methods
   // ============================
@@ -90,7 +90,7 @@ contract Hub is OwnedHub, Math {
   //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address);
-  //   Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
+  //   Hub.ChangeOwnerMO(HUB_WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()
   // ----------------
@@ -191,17 +191,16 @@ contract Hub is OwnedHub, Math {
   // Hub.PollStartEnd()
   // ----------------
   // Called from Poll to start/end a poll, start when vPollN is set, end when vPollN is 0
-  function PollStartEnd(uint32 vPollN) external IsPollContractCaller {
+  function PollStartEnd(uint32 vPollId, uint8 vPollN) external IsPollContractCaller {
     require(vPollN >= 0 && vPollN <= NUM_POLLS); // range check of vPollN. Should be ok if called from Poll as intended so no fail msg
     if (vPollN > 0) {
       pSetState(pState |= STATE_POLL_RUNNING_B);
-      pPollN = vPollN;
-      emit PollStartV(pPollN);
+      emit PollStartV(vPollId, vPollN);
     }else{
       pSetState(pState &= ~STATE_POLL_RUNNING_B);
-      emit PollEndV(pPollN);
-      pPollN = 0;
+      emit PollEndV(vPollId, pPollN);
     }
+    pPollN = vPollN;
   }
 
   // Hub.TerminateVote()

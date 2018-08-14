@@ -75,11 +75,11 @@ contract OwnedHub is Constants {
     _;
   }
   modifier IsWebOrAdminCaller {
-    require((msg.sender == iOwnersYA[WEB_OWNER_X] || msg.sender == iOwnersYA[ADMIN_OWNER_X]) && !pIsContractCallerB(), "Not required Web or Admin caller");
+    require((msg.sender == iOwnersYA[HUB_WEB_OWNER_X] || msg.sender == iOwnersYA[ADMIN_OWNER_X]) && !pIsContractCallerB(), "Not required Web or Admin caller");
     _;
   }
   modifier IsNotContractCaller {
-    require(!pIsContractCallerB(), 'No contract callers');
+    require(!pIsContractCallerB(), 'Contract callers not allowed');
     _;
   }
   modifier IsActive {

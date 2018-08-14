@@ -69,9 +69,9 @@ struct R_List{        // Bytes Storage slot  Comment
   uint256 weiRefunded;   // 32 4 wei refunded
   uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
   uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
-  uint32  votes;         //  4 7 Number of time member has voted (Must be a member to vote)
+  uint32  numVotes;      //  4 7 Number of non-revoked times a member has voted (Must be a member to vote)
   uint32  voteT;         //  4 7 Time of last vote
-   int32  vote;          //  4 7 Vote, +ve for yes, -ve for no pMaxVoteHardCapCentiPc
+   int32  piosVoted;     //  4 7 Pios voted, +ve for yes, -ve for no, max pMaxPicosVote
   uint32  pollId;        //  4 7 Id of last poll voted in
 }
 mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum account address
@@ -133,9 +133,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
     return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
   }
-  // function LastPollVotedIn(address accountA) external view returns (uint32) {
-  //   return pListMR[accountA].pollId;
-  // }
+  function LastPollVotedIn(address accountA) external view returns (uint32) {
+    return pListMR[accountA].pollId;
+  }
   function IsTransferFromAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
   }
@@ -215,6 +215,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   event SetTransfersOkByDefaultV(bool On);
   event SetTransferOkV(address indexed Entry, bool On);
   event PrepurchaseDepositV(address indexed To, uint256 Wei);
+  event VoteV(address indexed Voter, uint32 PollId, uint8 VoteN, int32 PiosVoted);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -224,7 +225,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
   //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
   //   List.ChangeOwnerMO(POLL_OWNER_X,   Poll address)
-  //   List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
+  //   List.ChangeOwnerMO(LIST_TOKEN_OWNER_X,  Token address)
 
   // List.Initialise()
   // -----------------
@@ -326,11 +327,11 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       0,                        // uint256 weiRefunded;   // 32 4 wei refunded
       0,                        // uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0,                        // uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
-      0,                        // uint32  votes;         //  4 7 Number of time member has voted (Must be a member to vote)
+      0,                        // uint32  numVotes;      //  4 7 Number of non-revoked times a member has voted (Must be a member to vote)
       0,                        // uint32  voteT;         //  4 7 Time of last vote
-      0,                        //  int32  vote;          //  4 7 Vote, +ve for yes, -ve for no pMaxVoteHardCapCentiPc
+      0,                        // uint32  piosVoted;     //  4 7 Pios voted
       0);                       // uint32  pollId;        //  4 7 Id of last poll voted in
-    // Update other state vars
+// Update other state vars
     if (++pNumEntries == 1) // Number of list entries
       pFirstEntryA = vEntryA;
     else
@@ -587,29 +588,33 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // -----------
   // Called from Poll.RequestPoll() and Poll.pVote() to make or revoke a vote in a current poll
   // Needs to be a member
-  function Vote(address voterA, uint32 vPollId, uint32 vVoteActionN) external IsPollContractCaller returns (int32 piosVoted)  {
+  // Returns pios voted (-ve for no), or 0 on an error
+  function Vote(address voterA, uint32 vPollId, uint8 voteN) external IsPollContractCaller returns (int32 piosVoted)  {
     R_List storage rsEntryR = pListMR[voterA];
     if (rsEntryR.bits & LE_MEMBER_B > 0) { // Is a Member
-      if (vVoteActionN == VOTE_REVOKE_N) {
+      if (voteN == VOTE_REVOKE_N) {
         // Previous vote being revoked
-        if (rsEntryR.pollId == vPollId && rsEntryR.vote != 0) {
+        if (rsEntryR.pollId == vPollId && rsEntryR.piosVoted != 0 && rsEntryR.numVotes > 0) {
           // has voted in the current poll && vote hasn't already been revoked
-          piosVoted = rsEntryR.vote;
-          rsEntryR.vote = 0;
-        }
-      } else if (vVoteActionN == VOTE_YES_N || vVoteActionN == VOTE_NO_N) {
+          piosVoted = rsEntryR.piosVoted;
+          rsEntryR.piosVoted = 0;
+          rsEntryR.numVotes--;
+        } // else an error return of 0
+      } else if (voteN == VOTE_YES_N || voteN == VOTE_NO_N) {
         // Yes or No VOTE_YES_N, VOTE_NO_N
         rsEntryR.voteT = uint32(now);
-        rsEntryR.votes++;
+        rsEntryR.numVotes++;
         rsEntryR.pollId = vPollId;
         piosVoted = int32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
-        if (vVoteActionN == VOTE_NO_N)
+        if (voteN == VOTE_NO_N)
           piosVoted = -piosVoted;
-        rsEntryR.vote = piosVoted;
+        rsEntryR.piosVoted = piosVoted;
       }
+      // all types incl a not recognised voteN which should happen so let it go here
+      emit VoteV(voterA, vPollId, voteN, piosVoted);
     }
-
   }
+
   // List.TransferIssuedPIOsToPacioBc()
   // ----------------------------------
   // For use when transferring issued PIOs to the Pacio blockchain

@@ -41,7 +41,7 @@ Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address)
-Hub.ChangeOwnerMO(WEB_OWNER_X, Web account address)
+Hub.ChangeOwnerMO(HUB_WEB_OWNER_X, Web account address)
 Hub.Initialise() to set the contract address variables and the initial STATE_PRIOR_TO_OPEN_B state
 
 Sale owned by Deployer OpMan Hub Admin Poll
@@ -62,10 +62,10 @@ List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
 List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
 List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
 List.ChangeOwnerMO(POLL_OWNER_X,   Poll address)
-List.ChangeOwnerMO(TOKEN_OWNER_X,  Token address)
+List.ChangeOwnerMO(LIST_TOKEN_OWNER_X,  Token address)
 List.Initialise()  to set the contract address variables.
 
-Token owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+Token owned by Deployer OpMan Hub Sale
 -----
 Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
@@ -85,18 +85,19 @@ Mfund.Initialise() to initialise the Mfund contract
 Mfund.SetPclAccountMO(address vPclAccountA) external
 Mfund.EndInitialise() to end initialising
 
-Pfund owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+Pfund owned by Deployer OpMan Hub Sale
 -----
 Pfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Pfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Pfund.Initialise()
 
-Poll owned by Deployer OpMan Hub Admin
+Poll owned by Deployer OpMan Hub Admin Web
 ----
 Poll.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
 Poll.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Poll.ChangeOwnerMO(POLL_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+Poll.ChangeOwnerMO(POLL_WEB_OWNER_X, Web address)
 Poll.Initialise()
 
 Then Manually by Admin

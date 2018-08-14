@@ -68,7 +68,7 @@ contract OwnedToken is Constants {
     _;
   }
   modifier IsNotContractCaller {
-    require(!pIsContractCallerB(), 'No contract callers');
+    require(!pIsContractCallerB(), 'Contract callers not allowed');
     _;
   }
   modifier IsActive {

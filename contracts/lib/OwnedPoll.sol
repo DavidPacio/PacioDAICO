@@ -1,6 +1,6 @@
 // \lib\OwnedPoll.sol
 
-// Version of Owned for Poll which is owned by Deployer OpMan Hub Admin
+// Version of Owned for Poll which is owned by Deployer OpMan Hub Admin Web
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,14 +9,11 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedPoll is Constants {
-  uint256 internal constant NUM_OWNERS = 4;
+  uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner
-                                          // 2 Hub  owner
-                                          // 3 Admin owner
-                                          // |- owner X
+  address[NUM_OWNERS] internal iOwnersYA; // Owners
+
   // Constructor NOT payable
   // -----------
   constructor() internal {
@@ -65,8 +62,12 @@ contract OwnedPoll is Constants {
     require(msg.sender == iOwnersYA[HUB_OWNER_X] && pIsContractCallerB(), "Not required Hub caller");
     _;
   }
+  modifier IsWebCaller {
+    require(msg.sender == iOwnersYA[POLL_WEB_OWNER_X] && !pIsContractCallerB(), "Not required Web caller");
+    _;
+  }
   modifier IsNotContractCaller {
-    require(!pIsContractCallerB(), 'No contract callers');
+    require(!pIsContractCallerB(), 'Contract callers not allowed');
     _;
   }
   modifier IsAdminOrWalletCaller {
@@ -114,4 +115,4 @@ contract OwnedPoll is Constants {
     iPausedB = false;
     emit ResumedV();
   }
-} // End OwnedOwnedPoll contract
+} // End OwnedPoll contract

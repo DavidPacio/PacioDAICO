@@ -50,21 +50,22 @@ contract Constants {
   // List     Deployer OpMan Hub   Sale  Poll   Token
   // Mfund    Deployer OpMan Hub   Sale  Poll   Pfund  Admin
   // Pfund    Deployer OpMan Hub   Sale
-  // Poll     Deployer OpMan Hub   Admin
+  // Poll     Deployer OpMan Hub   Admin Web
 
-  uint256 internal constant DEPLOYER_X          = 0;
-  uint256 internal constant OP_MAN_OWNER_X      = 1;
+  uint256 internal constant DEPLOYER_X          = 0; // /- same in all contracts where used
+  uint256 internal constant OP_MAN_OWNER_X      = 1; // V
   uint256 internal constant HUB_OWNER_X         = 2;
   uint256 internal constant ADMIN_OWNER_X       = 2;
   uint256 internal constant SALE_OWNER_X        = 3;
   uint256 internal constant POLL_OWNER_X        = 4;
-  uint256 internal constant WEB_OWNER_X         = 5;
-  uint256 internal constant TOKEN_OWNER_X       = 5;
-  uint256 internal constant SALE_ADMIN_OWNER_X  = 3;
+  uint256 internal constant HUB_WEB_OWNER_X     = 5; // /- specific to first contract in the name
+  uint256 internal constant SALE_ADMIN_OWNER_X  = 3; // V
   uint256 internal constant TOKEN_ADMIN_OWNER_X = 4;
+  uint256 internal constant LIST_TOKEN_OWNER_X  = 5;
   uint256 internal constant MFUND_PFUND_OWNER_X = 5;
   uint256 internal constant MFUND_ADMIN_OWNER_X = 6;
   uint256 internal constant POLL_ADMIN_OWNER_X  = 3;
+  uint256 internal constant POLL_WEB_OWNER_X    = 4;
 
   // Managed Operation Indices
   uint256 internal constant RESUME_MO_X                   =  0; // ResumeMO()
@@ -90,32 +91,32 @@ contract Constants {
   uint32  internal constant DAY        = 86400;
   uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
   //                                                                /--- Not applicable after soft cap hit
-  // Poll 'Enums'                                                   |/- Not applicable after sale close
-  uint32 internal constant POLL_CLOSE_SALE_N               =  1; //  c Close the sale
-  uint32 internal constant POLL_CHANGE_S_CAP_USD_N         =  2; // sc Change Sale.pUsdSoftCap the USD soft cap
-  uint32 internal constant POLL_CHANGE_S_CAP_PIO_N         =  3; // sc Change Sale.pPioSoftCap the PIO soft cap
-  uint32 internal constant POLL_CHANGE_H_CAP_USD_N         =  4; //  c Change Sale.pUsdHardCap the USD sale hard cap
-  uint32 internal constant POLL_CHANGE_H_CAP_PIO_N         =  5; //  c Change Sale.pPioHardCap the PIO sale hard cap
-  uint32 internal constant POLL_CHANGE_SALE_END_TIME_N     =  6; //  c Change Sale.pSaleEndT   the sale end time
-  uint32 internal constant POLL_CHANGE_S_CAP_DISP_PC_N     =  7; // sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
-  uint32 internal constant POLL_CHANGE_TAP_RATE_N          =  8; //    Change Mfund.pTapRateEtherPm     the Tap rate in Ether per month. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
-  uint32 internal constant POLL_CHANGE_REQUEST_NUM_N       =  9; //    Change Poll.pRequestsToStartPoll      `  Number of Members required to request a poll for it to start automatically
-  uint32 internal constant POLL_CHANGE_REQUEST_DAYS_N      = 10; //    Change Poll.pPollRequestConfirmDays      Days in which a request for a Poll must be confirmed by Poll.pRequestsToStartPoll Members for it to start, or else to lapse
-  uint32 internal constant POLL_CHANGE_POLL_DAYS_N         = 11; //    Change Poll.pPollRunDays                 Days for which a poll runs
-  uint32 internal constant POLL_CHANGE_REPEAT_DAYS_N       = 12; //    Change Poll.pDaysBeforePollRepeat        Days which must elapse before any particular poll can be repeated
-  uint32 internal constant POLL_CHANGE_MAX_VOTE_PC_N       = 13; //    Change Poll.pMaxVoteHardCapCentiPc       CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
-  uint32 internal constant POLL_CHANGE_VALID_MEMS_XRT_PC_N = 14; //    Change Poll.pValidMemsExclRrrTermPollsPc Percentage of Members to vote for polls other than Release reserve & restart and Termination ones to be valid
-  uint32 internal constant POLL_CHANGE_PASS_XRT_PC_N       = 15; //    Change Poll.pPassVoteExclRrrTermPollsPc  Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
-  uint32 internal constant POLL_CHANGE_VALID_MEMS_RT_PC_N  = 16; //    Change Poll.pValidMemsRrrTermPollsPc     Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
-  uint32 internal constant POLL_CHANGE_PASS_RT_PC_N        = 17; //    Change Poll.pPassVoteRrrTermPollsPc      Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
-  uint32 internal constant POLL_RELEASE_RESERVE_PIOS_N     = 18; //    Release some of the PIOs held in reserve and restart the DAICO
-  uint32 internal constant POLL_TERMINATE_FUNDING_N        = 19; //    Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Applicable only after the sale has closed.
-  uint32 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
+  // Poll 'Enum'                                                    |/- Not applicable after sale close
+  uint8 internal constant POLL_CLOSE_SALE_N               =  1; //  c Close the sale
+  uint8 internal constant POLL_CHANGE_S_CAP_USD_N         =  2; // sc Change Sale.pUsdSoftCap the USD soft cap
+  uint8 internal constant POLL_CHANGE_S_CAP_PIO_N         =  3; // sc Change Sale.pPioSoftCap the PIO soft cap
+  uint8 internal constant POLL_CHANGE_H_CAP_USD_N         =  4; //  c Change Sale.pUsdHardCap the USD sale hard cap
+  uint8 internal constant POLL_CHANGE_H_CAP_PIO_N         =  5; //  c Change Sale.pPioHardCap the PIO sale hard cap
+  uint8 internal constant POLL_CHANGE_SALE_END_TIME_N     =  6; //  c Change Sale.pSaleEndT   the sale end time
+  uint8 internal constant POLL_CHANGE_S_CAP_DISP_PC_N     =  7; // sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
+  uint8 internal constant POLL_CHANGE_TAP_RATE_N          =  8; //    Change Mfund.pTapRateEtherPm     the Tap rate in Ether per month. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding
+  uint8 internal constant POLL_CHANGE_REQUEST_NUM_N       =  9; //    Change Poll.pRequestsToStartPoll      `  Number of Members required to request a poll for it to start automatically
+  uint8 internal constant POLL_CHANGE_REQUEST_DAYS_N      = 10; //    Change Poll.pPollRequestConfirmDays      Days in which a request for a Poll must be confirmed by Poll.pRequestsToStartPoll Members for it to start, or else to lapse
+  uint8 internal constant POLL_CHANGE_POLL_DAYS_N         = 11; //    Change Poll.pPollRunDays                 Days for which a poll runs
+  uint8 internal constant POLL_CHANGE_REPEAT_DAYS_N       = 12; //    Change Poll.pDaysBeforePollRepeat        Days which must elapse before any particular poll can be repeated
+  uint8 internal constant POLL_CHANGE_MAX_VOTE_PC_N       = 13; //    Change Poll.pMaxVoteHardCapCentiPc       CentiPercentage of hard cap PIOs as the maximum voting PIOs per Member
+  uint8 internal constant POLL_CHANGE_VALID_MEMS_XRT_PC_N = 14; //    Change Poll.pValidMemsExclRrrTermPollsPc Percentage of Members to vote for polls other than Release reserve & restart and Termination ones to be valid
+  uint8 internal constant POLL_CHANGE_PASS_XRT_PC_N       = 15; //    Change Poll.pPassVoteExclRrrTermPollsPc  Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
+  uint8 internal constant POLL_CHANGE_VALID_MEMS_RT_PC_N  = 16; //    Change Poll.pValidMemsRrrTermPollsPc     Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
+  uint8 internal constant POLL_CHANGE_PASS_RT_PC_N        = 17; //    Change Poll.pPassVoteRrrTermPollsPc      Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
+  uint8 internal constant POLL_RELEASE_RESERVE_PIOS_N     = 18; //    Release some of the PIOs held in reserve and restart the DAICO
+  uint8 internal constant POLL_TERMINATE_FUNDING_N        = 19; //    Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Applicable only after the sale has closed.
+  uint8 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
 
-  // Vote action 'Enums'
-  uint32 internal constant VOTE_YES_N    =  1; // Vote Yes
-  uint32 internal constant VOTE_NO_N     =  2; // Vote No
-  uint32 internal constant VOTE_REVOKE_N =  3; // Revoke previous vote in the current poll
+  // Vote 'Enum'
+  uint8 internal constant VOTE_YES_N    =  1; // Vote Yes
+  uint8 internal constant VOTE_NO_N     =  2; // Vote No
+  uint8 internal constant VOTE_REVOKE_N =  3; // Revoke previous vote in the current poll
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                           | Undefined so can be used a test for an entry existing

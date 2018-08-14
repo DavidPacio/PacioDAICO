@@ -109,7 +109,7 @@ contract Token is EIP20Token, Math {
   //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   Token.ChangeOwnerMO(TOKEN_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+  //    List.ChangeOwnerMO(LIST_TOKEN_OWNER_X, Token address)
   function Initialise(uint32 vDbId) external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract

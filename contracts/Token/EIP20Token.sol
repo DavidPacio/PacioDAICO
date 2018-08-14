@@ -33,8 +33,8 @@ import "../lib/OwnedToken.sol";
 contract EIP20Token is OwnedToken {
   // Data
   bool    public constant isEIP20Token = true; // Interface declaration
-  string  public name     = "PIOE Token";
-  string  public symbol   = "PIOE";
+  string  public name     = "PIO Token";
+  string  public symbol   = "PIO";
   uint8   public decimals = 12;
   uint256 public totalSupply;  // Total tokens minted
   I_ListToken internal iListC; // the list contract. Set by Token.Initialise()

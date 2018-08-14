@@ -65,7 +65,7 @@ contract OwnedList is Constants {
     _;
   }
   modifier IsTokenContractCaller {
-    require(msg.sender == iOwnersYA[TOKEN_OWNER_X] && pIsContractCallerB(), "Not required Token caller");
+    require(msg.sender == iOwnersYA[LIST_TOKEN_OWNER_X] && pIsContractCallerB(), "Not required Token caller");
     _;
   }
 
