@@ -15,6 +15,11 @@ interface I_SalePoll {
   function SaleEndTime() external view returns (uint32);
   function UsdRaised() external view returns (uint32);
   function PicosSold() external view returns (uint256);
+  function PollSetSaleEndTime(uint32 vSaleEndT) external;
+  function PollSetUsdSoftCap(uint32 vUsdSoftCap) external;
+  function PollSetPioSoftCap(uint32 vUsdSoftCap) external;
+  function PollSetUsdHardCap(uint32 vUsdHardCap) external;
+  function PollSetPioHardCap(uint32 vUsdHardCap) external;
 }
 // End I_SalePoll interface
 

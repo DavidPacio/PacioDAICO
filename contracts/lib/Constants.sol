@@ -8,26 +8,27 @@ Did not use enums because they can't be used with interface contracts. Would hav
 pragma solidity ^0.4.24;
 
 contract Constants {
-  // State Bits for use with pState                              /- Bit and description
-  // All zero                                        =             Nothing started yet
-  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =    1; //  0 Open for registration, Prepurchase escrow deposits, and white listing
-  uint32 internal constant STATE_OPEN_B              =    2; //  1 Sale is open. Is unset on any of the closes
-  uint32 internal constant STATE_S_CAP_REACHED_B     =    4; //  2 Soft cap reached -> initial draw
-  uint32 internal constant STATE_CLOSED_H_CAP_B      =    8; //  3 Sale closed due to hitting hard cap
-  uint32 internal constant STATE_CLOSED_TIME_UP_B    =   16; //  4 Sale closed due to running out of time
-  uint32 internal constant STATE_CLOSED_MANUAL_B     =   32; //  5 Sale closed manually for whatever reason
-  uint32 internal constant STATE_TAPS_OK_B           =   64; //  6 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
-  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =  128; //  7 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_TERMINATE_REFUND_B  =  256; //  8 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_MFUND_EMPTY_B       =  512; //  9 Mfund is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_PFUND_EMPTY_B       = 1024; // 10 Pfund is empty as a result of refunds or withdrawals emptying the pot
-  uint32 internal constant STATE_TRANSFER_TO_PB_B    = 2048; // 11 PIOs are being transferred to the Pacio Blockchain
-  uint32 internal constant STATE_TRANSFERRED_TO_PB_B = 4096; // 12 All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
-  uint32 internal constant STATE_POLL_RUNNING_B      = 8192; // 13 A Poll is running. See the Poll contract for details
+  // State Bits for use with pState                               /- Bit and description
+  // All zero                                        =              Nothing started yet
+  uint32 internal constant STATE_PRIOR_TO_OPEN_B     =     1; //  0 Open for registration, Prepurchase escrow deposits, and white listing
+  uint32 internal constant STATE_OPEN_B              =     2; //  1 Sale is open. Is unset on any of the closes
+  uint32 internal constant STATE_S_CAP_REACHED_B     =     4; //  2 Soft cap reached -> initial draw
+  uint32 internal constant STATE_CLOSED_H_CAP_B      =     8; //  3 Sale closed due to hitting hard cap
+  uint32 internal constant STATE_CLOSED_TIME_UP_B    =    16; //  4 Sale closed due to running out of time
+  uint32 internal constant STATE_CLOSED_POLL_B       =    32; //  5 Sale closed as the result of Yes Poll to close the sale
+  uint32 internal constant STATE_CLOSED_MANUAL_B     =    64; //  6 Sale closed manually for whatever reason
+  uint32 internal constant STATE_TAPS_OK_B           =   128; //  7 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
+  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =   256; //  8 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_TERMINATE_REFUND_B  =   512; //  9 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_MFUND_EMPTY_B       =  1024; // 10 Mfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_PFUND_EMPTY_B       =  2048; // 11 Pfund is empty as a result of refunds or withdrawals emptying the pot
+  uint32 internal constant STATE_TRANSFER_TO_PB_B    =  4096; // 12 PIOs are being transferred to the Pacio Blockchain
+  uint32 internal constant STATE_TRANSFERRED_TO_PB_B =  8192; // 13 All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
+  uint32 internal constant STATE_POLL_RUNNING_B      = 16384; // 14 A Poll is running. See the Poll contract for details
 
   // Combos for anding checks
   uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
-  uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
+  uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_POLL_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
   uint32 internal constant STATE_REFUNDING_COMBO_B  =  384; // STATE_S_CAP_MISS_REFUND_B | STATE_TERMINATE_REFUND_B
 
   // Contract Indices
@@ -109,15 +110,19 @@ contract Constants {
   uint8 internal constant POLL_CHANGE_PASS_XRT_PC_N       = 15; //    Change Poll.pPassVoteExclRrrTermPollsPc  Percentage of yes votes of PIOs voted to approve polls other than Release reserve & restart and Termination ones
   uint8 internal constant POLL_CHANGE_VALID_MEMS_RT_PC_N  = 16; //    Change Poll.pValidMemsRrrTermPollsPc     Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
   uint8 internal constant POLL_CHANGE_PASS_RT_PC_N        = 17; //    Change Poll.pPassVoteRrrTermPollsPc      Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
-  uint8 internal constant POLL_RELEASE_RESERVE_PIOS_N     = 18; //    Release some of the PIOs held in reserve and restart the DAICO
-  uint8 internal constant POLL_TERMINATE_FUNDING_N        = 19; //    Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Applicable only after the sale has closed.
+  uint8 internal constant POLL_RELEASE_RESERVE_PIOS_N     = 18; //  c Release some of the PIOs held in reserve and restart the DAICO
+  uint8 internal constant POLL_TERMINATE_FUNDING_N        = 19; //  c Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
+                                                                //  |- Require sale to have closed
   uint8 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
 
   // Vote 'Enum'
-  uint8 internal constant VOTE_YES_N         =  1; // Vote Yes /- also used for the result of a poll
-  uint8 internal constant VOTE_NO_N          =  2; // Vote No  |
-  uint8 internal constant VOTE_REVOKE_N      =  3; // Revoke previous vote in the current poll
-  uint8 internal constant VOTE_RESULT_INVALID = 4; // Poll result was invalid due to insufficient members voting
+  uint8 internal constant VOTE_YES_N    = 1; // Vote Yes
+  uint8 internal constant VOTE_NO_N     = 2; // Vote No
+  uint8 internal constant VOTE_REVOKE_N = 3; // Revoke previous vote in the current poll
+  // Poll 'Enum'
+  uint8 internal constant POLL_YES_N    = 1; // Poll Yes result == VOTE_YES_N
+  uint8 internal constant POLL_NO_N     = 2; // Poll No  result == VOTE_NO_N
+  uint8 internal constant POLL_INVALID  = 3; // Poll result was invalid due to insufficient members voting
 
   // List Entry Bits                                                /- bit and bit setting description
   // Zero                                                           | Undefined so can be used a test for an entry existing

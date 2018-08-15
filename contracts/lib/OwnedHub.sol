@@ -45,6 +45,10 @@ contract OwnedHub is Constants {
   function iIsSaleContractCallerB() internal view returns (bool) {
     return msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB();
   }
+  function iIsPollContractCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB();
+  }
+
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
     uint256 codeSize;
@@ -71,7 +75,7 @@ contract OwnedHub is Constants {
     _;
   }
   modifier IsPollContractCaller {
-    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
+    require(iIsPollContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsWebOrAdminCaller {

@@ -71,7 +71,7 @@ contract Hub is OwnedHub, Math {
   // ======
   event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract, address PollContract);
   event StateChangeV(uint32 PrevState, uint32 NewState);
-  event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
+  event SetSaleTimesV(uint32 StartTime, uint32 EndTime);
   event StartSaleV();
   event SoftCapReachedV();
   event CloseSaleV();
@@ -80,6 +80,7 @@ contract Hub is OwnedHub, Math {
   event MfundRefundingCompleteV();
   event PollStartV(uint32 PollId, uint8 PollN);
   event   PollEndV(uint32 PollId, uint8 PollN);
+  event PollTerminateFundingV();
 
   // Initialisation/Setup Methods
   // ============================
@@ -119,18 +120,18 @@ contract Hub is OwnedHub, Math {
     pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
   }
 
-  // Hub.SetSaleDates()
+  // Hub.SetSaleTimes()
   // ------------------
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
   // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
-  function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
+  function SetSaleTimes(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
     pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) | (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
-    pSaleC.SetSaleDates(vStartT, vEndT);
-    emit SetSaleDatesV(vStartT, vEndT);
+    pSaleC.SetSaleTimes(vStartT, vEndT);
+    emit SetSaleTimesV(vStartT, vEndT);
   }
 
   // Hub.pSetState() private
@@ -172,12 +173,16 @@ contract Hub is OwnedHub, Math {
 
   // Hub.CloseSaleMO()
   // -----------------
-  // Is called from Sale.pCloseSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
-  // Can be called manually by Admin to end the sale prematurely as a managed op if necessary. In that case vBit is not used and the STATE_CLOSED_MANUAL_B state bit is used
+  // Is called:
+  // - by Sale.pCloseSale() to end the sale on hard cap being reached vBit == STATE_CLOSED_H_CAP_B, or time up vBit == STATE_CLOSED_TIME_UP_B
+  // - by Poll.pClosePoll() on a vote to end the sale with vBit = STATE_CLOSED_POLL_B
+  // - Manually by Admin to end the sale prematurely as a HUB_CLOSE_SALE_MO_X managed op if necessary. In that case vBit is not used and the STATE_CLOSED_MANUAL_B state bit is used
   function CloseSaleMO(uint32 vBit) external {
     uint32 bitsToSet;
     if (iIsSaleContractCallerB())
-      bitsToSet = vBit;
+      bitsToSet = vBit; // Expected to be STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B
+    if (iIsPollContractCallerB())
+      bitsToSet = vBit; // Expected to be STATE_CLOSED_POLL_B
     else if (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_CLOSE_SALE_MO_X))
       bitsToSet = STATE_CLOSED_MANUAL_B;
     else
@@ -203,14 +208,15 @@ contract Hub is OwnedHub, Math {
     pPollN = vPollN;
   }
 
-  // Hub.TerminateVote()
-  // -------------------
-  // Called when a Terminate poll has voted to end the project, Mfund funds to be refunded in proportion to Picos held
+  // Hub.PollTerminateFunding()
+  // --------------------------
+  // Called from Poll.pClosePoll() when a POLL_TERMINATE_FUNDING_N poll has voted to end funding the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
-  function TerminateVote() external IsPollContractCaller {
+  function PollTerminateFunding() external IsPollContractCaller {
     pSetState(pState |= STATE_TERMINATE_REFUND_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pListC.SetTransfersOkByDefault(false);
+    emit PollTerminateFundingV();
   }
 
   // Hub.SetTransferToPacioBcStateMO()

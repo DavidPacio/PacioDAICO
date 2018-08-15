@@ -35,14 +35,14 @@ contract Sale is OwnedSale, Math {
   string  public  name = "Pacio DAICO Sale";
   uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pSaleStartT;    // i Sale start time
-  uint256 private pSaleEndT;      // i Sale end time.   Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
+  uint256 private pSaleEndT;      // i Sale end time.            Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
+  uint256 private pUsdSoftCap;    // i USD soft cap $8,000,000   Can be changed by a POLL_CHANGE_S_CAP_USD_N poll
+  uint256 private pPicoSoftCap;   // i Pico soft cap             Can be changed by a POLL_CHANGE_S_CAP_PIO_N poll
+  uint256 private pUsdHardCap;    // i USD hard cap $42,300,000  Can be changed by a POLL_CHANGE_H_CAP_USD_N poll
+  uint256 private pPicoHardCap;   // i Pico hard cap             Can be changed by a POLL_CHANGE_H_CAP_PIO_N poll
   uint256 private pPicoHardCapT1; // i Hard cap for the sale tranche 1  32 million PIOs =  32,000,000, 000,000,000,000 picos
   uint256 private pPicoHardCapT2; // i Hard cap for the sale tranche 2  32 million PIOs =  32,000,000, 000,000,000,000 picos
   uint256 private PicoHardCapT3;  // i Hard cap for the sale tranche 3 350 million PIOs = 350,000,000, 000,000,000,000 picos
-  uint256 private pUsdSoftCap;    // i USD soft cap $8,000,000    Can be changed by a POLL_CHANGE_S_CAP_USD_N poll
-  uint256 private pPicoSoftCap;   // i Pico soft cap              Can be changed by a POLL_CHANGE_S_CAP_PIO_N poll
-  uint256 private pUsdHardCap;    // i USD hard cap $42,300,000.  Can be changed by a POLL_CHANGE_H_CAP_USD_N poll
-  uint256 private pPicoHardCap;   // i Pico hard cap              Can be changed by a POLL_CHANGE_H_CAP_PIO_N poll
   uint256 private pMinWeiT1;      // i Minimum wei contribution for tranche 1  50 Ether = 50,000,000,000,000,000,000 wei
   uint256 private pMinWeiT2;      // i Minimum wei contribution for tranche 2   5 Ether =  5,000,000,000,000,000,000 wei
   uint256 private pMinWeiT3;      // i Minimum wei contribution for tranche 3 0.1 Ether =    100,000,000,000,000,000 wei
@@ -215,12 +215,17 @@ contract Sale is OwnedSale, Math {
   event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256 PicosPerEth1, uint256 PicosPerEth2, uint256 PicosPerEth3, uint256 UsdRaised);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
-  event SetSaleDatesV(uint32 StartTime, uint32 EndTime);
+  event SetSaleTimesV(uint32 SaleStartTime, uint32 SaleEndTime);
   event PrepurchaseDepositV(address indexed Contributor, uint256 Wei);
   event SaleV(address indexed Contributor, uint256 Picos, uint256 SaleWei, uint32 Tranche, uint256 UsdEtherPrice, uint256 PicosPerEth, uint32 bonusCentiPc);
   event SoftCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 PicosSold, uint256 PicoSoftCap, uint256 WeiRaised, uint256 UsdRaised, uint256 UsdSoftCap,uint256  pUsdEtherPrice);
   event HardCapReachedV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 PicosSold, uint256 PicoHardCap, uint256 WeiRaised, uint256 UsdRaised, uint256 UsdHardCap, uint256 UsdEtherPrice);
   event TimeUpV(uint256 PicosSoldT1, uint256 PicosSoldT2, uint256 PicosSoldT3, uint256 WeiRaised);
+  event PollSetSaleEndTimeV(uint32 SaleEndTime);
+  event PollSetUsdSoftCapV(uint32 UsdSoftCap);
+  event PollSetPioSoftCapV(uint32 PioSoftCap);
+  event PollSetUsdHardCapV(uint32 UsdHardCap);
+  event PollSetPioHardCapV(uint32 PioHardCap);
 
   // Initialisation/Setup Methods
   // ============================
@@ -305,15 +310,15 @@ contract Sale is OwnedSale, Math {
     // No event emit as List.Issue() does it
   }
 
-  // Sale.SetSaleDates()
+  // Sale.SetSaleTimes()
   // -------------------
-  // Called from Hub.SetSaleDates() to set sale dates
+  // Called from Hub.SetSaleTimes() to set sale times
   // Initialise(), SetCapsAndTranchesMO(), SetUsdEtherPrice(), and PresaleIssue() multiple times must have been called before this.
-  // Hub.SetSaleDates() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
-  function SetSaleDates(uint32 vStartT, uint32 vEndT) external IsHubContractCaller {
-    pSaleStartT = vStartT;
-    pSaleEndT   = vEndT;
-    emit SetSaleDatesV(vStartT, vEndT);
+  // Hub.SetSaleTimes() will first have set state bit STATE_PRIOR_TO_OPEN_B or STATE_OPEN_B
+  function SetSaleTimes(uint32 vSaleStartT, uint32 vSaleEndT) external IsHubContractCaller {
+    pSaleStartT = vSaleStartT;
+    pSaleEndT   = vSaleEndT;
+    emit SetSaleTimesV(vSaleStartT, vSaleEndT);
   }
 
   // State changing external methods
@@ -329,6 +334,46 @@ contract Sale is OwnedSale, Math {
       emit SoftCapReachedV(pPicosSoldT1, pPicosSoldT2, pPicosSoldT3, pPicosSold, pPicoSoftCap, pWeiRaised, pUsdRaised, pUsdSoftCap, pUsdEtherPrice);
     emit StateChangeV(pState, vState);
     pState = vState;
+  }
+
+  // Sale.PollSetSaleEndTime()
+  // ------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_SALE_END_TIME_N yes
+  function PollSetSaleEndTime(uint32 vSaleEndT) external IsPollContractCaller {
+    pSaleEndT = vSaleEndT;
+    emit PollSetSaleEndTimeV(vSaleEndT);
+  }
+
+  // Sale.PollSetUsdSoftCap()
+  // ------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_S_CAP_USD_N yes
+  function PollSetUsdSoftCap(uint32 vUsdSoftCap) external IsPollContractCaller {
+    pUsdSoftCap = vUsdSoftCap; // USD soft cap $8,000,000
+    emit PollSetUsdSoftCapV(vUsdSoftCap);
+  }
+
+  // Sale.PollSetPioSoftCap()
+  // ------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_S_CAP_PIO_N yes
+  function PollSetPioSoftCap(uint32 vPioSoftCap) external IsPollContractCaller {
+    pPicoSoftCap = vPioSoftCap * 10**12;
+    emit PollSetPioSoftCapV(vPioSoftCap);
+  }
+
+  // Sale.PollSetUsdHardCap()
+  // ------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_H_CAP_USD_N yes
+  function PollSetUsdHardCap(uint32 vUsdHardCap) external IsPollContractCaller {
+    pUsdHardCap = vUsdHardCap; // USD soft cap $8,000,000
+    emit PollSetUsdHardCapV(vUsdHardCap);
+  }
+
+  // Sale.PollSetPioHardCap()
+  // ------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_H_CAP_PIO_N yes
+  function PollSetPioHardCap(uint32 vPioHardCap) external IsPollContractCaller {
+    pPicoSoftCap = vPioHardCap * 10**12;
+    emit PollSetPioHardCapV(vPioHardCap);
   }
 
   // Sale.Buy()

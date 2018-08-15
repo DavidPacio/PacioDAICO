@@ -8,5 +8,7 @@ pragma solidity ^0.4.24;
 
 interface I_HubPoll {
   function PollStartEnd(uint32 vPollId, uint8 vPollN) external;
+  function CloseSaleMO(uint32 vBit) external;
+  function PollTerminateFunding() external;
 }
 // End I_HubPoll interface

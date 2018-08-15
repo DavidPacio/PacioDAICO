@@ -21,9 +21,9 @@ import "../Token/I_TokenMfund.sol";
 
 contract Mfund is OwnedMfund, Math {
   string  public name = "Pacio DAICO Managed Fund";
-  uint256 private pTapRateEtherPm     = 100; // Tap rate in Ether per month starting at 100.                 Can be changed by a POLL_CHANGE_TAP_RATE_N poll. Can be changed to 0 to pause withdrawals
-  uint256 private pSoftCapDispersalPc =  50; // % of fund balance to be dispersed on soft cap being reached. Can be changed by a POLL_CHANGE_S_CAP_DISP_PC_N poll
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
+  uint32  private pSoftCapDispersalPc =  50; // % of fund balance to be dispersed on soft cap being reached. Can be changed by a POLL_CHANGE_S_CAP_DISP_PC_N poll
+  uint32  private pTapRateEtherPm     = 100; // Tap rate in Ether per month starting at 100.                 Can be changed by a POLL_CHANGE_TAP_RATE_N poll. Can be changed to 0 to pause withdrawals
   uint256 private pTotalDepositedWei; // Total wei deposited before any withdrawals or refunds. Should == this.balance until the soft cap hit withdrawal
   uint256 private pTerminationPicosIssued; // Token.PicosIssued() when a TerminateRefund starts for proportional calcs
   address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for taps (withdrawals)
@@ -64,8 +64,8 @@ contract Mfund is OwnedMfund, Math {
   function TerminationPicosIssued() external view returns (uint256) {
     return pTerminationPicosIssued;
   }
-  // Mfund.SoftCapReachedDispersalPercent()
-  function SoftCapReachedDispersalPercent() external view returns (uint256) {
+  // Mfund.SoftCapReachedDispersalPc()
+  function SoftCapReachedDispersalPc() external view returns (uint256) {
     return pSoftCapDispersalPc;
   }
   // Mfund.PclAccount()
@@ -94,6 +94,8 @@ contract Mfund is OwnedMfund, Math {
   event  DepositV(uint256 indexed DepositId,  address indexed Account, uint256 Wei);
   event WithdrawV(uint256 indexed WithdrawId, address Account, uint256 Wei);
   event   RefundV(uint256 indexed RefundId,   address indexed To, uint256 RefundPicos, uint256 RefundWei, uint32 Bit);
+  event PollSetSoftCapDispersalPcV(uint32 SoftCapDispersalPc);
+  event PollSetTapRateEtherPmV(uint32 TapRateEtherPm);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -148,6 +150,22 @@ contract Mfund is OwnedMfund, Math {
     }
     emit StateChangeV(pState, vState);
     pState = vState;
+  }
+
+  // Mfund.PollSetSoftCapDispersalPc()
+  // ---------------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_S_CAP_DISP_PC_N yes
+  function PollSetSoftCapDispersalPc(uint32 vSoftCapDispersalPc) external IsPollContractCaller {
+    pSoftCapDispersalPc = vSoftCapDispersalPc;
+    emit PollSetSoftCapDispersalPcV(pSoftCapDispersalPc);
+  }
+
+  // Mfund.PollSetTapRateEtherPm()
+  // -----------------------------
+  // Called from Poll.pClosePoll() on a POLL_CHANGE_TAP_RATE_N yes
+  function PollSetTapRateEtherPm(uint32 vTapRateEtherPm) external IsPollContractCaller {
+    pTapRateEtherPm = vTapRateEtherPm;
+    emit PollSetTapRateEtherPmV(pTapRateEtherPm);
   }
 
   // Private functions
