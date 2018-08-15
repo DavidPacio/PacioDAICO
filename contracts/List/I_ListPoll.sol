@@ -11,6 +11,8 @@ interface I_ListPoll {
   function IsMember(address accountA) external view returns (bool);
   function PicosBalance(address accountA) external view returns (uint256);
   function SetMaxVotePerMember(uint256 pMaxPicosVote) external;
+  function Proxy(address accountA) external view returns (address);
+  function SetProxy(address vEntryA, address vProxyA) external returns (bool);
   function Vote(address voterA, uint32 vPollId, uint8 voteN) external returns (int32 piosVoted);
 }
 // End I_ListPoll interface

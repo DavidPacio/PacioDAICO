@@ -12,7 +12,6 @@ interface I_ListHub {
   function Browse(address currentA, uint8 vActionN) external view returns (address retA, uint8 typeN);
   function NextEntry(address accountA) external view returns (address);
   function PrevEntry(address accountA) external view returns (address);
-  function Proxy(address accountA) external view returns (address);
   function WeiContributed(address accountA) external view returns (uint256);
   function IsTransferAllowedByDefault() external view returns (bool);
   // State changing
@@ -22,7 +21,6 @@ interface I_ListHub {
   function Whitelist(address vEntryA, uint32 vWhiteT) external returns (bool);
   function Downgrade(address vEntryA, uint32 vDownT)  external returns (bool);
   function SetBonus(address vEntryA, uint32 vBonusPc) external returns (bool);
-  function SetProxy(address vEntryA, address vProxyA) external returns (bool);
   function SetTransfersOkByDefault(bool B) external returns (bool);
   function SetTransferOk(address vEntryA, bool B) external returns (bool);
 }

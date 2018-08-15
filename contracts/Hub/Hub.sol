@@ -413,11 +413,6 @@ djh??
   function PrevEntry(address accountA) external view IsWebOrAdminCaller returns (address) {
     return pListC.PrevEntry(accountA);
   }
-  // Hub.Proxy()
-  // -----------
-  function Proxy(address accountA) external view IsWebOrAdminCaller returns (address) {
-    return pListC.Proxy(accountA);
-  }
 
   // Hub.CreateListEntry()
   // ---------------------
@@ -453,13 +448,6 @@ djh??
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
   function SetBonus(address accountA, uint32 vBonusPc) external IsWebOrAdminCaller IsActive returns (bool) {
     return pListC.SetBonus(accountA, vBonusPc);
-  }
-  // Hub.SetProxy()
-  // --------------
-  // Sets the proxy address of entry accountA to vProxyA plus updates bits and pNumProxies
-  // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address accountA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetProxy(accountA, vProxyA);
   }
 
   // Hub.SetTransfersOkByDefault()

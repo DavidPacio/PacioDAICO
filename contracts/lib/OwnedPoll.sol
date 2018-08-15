@@ -66,6 +66,10 @@ contract OwnedPoll is Constants {
     require(msg.sender == iOwnersYA[POLL_WEB_OWNER_X] && !pIsContractCallerB(), "Not required Web caller");
     _;
   }
+  modifier IsWebOrAdminCaller {
+    require((msg.sender == iOwnersYA[POLL_WEB_OWNER_X] || msg.sender == iOwnersYA[ADMIN_OWNER_X]) && !pIsContractCallerB(), "Not required Web or Admin caller");
+    _;
+  }
   modifier IsNotContractCaller {
     require(!pIsContractCallerB(), 'Contract callers not allowed');
     _;

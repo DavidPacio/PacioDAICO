@@ -6,7 +6,6 @@ Owned by Deployer OpMan Hub Admin Web
 
 djh??
 • List stuff..........
-• web/admin fn to check for end of poll
 • proxy handling
 • poll info for web purposes
 
@@ -23,7 +22,6 @@ OpMan.ResumeContractMO(POLL_CONTRACT_X) IsConfirmedSigner which is a managed op
 Poll.Fallback function
 ======================
 No sending ether to this contract!
-
 
 */
 
@@ -147,6 +145,12 @@ contract Poll is OwnedPoll, Math {
   function PassVoteTerminationPc() external view returns (uint32) {
     return pPassVoteRrrTermPollsPc;
   }
+  // Poll.Proxy()
+  function Proxy(address voterA) external view returns (address) {
+    return pListC.Proxy(voterA);
+  }
+
+  // djh?? vote info
   // // Poll.VoteCast()
   // function VoteCast(address voterA) external view returns (uint32 voteT, int32 vote, uint256 picosHeld) {
   //   R_Vote storage srVoteR = pVotesMR[voterA];
@@ -233,6 +237,23 @@ contract Poll is OwnedPoll, Math {
   function WebRequestPoll(address requesterA, uint8 requestedPollN, uint32 requestChangeToValue) external IsWebCaller returns (bool) {
     return pRequestPoll(false, requesterA, requestedPollN, requestChangeToValue);
   }
+
+  // Poll.CheckForEndOfPoll()
+  // ------------------------
+  // Called from the Pacio web site or by Admin to check for a poll ending
+  // Return true if the poll closed as a result of the call
+  function CheckForEndOfPoll() external IsWebOrAdminCaller returns (bool) {
+    return pCheckForEndOfPoll();
+  }
+
+  // Hub.SetProxy()
+  // --------------
+  // Sets the proxy address of entry accountA to vProxyA plus updates bits and pNumProxies
+  // vProxyA = 0x0 to unset or remove a proxy
+  function SetProxy(address accountA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
+    return pListC.SetProxy(accountA, vProxyA);
+  }
+
 
   // Poll.pRequestPoll() private
   // -------------------
@@ -382,6 +403,26 @@ contract Poll is OwnedPoll, Math {
     emit PollStartV(pPollId, pPollN, pPollStartT, pPollEndT, pChangePollToValue);
     return true;
   } // end RequestPoll()
+
+  // Poll.ClosePollYesMO()
+  // ---------------------
+  // Can be called manually by Admin as a managed op to force Yes result closing of a Poll if necessary.
+  function ClosePollYesMO() external IsAdminCaller {
+    require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_YES_MO_X));
+  //pClosePoll(uint32 validMemsPc, uint32 passVotePc, uint8 pollResultN) private returns (bool)
+    pClosePoll(0, 0, POLL_YES_N); // the 0s for validMemsPc and passVotePc indicate that this was a forced close
+  }
+
+  // Poll.ClosePollNoMO()
+  // ---------------------
+  // Can be called manually by Admin as a managed op to force Yes result closing of a Poll if necessary.
+  function ClosePollNoMO() external IsAdminCaller {
+    require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_NO_MO_X));
+  //pClosePoll(uint32 validMemsPc, uint32 passVotePc, uint8 pollResultN) private returns (bool)
+    pClosePoll(0, 0, POLL_NO_N); // the 0s for validMemsPc and passVotePc indicate that this was a forced close
+  }
 
   // Poll.pCheckForEndOfPoll() private
   // -------------------------

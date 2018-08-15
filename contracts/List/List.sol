@@ -133,9 +133,11 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function BonusPcAndBits(address accountA) external view returns (uint32 bonusCentiPc, uint32 bits) {
     return (pListMR[accountA].bonusCentiPc, pListMR[accountA].bits);
   }
-  function LastPollVotedIn(address accountA) external view returns (uint32) {
-    return pListMR[accountA].pollId;
+  function Proxy(address accountA) external view returns (address) {
+    return pListMR[accountA].proxyA;
   }
+  // djh?? Vote info
+
   function IsTransferFromAllowedByDefault() external view returns (bool) {
     return pTransfersOkB;
   }
@@ -173,12 +175,6 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // Requires Sender to be Hub
   function PrevEntry(address accountA) external view IsHubContractCaller returns (address) {
     return pListMR[accountA].prevEntryA;
-  }
-  // List.Proxy()
-  // ------------
-  // Requires Sender to be Hub
-  function Proxy(address accountA) external view IsHubContractCaller returns (address) {
-    return pListMR[accountA].proxyA;
   }
   // List.Lookup()
   // -------------

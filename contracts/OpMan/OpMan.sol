@@ -170,6 +170,8 @@ contract OpMan is OwnedOpMan {
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_SET_PCL_ACCOUNT_MO_X,    3, HOUR); //  5 Mfund.SetPclAccountMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_MO_X,           3, HOUR); //  6 Mfund.WithdrawMO()
+    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, HOUR); //  5 Poll.ClosePollYesMO()
+    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, HOUR); //  6 Poll.ClosePollNoMO()
     pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, HOUR); //  5 Token.TransferUnIssuedPIOsToPacioBcMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
