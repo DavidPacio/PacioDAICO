@@ -96,10 +96,10 @@ contract Constants {
   //                                                                /--- Not applicable after soft cap hit
   // Poll 'Enum'                                                    |/- Not applicable after sale close
   uint8 internal constant POLL_CLOSE_SALE_N               =  1; //  c Close the sale
-  uint8 internal constant POLL_CHANGE_S_CAP_USD_N         =  2; // sc Change Sale.pUsdSoftCap the USD soft cap
-  uint8 internal constant POLL_CHANGE_S_CAP_PIO_N         =  3; // sc Change Sale.pPioSoftCap the PIO soft cap
-  uint8 internal constant POLL_CHANGE_H_CAP_USD_N         =  4; //  c Change Sale.pUsdHardCap the USD sale hard cap
-  uint8 internal constant POLL_CHANGE_H_CAP_PIO_N         =  5; //  c Change Sale.pPioHardCap the PIO sale hard cap
+  uint8 internal constant POLL_CHANGE_S_CAP_USD_N         =  2; // sc Change Sale.pUsdSoftCap  the USD soft cap
+  uint8 internal constant POLL_CHANGE_S_CAP_PIO_N         =  3; // sc Change Sale.pPicoSoftCap the Pico (PIO) soft cap
+  uint8 internal constant POLL_CHANGE_H_CAP_USD_N         =  4; //  c Change Sale.pUsdHardCap  the USD sale hard cap
+  uint8 internal constant POLL_CHANGE_H_CAP_PIO_N         =  5; //  c Change Sale.pPicoHardCap the Pico (PIO) sale hard cap
   uint8 internal constant POLL_CHANGE_SALE_END_TIME_N     =  6; //  c Change Sale.pSaleEndT   the sale end time
   uint8 internal constant POLL_CHANGE_S_CAP_DISP_PC_N     =  7; // sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
   uint8 internal constant POLL_CHANGE_TAP_RATE_N          =  8; //    Change Mfund.pTapRateEtherPm     the Tap rate in Ether per month. A change to 0 stops withdrawals as a softer halt than a termination poll since the tap can be adjusted back up again to resume funding

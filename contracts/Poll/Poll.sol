@@ -203,7 +203,11 @@ contract Poll is OwnedPoll, Math {
 
   // pSetMaxVotePerMember() private
   // ----------------------
-  // Called from Initialise() and pCheckForEndOfPoll() if pMaxVoteHardCapCentiPc changes to set List.pMaxPicosVote
+  // Called from Initialise() and
+  // pClosePoll() for a POLL_CHANGE_MAX_VOTE_PC_N yes poll to change Poll.pMaxVoteHardCapCentiPc
+  // pClosePoll() for a POLL_CHANGE_H_CAP_USD_N yes poll to change Sale.pPicoHardCap change
+  // to set List.pMaxPicosVote
+  // After a call to pSetMaxVotePerMember() an admin traverse of List is required to update list entry.piosProxyVote for Members who are proxies
   function pSetMaxVotePerMember() private {
     // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
     pListC.SetMaxVotePerMember(safeMul(safeMul(uint256(pSaleC.PioHardCap()), 10*12), pMaxVoteHardCapCentiPc) / 100);
@@ -246,8 +250,9 @@ contract Poll is OwnedPoll, Math {
     return pCheckForEndOfPoll();
   }
 
-  // Hub.SetProxy()
+  // Poll.SetProxy()
   // --------------
+  // Called from the Pacio web site or by Admin to add or remove a proxy
   // Sets the proxy address of entry accountA to vProxyA plus updates bits and pNumProxies
   // vProxyA = 0x0 to unset or remove a proxy
   function SetProxy(address accountA, address vProxyA) external IsWebOrAdminCaller IsActive returns (bool) {
@@ -272,10 +277,10 @@ contract Poll is OwnedPoll, Math {
     //                             /--- Not applicable after soft cap hit
     // Poll 'Enums'                |/- Not applicable after sale close
     // POLL_CLOSE_SALE_N            c Close the sale
-    // POLL_CHANGE_S_CAP_USD_N     sc Change Sale.pUsdSoftCap the USD soft cap
-    // POLL_CHANGE_S_CAP_PIO_N     sc Change Sale.pPioSoftCap the PIO soft cap
-    // POLL_CHANGE_H_CAP_USD_N      c Change Sale.pUsdHardCap the USD sale hard cap
-    // POLL_CHANGE_H_CAP_PIO_N      c Change Sale.pPioHardCap the PIO sale hard cap
+    // POLL_CHANGE_S_CAP_USD_N     sc Change Sale.pUsdSoftCap  the USD soft cap
+    // POLL_CHANGE_S_CAP_PIO_N     sc Change Sale.pPicoSoftCap the Pico (PIO) soft cap
+    // POLL_CHANGE_H_CAP_USD_N      c Change Sale.pUsdHardCap  the USD sale hard cap
+    // POLL_CHANGE_H_CAP_PIO_N      c Change Sale.pPicoHardCap the Pico (PIO) sale hard cap
     // POLL_CHANGE_SALE_END_TIME_N  c Change Sale.pSaleEndT       the sale end time
     // POLL_CHANGE_S_CAP_DISP_PC_N sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
     if (pState & STATE_CLOSED_COMBO_B > 0)
@@ -473,8 +478,10 @@ contract Poll is OwnedPoll, Math {
     if (pPollN == POLL_CLOSE_SALE_N)                 pHubC.CloseSaleMO(STATE_CLOSED_POLL_B);                // Close the sale
     else if (pPollN == POLL_CHANGE_S_CAP_USD_N)      pSaleC.PollSetUsdSoftCap(pChangePollToValue);          // USD Soft Cap
     else if (pPollN == POLL_CHANGE_S_CAP_PIO_N)      pSaleC.PollSetPioSoftCap(pChangePollToValue);          // PIO Soft Cap
-    else if (pPollN == POLL_CHANGE_H_CAP_USD_N)      pSaleC.PollSetUsdHardCap(pChangePollToValue);          // USD Hard Cap
-    else if (pPollN == POLL_CHANGE_H_CAP_PIO_N)      pSaleC.PollSetPioHardCap(pChangePollToValue);          // PIO Hard Cap
+    else if (pPollN == POLL_CHANGE_H_CAP_USD_N) {
+      pSaleC.PollSetUsdHardCap(pChangePollToValue);  // USD Hard Cap
+      pSetMaxVotePerMember();                        // to set List.pMaxPicosVote
+    }else if (pPollN == POLL_CHANGE_H_CAP_PIO_N)     pSaleC.PollSetPioHardCap(pChangePollToValue);          // PIO Hard Cap
     else if (pPollN == POLL_CHANGE_SALE_END_TIME_N)  pSaleC.PollSetSaleEndTime(pChangePollToValue);         // Sale End Time
     else if (pPollN == POLL_CHANGE_S_CAP_DISP_PC_N)  pMfundC.PollSetSoftCapDispersalPc(pChangePollToValue); // Soft Cap Reached Dispersal %
     else if (pPollN == POLL_CHANGE_TAP_RATE_N)       pMfundC.PollSetTapRateEtherPm(pChangePollToValue);     // Tap rate Ether pm

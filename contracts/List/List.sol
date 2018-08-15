@@ -69,6 +69,9 @@ struct R_List{        // Bytes Storage slot  Comment
   uint256 weiRefunded;   // 32 4 wei refunded
   uint256 picosBought;   // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
   uint256 picosBalance;  // 32 6 Current token balance - determines who is a Pacio Member |
+  // djh?? Think through. Add is a proxy bit?
+  uint32  piosProxyVote; //  4 7 If Entry is     a Proxy (LE_HAS_PROXY_B and proxyA are not set) then is the Pios to be voted on behalf of members who have appointed this member as a proxy. Will need to be updated via an Admin pass if pMaxPicosVote changes
+                         //      If Entry is not a Proxy (LE_HAS_PROXY_B and proxyA are set)     then is the Pios to be voted by the proxy on behalf of the entry
   uint32  numVotes;      //  4 7 Number of non-revoked times a member has voted (Must be a member to vote)
   uint32  voteT;         //  4 7 Time of last vote
    int32  piosVoted;     //  4 7 Pios voted, +ve for yes, -ve for no, max pMaxPicosVote
@@ -112,7 +115,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function EntryBits(address accountA) external view returns (uint32) {
     return pListMR[accountA].bits;
   }
-  function IsMember(address accountA) external view returns (bool) {
+  function IsMember(address accountA) public view returns (bool) {
     return pListMR[accountA].bits & LE_MEMBER_B > 0;
   }
   function IsPrepurchase(address accountA) external view returns (bool) {
@@ -418,34 +421,6 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     return true;
   }
 
-  // List.SetProxy()
-  // ---------------
-  // Sets the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
-  // vProxyA = 0x0 to unset or remove a proxy
-  function SetProxy(address vEntryA, address vProxyA) external IsHubContractCaller returns (bool) {
-    R_List storage rsEntryR = pListMR[vEntryA];
-    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist
-    bool proxySetB = rsEntryR.bits & LE_HAS_PROXY_B > 0;
-    if (vProxyA == address(0)) {
-      // Unset or remove proxy
-      if (proxySetB) {
-        // Did have a proxy set
-        rsEntryR.bits ^= LE_HAS_PROXY_B; // unset the LE_HAS_PROXY_B bit which we know is set
-        pNumProxies = decrementMaxZero(pNumProxies);
-      }
-    }else{
-      // Set proxy
-      if (!proxySetB) {
-        // Didn't previously have a proxy
-        pNumProxies++;
-        rsEntryR.bits |= LE_HAS_PROXY_B;
-      }
-    }
-    rsEntryR.proxyA = vProxyA;
-    emit SetProxyV(vEntryA, vProxyA);
-    return true;
-  }
-
   // List.Issue()
   // ------------
   // Cases:
@@ -576,8 +551,54 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // List.SetMaxVotePerMember()
   // --------------------------
   // Called from Poll.pSetMaxVotePerMember() to set pMaxPicosVote
+  // After a call to SetMaxVotePerMember() an admin traverse of List is required to update list entry.piosProxyVote for Members who are proxies
   function SetMaxVotePerMember(uint256 vMaxPicosVote) external IsPollContractCaller {
      pMaxPicosVote = vMaxPicosVote; // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
+  }
+
+  // List.UpdatePiosProxyVote()
+  // --------------------------
+  // After a call to SetMaxVotePerMember() an admin traverse of List is required to update list entry.piosProxyVote for Members who are proxies
+  function UpdatePiosProxyVote(address entryA, uint32 vPiosToVote) external IsPollContractCaller {
+    R_List storage rsEntryR = pListMR[voterA];
+    if (rsEntryR.bits & LE_MEMBER_B > 0) { // Is a Member
+     pMaxPicosVote = vMaxPicosVote; // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
+  }
+
+  // List.SetProxy()
+  // ---------------
+  // Sets, changes, or removes the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
+  // vProxyA = 0x0 to remove a proxy
+  function SetProxy(address vEntryA, address vProxyA) external IsPollContractCaller returns (bool) {
+    R_List storage rsEntryR = pListMR[vEntryA];
+    require(rsEntryR.bits > 0, 'Unknown account'); // Entry is expected to exist. doesn't have to be a Member. (Can appoint a proxy on registering)
+    bool proxySetB = rsEntryR.bits & LE_HAS_PROXY_B > 0;
+    uint32 piosToVote = int32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
+    if (vProxyA == address(0)) {
+      // Remove proxy
+      if (proxySetB) {
+        // Did have a proxy set
+        UpdatePiosProxyVote(rsEntryR.proxyA, )
+                piosVoted = int32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
+
+        rsEntryR.bits ^= LE_HAS_PROXY_B; // unset the LE_HAS_PROXY_B bit which we know is set
+        pNumProxies = decrementMaxZero(pNumProxies);
+      }
+    }else{
+      // Set proxy which is expected to be a Member
+      require(IsMember(vProxyA), 'Proxy not a Member');
+      if (proxySetB) {
+        // Changing proxy
+      }else{
+        // Didn't previously have a proxy
+        pNumProxies++;
+        rsEntryR.bits |= LE_HAS_PROXY_B;
+      }
+
+    }
+    rsEntryR.proxyA = vProxyA;
+    emit SetProxyV(vEntryA, vProxyA);
+    return true;
   }
 
   // List.Vote()
