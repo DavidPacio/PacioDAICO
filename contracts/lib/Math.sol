@@ -37,6 +37,12 @@ contract Math {
     z = x <= y ? 0 : x - y;
   }
 
+  // subMaxZero32(x, y) private
+  // Pacio addition to avoid reverting if a uint32 subtraction would go below zero and return 0 in that case.
+  function subMaxZero32(uint32 x, uint32 y) internal pure returns (uint32 z) {
+    z = x <= y ? 0 : x - y;
+  }
+
   // decrementMaxZero(x, y)
   // Pacio addition for decrementing an int32 to avoid reverting if decrementing would go below zero and return 0 in that case.
   function decrementMaxZero(uint32 x) internal pure returns (uint32 z) {

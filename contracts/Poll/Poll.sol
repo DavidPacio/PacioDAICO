@@ -5,8 +5,6 @@ Contract to run Pacio DAICO Polls
 Owned by Deployer OpMan Hub Admin Web
 
 djh??
-• List stuff..........
-• proxy handling
 • poll info for web purposes
 
 Differences from Abyss
@@ -164,7 +162,8 @@ contract Poll is OwnedPoll, Math {
   event        RequestPollV(uint32 indexed PollId, address Member, uint8 RequestedPollN, uint32 ChangeToValue, uint32 NumMembersVoted);
   event RequestPollTimeoutV(uint32 indexed PollId, uint8 RequestedPollN);
   event          PollStartV(uint32 indexed PollId, uint32 PollN, uint32 PollStartT, uint32 PollEndT, uint32 ChangePollToValue);
-  event               VoteV(uint32 indexed PollId, address indexed voterA, uint8 VoteN, int32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
+  event               VoteV(uint32 indexed PollId, address indexed Voter, uint8 VoteN, uint32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
+  event         RevokeVoteV(uint32 indexed PollId, address indexed Voter, int32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
   event            PollEndV(uint32 indexed PollId, uint32 PollN, uint32 NumMembersVoted, uint32 PiosVotedYes, uint32 PiosVotedNo, uint32 ValidMembersPc, uint32 PassVotePc, uint8 PollResultN, uint32 ChangePollCurrentValue, uint32 ChangePollToValue);
   event PollChangeRequestsToStartPollV(uint32 RequestsToStartPoll);
   event PollChangePollRequestConfirmDaysV(uint32 PollRequestConfirmDays);
@@ -211,6 +210,14 @@ contract Poll is OwnedPoll, Math {
   function pSetMaxVotePerMember() private {
     // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
     pListC.SetMaxVotePerMember(safeMul(safeMul(uint256(pSaleC.PioHardCap()), 10*12), pMaxVoteHardCapCentiPc) / 100);
+  }
+
+  // Poll.UpdatePioVotesDelegated()
+  // ------------------------------
+  // To be called by Admin (via web) on a traverse of the List for proxy appointers to to update list pioVotesDelegated and sumVotesDelegated up the line
+  // following a pSetMaxVotePerMember() call to set List.pMaxPicosVote
+  function UpdatePioVotesDelegated(address entryA) external IsAdminCaller {
+    pListC.UpdatePioVotesDelegated(entryA);
   }
 
   // State changing methods
@@ -565,14 +572,14 @@ contract Poll is OwnedPoll, Math {
   // ------------
   function pVote(address voterA, uint8 voteN) private {
     require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-    int32 piosVoted = pListC.Vote(voterA, pPollId, voteN); // checks that voterA is a member who hasn't already voted and returns 0 if so
+    uint32 piosVoted = pListC.Vote(voterA, pPollId, voteN); // checks that voterA is a member who hasn't already voted and returns 0 if so
     require(piosVoted != 0, 'Vote not valid');
     if (voteN == VOTE_YES_N) {
       require(piosVoted > 0, 'List.Vote() error');
-      pPiosVotedYes += uint32(piosVoted);
+      pPiosVotedYes += piosVoted;
     }else{
       require(piosVoted < 0, 'List.Vote() error');
-      pPiosVotedNo  += uint32(-piosVoted);
+      pPiosVotedNo  += piosVoted;
     }
     pNumMembersVoted++;
     emit VoteV(pPollId, voterA, voteN, piosVoted, pPiosVotedYes, pPiosVotedNo);
@@ -597,18 +604,17 @@ contract Poll is OwnedPoll, Math {
   // ------------------
   function pVoteRevoke(address voterA) private {
     require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-    int32 piosVoted = pListC.Vote(voterA, pPollId, VOTE_REVOKE_N); // checks that voterA is a member who has already voted and returns 0 if so
+
+    int32 piosVoted = pListC.RevokeVote(voterA, pPollId); // checks that voterA is a member who has already voted and returns 0 if so
     require(piosVoted != 0, 'Revoke vote not valid');
-    if (piosVoted > 0) {
+    if (piosVoted > 0)
       // Was a yes vote
-      pPiosVotedYes = pPiosVotedYes > uint32(piosVoted) ? pPiosVotedYes - uint32(piosVoted) : 0;
-    }else{
+      pPiosVotedYes = subMaxZero32(pPiosVotedYes,uint32(piosVoted));
+    else
       // Was a no vote
-      piosVoted = -piosVoted;
-      pPiosVotedNo = pPiosVotedNo > uint32(piosVoted) ? pPiosVotedNo - uint32(piosVoted) : 0;
-    }
+      pPiosVotedNo = subMaxZero32(pPiosVotedNo, uint32(-piosVoted));
     pNumMembersVoted = decrementMaxZero(pNumMembersVoted);
-    pCheckForEndOfPoll();
+    emit RevokeVoteV(pPollId, voterA, piosVoted, pPiosVotedYes, pPiosVotedNo);
   }
 
   // Poll Fallback function
