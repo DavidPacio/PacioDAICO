@@ -8,7 +8,9 @@ djh??
 • handle proxy stuff for cases of:
   . member being downgraded
   . member being unset on refund or trasnfer -> 0 picosBalance
+• add count of proxies
 - expand lookup for the voting members - 2 fns
+• add an MO ability to block a member from voting
 
 Member info [Struct order is different to minimise slots used]
 address nextEntryA;    // Address of the next entry     - 0 for the last  one
@@ -46,7 +48,7 @@ contract List is OwnedList, Math {
   uint32  private pNumWhite;      // Number of whitelist entries
   uint32  private pNumMembers;    // Number of Pacio members
   uint32  private pNumPresale;    // Number of presale list entries = seed presale and private placement entries
-  uint32  private pNumProxies;    // Number of entries with a Proxy set
+  uint32  private pNumProxyAppointed; // Number of entries with a proxy appointed. Isn't members as a non-member can appoint a proxy in anticipation of becoming a member
   uint32  private pNumDowngraded; // Number downgraded (from whitelist)
   uint256 private pMaxPicosVote;  // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
   address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
@@ -71,6 +73,7 @@ struct R_List{            // Bytes Storage slot  Comment
   uint256 weiRefunded;       // 32 4 wei refunded
   uint256 picosBought;       // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
   uint256 picosBalance;      // 32 6 Current token balance - determines who is a Pacio Member |
+  uint32  numProxyFor;       //  4 7 Number of members who have appointed this member as proxy i.e. the count of how many mebers this member is a proxy for
   uint32  pioVotesDelegated; //  4 7 Pio votes delegated if entry has appointed a proxy            /- an entry can have both set
   uint32  sumVotesDelegated; //  4 7 Sum of pio votes delegated by appointees if entry is a proxy  |
   uint32  numVotes;          //  4 7 Number of non-revoked times a member has voted (Must be a member to vote)
@@ -108,8 +111,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function NumberOfWhitelistDowngrades() external view returns (uint32) {
     return pNumDowngraded;
   }
-  function NumberOfMembersWithProxyAppointed() external view returns (uint32) {
-    return pNumProxies;
+  function NumberOfEntriesWithProxyAppointed() external view returns (uint32) {
+    return pNumProxyAppointed;
   }
   function MaxPiosVotePerMember() external view returns (uint32) {
     return uint32(pMaxPicosVote / 10**12);
@@ -218,8 +221,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   event PrepurchaseDepositV(address indexed To, uint256 Wei);
   event UpdatePioVotesDelegatedV(address indexed Entry, uint32 OldPioVotesDelegated, uint32 NewPioVotesDelegated);
   event UpdateSumVotesDelegatedV(address indexed Proxy, uint32 OldSumVotesDelegated, uint32 NewSumVotesDelegated);
-  event       VoteV(address indexed Voter, uint32 PollId, uint8 VoteN, uint32 PiosVoted);
-  event RevokeVoteV(address indexed Voter, uint32 PollId, int32 PiosVoted);
+  event VoteV(address indexed Voter, uint32 PollId, uint8 VoteN, uint32 PiosVoted, uint32 NumMembersVotedFor, uint8 VoteRevoked);
 
   // Initialisation/Setup Functions
   // ==============================
@@ -331,6 +333,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       0,                        // uint256 weiRefunded;       // 32 4 wei refunded
       0,                        // uint256 picosBought;       // 32 5 Tokens bought/purchased                                  /- picosBought - picosBalance = number transferred or number refunded if refundT is set
       0,                        // uint256 picosBalance;      // 32 6 Current token balance - determines who is a Pacio Member |
+      0,                        // uint32  numProxyFor;       //  4 7 Number of members who have appointed this member as proxy i.e. the count of how many mebers this member is a proxy for
       0,                        // uint32  pioVotesDelegated; //  4 7 Pio votes delegated if entry has appointed a proxy            /- an entry can have both set
       0,                        // uint32  sumVotesDelegated; //  4 7 Sum of pio votes delegated by appointees if entry is a proxy  |
       0,                        // uint32  numVotes;          //  4 7 Number of non-revoked times a member has voted (Must be a member to vote)
@@ -570,15 +573,16 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function UpdatePioVotesDelegated(address entryA) external IsPollContractCaller {
     R_List storage rsEntryR = pListMR[entryA];
     require(rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B > 0, 'No proxy appointed');
-    pUpdatePioVotesDelegated(entryA, uint32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12));
+    pUpdatePioVotesDelegatedAndNumProxyFor(entryA, uint32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12), 0);
   }
 
-  // pUpdatePioVotesDelegated() private
-  // --------------------------
+  // pUpdatePioVotesDelegatedAndNumProxyFor() private
+  // ----------------------------------------
   // Called from List.UpdatePioVotesDelegated() for a proxy appointer to adjust pioVotesDelegated and sumVotesDelegated up the line following a pMaxPicosVote change
   //             List.SetProxy() for setting a proxy, changing a proxy, or removing a proxy
+  // Also updates numProxyFor for the first proxy up the line according to vNumProxyForChange: 0 = no change; +ve = increment; -ve = decrement
   // WARNING: The gas usage is unknown as there is a loop involved. MUST be called with a high gas limit set.
-  function pUpdatePioVotesDelegated(address entryA, uint32 vNewPioVotesDelegated) private returns (bool) {
+  function pUpdatePioVotesDelegatedAndNumProxyFor(address entryA, uint32 vNewPioVotesDelegated, int32 vNumProxyForChange) private returns (bool) {
     R_List storage rsEntryR = pListMR[entryA];
     if (rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B == 0) return false; // Expected to be a Proxy appointer
     int32 piosToVoteChange = int32(vNewPioVotesDelegated) - int32(rsEntryR.pioVotesDelegated);
@@ -588,8 +592,15 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     while (rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B > 0) {
       address proxyA = rsEntryR.proxyA;
       if (proxyA == address(0)) return false;        // expected to have a Proxy
-      rsEntryR = pListMR[proxyA];
+      rsEntryR = pListMR[proxyA]; // entry of the proxy
       if (rsEntryR.bits & LE_IS_A_PROXY_B == 0) return false; // expected to be a Proxy
+      if (vNumProxyForChange != 0) {
+        if (vNumProxyForChange > 0)
+          rsEntryR.numProxyFor++;
+        else
+          rsEntryR.numProxyFor = decrementMaxZero(rsEntryR.numProxyFor);
+        vNumProxyForChange = 0; // so that the change is applied only to the first proxy up the chain
+      }
       uint32 newSumVotesDelegated = piosToVoteChange >= 0 ? rsEntryR.sumVotesDelegated + uint32(piosToVoteChange)
                                                           : subMaxZero32(rsEntryR.sumVotesDelegated, uint32(-piosToVoteChange));
       emit UpdateSumVotesDelegatedV(proxyA, rsEntryR.sumVotesDelegated, newSumVotesDelegated);
@@ -601,7 +612,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // List.SetProxy()
   // ---------------
-  // Sets, changes, or removes the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxies
+  // Sets, changes, or removes the proxy address of entry vEntryA to vProxyA plus updates bits and pNumProxyAppointed
   // vProxyA = 0x0 to remove a proxy
   // There are 4 cases re proxies:  Votes  LE_PROXY_INVOLVED_COMBO_B    LE_HAS_APPOINTED_PROXY_B LE_IS_A_PROXY_B  proxyA  pioVotesDelegated  sumVotesDelegated
   // Proxy not involved             Yes    unset                        unset                    unset            0x0     0                  0
@@ -610,6 +621,9 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // Both proxy appointer and Proxy No     == LE_PROXY_INVOLVED_COMBO_B set                      set              set     > 0                > 0
   // where pioVotesDelegated for one entry is uint32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12)
   // and Yes to Votes also requires the entry to be a Member
+
+// djh?? pass numProxyFor up the line
+
   function SetProxy(address vEntryA, address vProxyA) external IsPollContractCaller returns (bool) {
     R_List storage rsEntryR = pListMR[vEntryA];
     uint32 bits = rsEntryR.bits;
@@ -620,23 +634,26 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       // Remove proxy
       if (proxySetB) {
         // Did have a proxy set
-        pUpdatePioVotesDelegated(vEntryA, 0);
+        pUpdatePioVotesDelegatedAndNumProxyFor(vEntryA, 0, -1); // -1 to decrement proxy's numProxyFor
         rsEntryR.bits ^= LE_HAS_APPOINTED_PROXY_B; // unset the LE_HAS_APPOINTED_PROXY_B bit which we know is set
-        pNumProxies = decrementMaxZero(pNumProxies);
+        pNumProxyAppointed = decrementMaxZero(pNumProxyAppointed);
       }
     }else{
       // Set proxy which is expected to be a Member
       if(!IsMember(vProxyA)) return false; // Proxy is expected to be a Member
+      int32 numProxyForChange; // re the pUpdatePioVotesDelegatedAndNumProxyFor() call to come
       if (proxySetB)
         // Changing proxy
-        pUpdatePioVotesDelegated(vEntryA, 0); // remove votes from old proxy, then will add new below
+        pUpdatePioVotesDelegatedAndNumProxyFor(vEntryA, 0, 0); // remove votes from old proxy, then will add new below, with numProxyForChange left at 0
       else{
         // Didn't previously have a proxy
-        pNumProxies++;
+        numProxyForChange = 1; // to inccrement proxy's numProxyFor
+        pNumProxyAppointed++;
         rsEntryR.bits |= LE_HAS_APPOINTED_PROXY_B;
+        pListMR[vProxyA].numProxyFor++;
       }
       rsEntryR.pioVotesDelegated = piosToVote;
-      pUpdatePioVotesDelegated(vEntryA, piosToVote);
+      pUpdatePioVotesDelegatedAndNumProxyFor(vEntryA, piosToVote, numProxyForChange);
     }
     rsEntryR.proxyA = vProxyA;
     emit SetProxyV(vEntryA, vProxyA);
@@ -653,43 +670,33 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // Proxy appointer                No     == LE_HAS_APPOINTED_PROXY_B  set                      unset            set     > 0                0
   // Proxy                          Yes    == LE_IS_A_PROXY_B           unset                    set              0x0     0                  > 0
   // Both proxy appointer and Proxy No     == LE_PROXY_INVOLVED_COMBO_B set                      set              set     > 0                > 0
-  function Vote(address voterA, uint32 vPollId, uint8 voteN) external IsPollContractCaller returns (uint32 piosVoted)  {
+  function Vote(address voterA, uint32 vPollId, uint8 voteN) external IsPollContractCaller returns (uint32 retPiosVoted, uint32 retNumMembersVotedFor, uint8 retVoteN)  {
     R_List storage rsEntryR = pListMR[voterA];
-    if (rsEntryR.bits & LE_MEMBER_B > 0                 // Is a Member
-     && rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B == 0   //  who has not appointes a proxy
-     &&  (voteN == VOTE_YES_N || voteN == VOTE_NO_N)) { // and voteN is as expected
-      // Yes or No VOTE_YES_N, VOTE_NO_N
-      rsEntryR.voteT = uint32(now);
-      rsEntryR.numVotes++;
-      rsEntryR.pollId = vPollId;
-      rsEntryR.voteN  = voteN;
-      piosVoted = rsEntryR.sumVotesDelegated + uint32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
-      rsEntryR.piosVoted = piosVoted;
+    if (rsEntryR.bits & LE_MEMBER_B > 0                  // Is a Member
+     && rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B == 0) { //  who has not appointes a proxy
+     // Is a Member who has not appointes a proxy
+     retNumMembersVotedFor = 1 + rsEntryR.numProxyFor;
+     if (voteN == VOTE_REVOKE_N) {
+        if (rsEntryR.pollId == vPollId && rsEntryR.piosVoted != 0 && rsEntryR.numVotes > 0) {
+          // has voted in the current poll && vote hasn't already been revoked
+          retPiosVoted = rsEntryR.piosVoted;
+          retVoteN = rsEntryR.voteN; // return what the previous vote was in the Revoke case
+          rsEntryR.piosVoted = 0;
+          rsEntryR.voteN == VOTE_REVOKE_N;
+          rsEntryR.numVotes--;
+        }
+     } else if  (voteN == VOTE_YES_N || voteN == VOTE_NO_N) { // and voteN is as expected
+        // Yes or No VOTE_YES_N, VOTE_NO_N
+        // retVoteN stays unset for the vote case
+        rsEntryR.voteT = uint32(now);
+        rsEntryR.numVotes++;
+        rsEntryR.pollId = vPollId;
+        rsEntryR.voteN  = voteN;
+        retPiosVoted = rsEntryR.sumVotesDelegated + uint32(Min(rsEntryR.picosBalance, pMaxPicosVote) / 10**12);
+        rsEntryR.piosVoted = retPiosVoted;
+      }
     } // else not a member, has appointed a proxy, or is not a valid voteN -> an error return
-    emit VoteV(voterA, vPollId, voteN, piosVoted); // emitted for error return (piosVoted = 0) cases too
-  }
-
-  // List.RevokeVote()
-  // -----------------
-  // Called from Poll.pVoteRevoke() to revoke a vote in a current poll
-  // Needs to be a member
-  // Returns pios voted (-ve for no), or 0 on an error
-  function RevokeVote(address voterA, uint32 vPollId) external IsPollContractCaller returns (int32 piosVoted)  {
-    R_List storage rsEntryR = pListMR[voterA];
-    if (rsEntryR.bits & LE_MEMBER_B > 0 && rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B == 0) {
-      // Is a Member who has not appointes a proxy
-      // Previous vote being revoked
-      if (rsEntryR.pollId == vPollId && rsEntryR.piosVoted != 0 && rsEntryR.numVotes > 0) {
-        // has voted in the current poll && vote hasn't already been revoked
-        piosVoted = int32(rsEntryR.piosVoted);
-        if (rsEntryR.voteN == VOTE_NO_N)
-          piosVoted = -piosVoted;
-        rsEntryR.piosVoted = 0;
-        rsEntryR.voteN == VOTE_REVOKE_N;
-        rsEntryR.numVotes--;
-      } // else an error return of 0
-    }
-    emit RevokeVoteV(voterA, vPollId, piosVoted); // emitted for error return (piosVoted = 0) cases too
+    emit VoteV(voterA, vPollId, voteN, retPiosVoted, retNumMembersVotedFor, retVoteN); // emitted for error return (retPiosVoted = 0) cases too
   }
 
   // List.TransferIssuedPIOsToPacioBc()
@@ -703,7 +710,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     rsEntryR.picosBalance = 0;
     rsEntryR.bits |= LE_TRANSFERRED_TO_PB_B;
     if (rsEntryR.bits & LE_MEMBER_B > 0)    pNumMembers = decrementMaxZero(pNumMembers);
-    if (rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B > 0) pNumProxies = decrementMaxZero(pNumProxies);
+    if (rsEntryR.bits & LE_HAS_APPOINTED_PROXY_B > 0) pNumProxyAppointed = decrementMaxZero(pNumProxyAppointed);
     rsEntryR.bits &= ~LE_M_FUND_PICOS_MEMBER_B; // unset the frA LE_M_FUND_B, LE_PICOS_B and LE_MEMBER_B bits
     // Token.TransferIssuedPIOsToPacioBc() emits TransferIssuedPIOsToPacioBcV(++pTransferToPbId, accountA, picos);
   }

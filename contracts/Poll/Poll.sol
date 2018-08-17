@@ -7,11 +7,6 @@ Owned by Deployer OpMan Hub Admin Web
 djh??
 • poll info for web purposes
 
-Differences from Abyss
-- one contract not a new one for each poll
-- djh??
-
-
 Pause/Resume
 ============
 OpMan.PauseContract(POLL_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
@@ -162,8 +157,7 @@ contract Poll is OwnedPoll, Math {
   event        RequestPollV(uint32 indexed PollId, address Member, uint8 RequestedPollN, uint32 ChangeToValue, uint32 NumMembersVoted);
   event RequestPollTimeoutV(uint32 indexed PollId, uint8 RequestedPollN);
   event          PollStartV(uint32 indexed PollId, uint32 PollN, uint32 PollStartT, uint32 PollEndT, uint32 ChangePollToValue);
-  event               VoteV(uint32 indexed PollId, address indexed Voter, uint8 VoteN, uint32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
-  event         RevokeVoteV(uint32 indexed PollId, address indexed Voter, int32 PiosVoted, uint32 PiosVotedYes, uint32 PiosVotedNo);
+  event               VoteV(uint32 indexed PollId, address indexed Voter, uint8 VoteN, int32 PiosVoted, int32 NumMembersVotedFor, uint32 PiosVotedYes, uint32 PiosVotedNo, uint32 NumMembersVoted);
   event            PollEndV(uint32 indexed PollId, uint32 PollN, uint32 NumMembersVoted, uint32 PiosVotedYes, uint32 PiosVotedNo, uint32 ValidMembersPc, uint32 PassVotePc, uint8 PollResultN, uint32 ChangePollCurrentValue, uint32 ChangePollToValue);
   event PollChangeRequestsToStartPollV(uint32 RequestsToStartPoll);
   event PollChangePollRequestConfirmDaysV(uint32 PollRequestConfirmDays);
@@ -396,7 +390,8 @@ contract Poll is OwnedPoll, Math {
         // The check that this request is within pPollRequestConfirmDays days has been done already by the pCheckForEndOfPoll() above
         require(requestedPollN == pPollN && requestChangeToValue == pChangePollToValue, 'Different poll request pending');
       }
-      require(pListC.Vote(requesterA, pPollId, VOTE_YES_N) != 0, 'Vote not valid'); // checks that requesterA is a member who hasn't already voted
+      (uint32 piosVoted, uint32 numMembersVotedFor, uint8 voteN) = pListC.Vote(requesterA, pPollId, VOTE_YES_N);
+      require(piosVoted > 0 && numMembersVotedFor > 0 && voteN == 0, 'Vote not valid'); // checks that requesterA is a member who hasn't already voted. the numMembersVotedFor and voteN checks are really just to suppress unused local variable compiler warnings
       pNumMembersVoted++; // no need to sum votes here as only pNumMembersVoted matters
       emit RequestPollV(pPollId, requesterA, requestedPollN, requestChangeToValue, pNumMembersVoted);
       if (pNumMembersVoted < pRequestsToStartPoll)
@@ -572,17 +567,27 @@ contract Poll is OwnedPoll, Math {
   // ------------
   function pVote(address voterA, uint8 voteN) private {
     require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-    uint32 piosVoted = pListC.Vote(voterA, pPollId, voteN); // checks that voterA is a member who hasn't already voted and returns 0 if so
+    (uint32 piosVoted, uint32 numMembersVotedFor, uint8 prevVoteN) = pListC.Vote(voterA, pPollId, voteN);
     require(piosVoted != 0, 'Vote not valid');
-    if (voteN == VOTE_YES_N) {
-      require(piosVoted > 0, 'List.Vote() error');
-      pPiosVotedYes += piosVoted;
+    if (voteN == VOTE_REVOKE_N) {
+      // Revoking previous vote
+      if (prevVoteN == VOTE_YES_N)
+        // Was a yes vote
+        pPiosVotedYes = subMaxZero32(pPiosVotedYes, piosVoted);
+      else
+        // Was a no vote
+        pPiosVotedNo = subMaxZero32(pPiosVotedNo, piosVoted);
+      pNumMembersVoted = subMaxZero32(pNumMembersVoted, numMembersVotedFor);
+      emit VoteV(pPollId, voterA, prevVoteN, -int32(piosVoted), -int32(numMembersVotedFor), pPiosVotedYes, pPiosVotedNo, pNumMembersVoted);
     }else{
-      require(piosVoted < 0, 'List.Vote() error');
-      pPiosVotedNo  += piosVoted;
+      // Yes or No expected
+      if (voteN == VOTE_YES_N)
+        pPiosVotedYes += piosVoted;
+      else
+        pPiosVotedNo  += piosVoted;
+      pNumMembersVoted += numMembersVotedFor;
+      emit VoteV(pPollId, voterA, voteN, int32(piosVoted), int32(numMembersVotedFor), pPiosVotedYes, pPiosVotedNo, pNumMembersVoted);
     }
-    pNumMembersVoted++;
-    emit VoteV(pPollId, voterA, voteN, piosVoted, pPiosVotedYes, pPiosVotedNo);
     pCheckForEndOfPoll();
   }
 
@@ -590,32 +595,16 @@ contract Poll is OwnedPoll, Math {
   // -----------------
   // To be called from an account for revoking a vote
   function VoteRevoke() external IsNotContractCaller {
-    pVoteRevoke(msg.sender);
+    pVote(msg.sender, VOTE_REVOKE_N);
   }
 
   // Poll.WebVoteRevoke()
   // --------------------
   // To be called from a Pacio web site for revoking a vote by a logged in Member
   function WebVoteRevoke(address voterA) external IsWebCaller {
-    pVoteRevoke(voterA);
+    pVote(voterA, VOTE_REVOKE_N);
   }
 
-  // Poll.pVoteRevoke() private
-  // ------------------
-  function pVoteRevoke(address voterA) private {
-    require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-
-    int32 piosVoted = pListC.RevokeVote(voterA, pPollId); // checks that voterA is a member who has already voted and returns 0 if so
-    require(piosVoted != 0, 'Revoke vote not valid');
-    if (piosVoted > 0)
-      // Was a yes vote
-      pPiosVotedYes = subMaxZero32(pPiosVotedYes,uint32(piosVoted));
-    else
-      // Was a no vote
-      pPiosVotedNo = subMaxZero32(pPiosVotedNo, uint32(-piosVoted));
-    pNumMembersVoted = decrementMaxZero(pNumMembersVoted);
-    emit RevokeVoteV(pPollId, voterA, piosVoted, pPiosVotedYes, pPiosVotedNo);
-  }
 
   // Poll Fallback function
   // ======================
