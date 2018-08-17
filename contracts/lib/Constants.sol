@@ -138,8 +138,8 @@ contract Constants {
   uint32 internal constant LE_PRESALE_B               =    128; //  7 A Presale List entry - Pacio Seed Presale or Pacio Private Placement - not yet whitelisted
   uint32 internal constant LE_WAS_PRESALE_B           =    256; //  8 Was a Presale entry which has been whitelisted
   uint32 internal constant LE_FROM_TRANSFER_OK_B      =    512; //  9 Transfers from this entry allowed entry even if pTransfersOkB is false. Is set for the Sale contract entry.
-  uint32 internal constant LE_HAS_APPOINTED_PROXY_B   =   1024; // 10 This entry has appointed a Proxy. Need not be a Member.                                              /- one entry can have both bits set
-  uint32 internal constant LE_IS_A_PROXY_B            =   2048; // 11 This entry is a Proxy i.e. one or more other entries have appointed it as a proxy. Must be a Member. |  as a proxy can appoint a proxy
+  uint32 internal constant LE_PROXY_APPOINTER_B       =   1024; // 10 This entry has appointed a Proxy. Need not be a Member.                                              /- one entry can have both bits set
+  uint32 internal constant LE_PROXY_B                 =   2048; // 11 This entry is a Proxy i.e. one or more other entries have appointed it as a proxy. Must be a Member. |  as a proxy can appoint a proxy
   uint32 internal constant LE_DOWNGRADED_B            =   4096; // 12 This entry has been downgraded from whitelisted. Refunding candidate.
   uint32 internal constant LE_TRANSFERRED_TO_PB_B     =   8192; // 13 This entry has had its PIOs transferred to the Pacio Blockchain
   uint32 internal constant LE_P_REFUND_S_CAP_MISS_B   =  16384; // 14 Pfund funds Refund due to soft cap not being reached
@@ -149,14 +149,15 @@ contract Constants {
   uint32 internal constant LE_M_REFUND_TERMINATION_B  = 262144; // 18 Mfund or Presale with picos Refund proportionately according to Picos held following a vote for project termination
   uint32 internal constant LE_M_REFUND_ONCE_OFF_B     = 524288; // 19 Mfund funds Refunded once off manually for whatever reason including downgrade from whitelisted
   // Combos
-  uint32 internal constant LE_M_FUND_PICOS_MEMBER_B  =      76; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B
-  uint32 internal constant LE_WHITELISTED_MEMBER_B   =      96; // LE_WHITELISTED_B | LE_MEMBER_B
-  uint32 internal constant LE_EVER_PRESALE_COMBO_B   =     384; // LE_PRESALE_B | LE_WAS_PRESALE_B
-  uint32 internal constant LE_PROXY_INVOLVED_COMBO_B =    3072; // LE_HAS_APPOINTED_PROXY_B | LE_IS_A_PROXY_B
-  uint32 internal constant LE_REFUNDED_COMBO_B       = 1032192; // LE_P_REFUND_S_CAP_MISS_B | LE_P_REFUND_SALE_CLOSE_B | LE_P_REFUND_ONCE_OFF_B | LE_MNP_REFUND_S_CAP_MISS_B | LE_M_REFUND_TERMINATION_B | LE_M_REFUND_ONCE_OFF_B
-  uint32 internal constant LE_DEAD_COMBO_B           = 1040384; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 8192
-  uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B  = 1044610; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
-  uint32 internal constant LE_NO_REFUND_COMBO_B      = 1040386; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
+  uint32 internal constant LE_M_FUND_PICOS_MEMBER_B       =   76; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B
+  uint32 internal constant LE_WHITELISTED_MEMBER_B        =   96; // LE_WHITELISTED_B | LE_MEMBER_B
+  uint32 internal constant LE_EVER_PRESALE_COMBO_B        =  384; // LE_PRESALE_B | LE_WAS_PRESALE_B
+  uint32 internal constant LE_PROXY_INVOLVED_COMBO_B      = 3072; // LE_PROXY_APPOINTER_B | LE_PROXY_B
+  uint32 internal constant LE_M_FUND_PICOS_MEMBER_PROXY_B = 3148; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B | LE_PROXY_INVOLVED_COMBO_B
+  uint32 internal constant LE_REFUNDED_COMBO_B         = 1032192; // LE_P_REFUND_S_CAP_MISS_B | LE_P_REFUND_SALE_CLOSE_B | LE_P_REFUND_ONCE_OFF_B | LE_MNP_REFUND_S_CAP_MISS_B | LE_M_REFUND_TERMINATION_B | LE_M_REFUND_ONCE_OFF_B
+  uint32 internal constant LE_DEAD_COMBO_B             = 1040384; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 8192
+  uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B    = 1044610; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
+  uint32 internal constant LE_NO_REFUND_COMBO_B        = 1040386; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
 
   // LE_M_FUND_B Mfund funded whitelisted with picos entry as a result of funds and picos via Sale.Buy() or a Pfund to Mfund transfer or the whitelisting of a presale entry
   //              or unfunded whitelisted with picos entry as a result of a Transfer of picos. There is no bit for telling the difference as this doesn't affect any ops, Mfund refunds and voting being based only on the picos balance.
