@@ -731,8 +731,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function Vote(address voterA, uint32 vPollId, uint8 voteN) external IsPollContractCaller returns (uint32 retPiosVoted, uint32 retNumMembersVotedFor, uint8 retVoteN)  {
     R_List storage rsEntryR = pListMR[voterA];
     uint32 bits = rsEntryR.bits;
-    if (bits & LE_MEMBER_PROXY_B > 0        // Is a Member or a Proxy
-     && bits & LE_PROXY_APPOINTER_B == 0) { //  who has not appointed a proxy
+    if (bits & LE_MEMBER_PROXY_B > 0             // Is a Member or a Proxy
+     && bits & LE_PROXY_APP_VOTE_BLOCK_B == 0) { //  who has not appointed a proxy or been blocked from voting
      // Is a Member or proxy who has not appointes a proxy
      retNumMembersVotedFor = 1 + rsEntryR.numProxyVotesFor;
      if (voteN == VOTE_REVOKE_N) {
