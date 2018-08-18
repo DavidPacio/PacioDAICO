@@ -231,7 +231,7 @@ contract Poll is OwnedPoll, Math {
   // Called by Admin or Members to request a poll
   // A successful request by Admin results in an immediate start.
   // A successful request by a Member results in pPollN being set but does not result in a state change until the request is confirmed
-  function RequestPoll(uint8 requestedPollN, uint32 requestChangeToValue) external IsAdminOrWalletCaller returns (bool) {
+  function RequestPoll(uint8 requestedPollN, uint32 requestChangeToValue) external IsAdminOrWalletCaller  IsActive returns (bool) {
     return pRequestPoll(iIsAdminCallerB(), msg.sender, requestedPollN, requestChangeToValue);
   }
 
@@ -239,7 +239,7 @@ contract Poll is OwnedPoll, Math {
   // ---------------------
   // Called via Pacio web site on behalf of a logged in Member to request a poll
   // A successful request results in pPollN being set but does not result in a state change until the request is confirmed
-  function WebRequestPoll(address requesterA, uint8 requestedPollN, uint32 requestChangeToValue) external IsWebCaller returns (bool) {
+  function WebRequestPoll(address requesterA, uint8 requestedPollN, uint32 requestChangeToValue) external IsWebCaller IsActive returns (bool) {
     return pRequestPoll(false, requesterA, requestedPollN, requestChangeToValue);
   }
 
@@ -247,7 +247,7 @@ contract Poll is OwnedPoll, Math {
   // ------------------------
   // Called from the Pacio web site or by Admin to check for a poll ending
   // Return true if the poll closed as a result of the call
-  function CheckForEndOfPoll() external IsWebOrAdminCaller returns (bool) {
+  function CheckForEndOfPoll() external IsWebOrAdminCaller IsActive returns (bool) {
     return pCheckForEndOfPoll();
   }
 
@@ -538,28 +538,28 @@ contract Poll is OwnedPoll, Math {
   // Poll.VoteYes()
   // --------------
   // To be called from an account for a yes vote
-  function VoteYes() external IsNotContractCaller {
+  function VoteYes() external IsNotContractCaller IsActive {
     pVote(msg.sender, VOTE_YES_N);
   }
 
   // Poll.WebVoteYes()
   // -----------------
   // To be called from a Pacio web site for a yes vote by a logged in Member
-  function WebVoteYes(address voterA) external IsWebCaller {
+  function WebVoteYes(address voterA) external IsWebCaller IsActive {
     pVote(voterA, VOTE_YES_N);
   }
 
   // Poll.VoteNo()
   // -------------
   // To be called from an account for a no vote
-  function VoteNo() external IsNotContractCaller {
+  function VoteNo() external IsNotContractCaller IsActive {
     pVote(msg.sender, VOTE_NO_N);
   }
 
   // Poll.WebVoteNo()
   // ----------------
   // To be called from a Pacio web site for a no vote by a logged in Member
-  function WebVoteNo(address voterA) external IsWebCaller {
+  function WebVoteNo(address voterA) external IsWebCaller IsActive {
     pVote(voterA, VOTE_NO_N);
   }
 
@@ -594,14 +594,14 @@ contract Poll is OwnedPoll, Math {
   // Poll.VoteRevoke()
   // -----------------
   // To be called from an account for revoking a vote
-  function VoteRevoke() external IsNotContractCaller {
+  function VoteRevoke() external IsNotContractCaller IsActive {
     pVote(msg.sender, VOTE_REVOKE_N);
   }
 
   // Poll.WebVoteRevoke()
   // --------------------
   // To be called from a Pacio web site for revoking a vote by a logged in Member
-  function WebVoteRevoke(address voterA) external IsWebCaller {
+  function WebVoteRevoke(address voterA) external IsWebCaller IsActive {
     pVote(voterA, VOTE_REVOKE_N);
   }
 
