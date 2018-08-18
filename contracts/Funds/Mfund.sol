@@ -205,12 +205,12 @@ contract Mfund is OwnedMfund, Math {
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
-  // Mfund.WithdrawMO()
-  // ------------------
+  // Mfund.WithdrawTapMO()
+  // ---------------------
   // Is called by Admin to withdraw the available tap as a managed operation
-  function WithdrawMO() external IsAdminCaller {
+  function WithdrawTapMO() external IsAdminCaller {
     require(pState & STATE_TAPS_OK_B > 0, 'Tap not available');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MFUND_WITHDRAW_MO_X));
+    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MFUND_WITHDRAW_TAP_MO_X));
     uint256 withdrawWei = TapAmountWei();
     require(withdrawWei > 0, 'Available withdrawal is 0');
     pWithdraw(withdrawWei);

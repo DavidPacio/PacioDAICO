@@ -229,7 +229,6 @@ contract Hub is OwnedHub, Math {
     pSetState(pState |= vBit);
   }
 
-
   // Hub.Whitelist()
   // ---------------
   // Called by Admin or from web to whitelist an entry.
@@ -441,27 +440,41 @@ djh??
   // ---------------
   // Downgrades an entry from whitelisted
   function Downgrade(address accountA, uint32 vDownT) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.Downgrade(accountA, vDownT);
+    pListC.Downgrade(accountA, vDownT);
+    return true;
   }
   // Hub.SetBonus()
   // --------------
   // Sets bonusCentiPc Bonus percentage in centi-percent i.e. 675 for 6.75%. If set means that this person is entitled to a bonusCentiPc bonus on next purchase
   function SetBonus(address accountA, uint32 vBonusPc) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetBonus(accountA, vBonusPc);
+    pListC.SetBonus(accountA, vBonusPc);
+    return true;
   }
 
   // Hub.SetTransfersOkByDefault()
   // -----------------------------
   // To set/unset List.pTransfersOkB
   function SetTransfersOkByDefault(bool B) external IsAdminCaller returns (bool) {
-    return pListC.SetTransfersOkByDefault(B);
+    pListC.SetTransfersOkByDefault(B);
+    return true;
   }
 
-  // Hub.SetTransferOk()
+  // Hub.SetListEntryTransferOk()
   // -------------------
   // To set LE_FROM_TRANSFER_OK_B bit of entry accountA on if B is true, or unset the bit if B is false
-  function SetTransferOk(address accountA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
-    return pListC.SetTransferOk(accountA, B);
+  function SetListEntryTransferOk(address accountA, bool B) external IsWebOrAdminCaller IsActive returns (bool) {
+    pListC.SetListEntryTransferOk(accountA, B);
+    return true;
+  }
+
+  // Hub.SetListEntryBitsMO()
+  // -----------------------
+  // Managed operation to set/unset bits in a list entry
+  function SetListEntryBitsMO(address accountA, uint32 bitsToSet, bool unsetB) external IsAdminCaller IsActive returns (bool) {
+    require(pOpManC.IsManOpApproved(HUB_SET_LIST_ENTRY_BITS_MO_X));
+    pListC.SetListEntryBits(accountA, bitsToSet, unsetB);
+    // List.SetListEntryBits emits List.SetListEntryBitsV(accountA, bitsToSet, unsetB, bits, rsEntryR.bits);
+    return true;
   }
 
   // Hub Fallback function
@@ -472,4 +485,3 @@ djh??
   }
 
 } // End Hub contract
-

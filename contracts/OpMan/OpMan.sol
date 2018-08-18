@@ -166,10 +166,11 @@ contract OpMan is OwnedOpMan {
     pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, HOUR); //  5 Hub.StartSaleMO();
     pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, HOUR); //  6 Hub.SoftCapReachedMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, HOUR); //  7 Hub.CloseSaleMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_SET_LIST_ENTRY_BITS_MO_X,  3, HOUR); //  9 Hub.SetListEntryBitsMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, HOUR); //  8 Hub.SetTransferToPacioBcStateMO()
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_SET_PCL_ACCOUNT_MO_X,    3, HOUR); //  5 Mfund.SetPclAccountMO()
-    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_MO_X,           3, HOUR); //  6 Mfund.WithdrawMO()
+    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_TAP_MO_X,       3, HOUR); //  6 Mfund.WithdrawTapMO()
     pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, HOUR); //  5 Poll.ClosePollYesMO()
     pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, HOUR); //  6 Poll.ClosePollNoMO()
     pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, HOUR); //  5 Token.TransferUnIssuedPIOsToPacioBcMO()
