@@ -340,7 +340,7 @@ contract OpMan is OwnedOpMan {
   // ---------------------
   // 2.1 Admin to add additional contract as a managed op
   // Called manually by Admin to add an additional contract not included in the initial deployment. Must be approved.
-  function AddContractMO(uint32 vContractX, address vContractA, bool vPausableB) external IsAdminCaller {
+  function AddContractMO(uint32 vContractX, address vContractA, bool vPausableB) external IsAdminCaller IsActive {
     require(pIsManOpApproved(OP_MAN_ADD_CONTRACT_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_ADD_CONTRACT_MO_X since OP_MAN_CONTRACT_X is 0
     pAddContract(vContractX, vContractA, vPausableB);
   }
@@ -349,7 +349,7 @@ contract OpMan is OwnedOpMan {
   // -------------------
   // 2.2 Admin to add additional signer as a managed op
   // Called manually by Admin to add an additional signer not included in the initial deployment. Must be approved.
-  function AddSignerMO(address vSignerA) external IsAdminCaller returns (bool) {
+  function AddSignerMO(address vSignerA) external IsAdminCaller IsActive returns (bool) {
     require(pIsManOpApproved(OP_MAN_ADD_SIGNER_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_ADD_SIGNER_MO_X
     pAddSigner(vSignerA); // included IsNotDuplicateSigner() call
     return true;
@@ -359,7 +359,7 @@ contract OpMan is OwnedOpMan {
   // ------------------
   // 2.3 Admin to add additional manOp as a managed op
   // Called manually by Admin to add an additional manOp not included in the initial deployment. Must be approved.
-  function AddManOpMO(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller returns (bool) {
+  function AddManOpMO(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller IsActive returns (bool) {
     require(pIsManOpApproved(OP_MAN_ADD_MAN_OP_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_ADD_MAN_OP_MO_X
     pAddManOp(vContractX, vManOpX, vSigsRequired, vSecsToSign);
     return true;
@@ -367,9 +367,8 @@ contract OpMan is OwnedOpMan {
 
   // OpMan.InitAddManOp()
   // ------------------
-  // 2.4 Called from contract Initialise() function to add a manOp for the contract
-  function InitAddManOp(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external returns (bool) {
-    require(iInitialisingB); // To enforce being called only during initialisation
+  // 2.4 Called from a new contract Initialise() function to add a manOp for the contract
+  function InitAddManOp(uint256 vContractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsToSign) external IsContractCaller IsActive returns (bool) {
     uint256 cX = pContractsAddrMX[msg.sender];
     require(cX > 0, 'Not called from known contract'); // Not concerned about the cX == 0 (OP_MAN_CONTRACT_X) case for OpMan itself as no OpMan functions call this function.
     require(cX == vContractX, 'cX missmatch');
@@ -380,7 +379,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.ChangeSignerMO()
   // ----------------------
   // 3. Admin to change one signer to another as a managed op
-  function ChangeSignerMO(address vOldSignerA, address vNewSignerA) external IsAdminCaller returns (bool) {
+  function ChangeSignerMO(address vOldSignerA, address vNewSignerA) external IsAdminCaller IsActive returns (bool) {
     require(pIsManOpApproved(OP_MAN_CHANGE_SIGNER_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_CHANGE_SIGNER_MO_X
     uint256 iX = pSignersYA.length;
     for (uint256 j=0; j<pSignersYA.length; j++) {
@@ -402,7 +401,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.ConfirmSelfAsSigner()
   // ---------------------------
   // 4.1 Signer to confirm self as a signer
-  function ConfirmSelfAsSigner() external returns (bool) {
+  function ConfirmSelfAsSigner() external IsActive returns (bool) {
     R_Signer storage srSigR = pSignersAddrMR[msg.sender];
     require(srSigR.addedT > 0, 'Not called by a signer');
     require(srSigR.confirmedT == 0, 'Already confirmed');
@@ -425,7 +424,7 @@ contract OpMan is OwnedOpMan {
   // ------------------------
   // 5.1 Admin to update a contract as a managed op
   // New contract address must be unique
-  function UpdateContractMO(uint256 vContractX, address vNewContractA, bool vPausableB) external IsAdminCaller IsNotDuplicateContract(vNewContractA) returns (bool) {
+  function UpdateContractMO(uint256 vContractX, address vNewContractA, bool vPausableB) external IsAdminCaller IsNotDuplicateContract(vNewContractA) IsActive returns (bool) {
     require(pIsManOpApproved(OP_MAN_UPDATE_CONTRACT_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_UPDATE_CONTRACT_MO_X
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
@@ -448,7 +447,7 @@ contract OpMan is OwnedOpMan {
   // 5.2 Admin to update a manOp as a managed op
   // Can update sigsRequired and secsToSign not contractX
   // Accessed by its Key
-  function UpdateManOpMO(uint256 vManOpK, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller returns (bool) {
+  function UpdateManOpMO(uint256 vManOpK, uint32 vSigsRequired, uint32 vSecsToSign) external IsAdminCaller IsActive returns (bool) {
     require(pIsManOpApproved(OP_MAN_UPDATE_MAN_OP_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_UPDATE_MAN_OP_MO_X
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known');
@@ -467,7 +466,7 @@ contract OpMan is OwnedOpMan {
   // --------------------------
   // 6. Signer to start the approval process for a manOp
   // Accessed by its Key
-  function StartManOpApproval(uint256 vManOpK) external IsConfirmedSigner returns (bool) {
+  function StartManOpApproval(uint256 vManOpK) external IsConfirmedSigner IsActive returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known'); // op is defined
     require(!srManOpR.pausedB,         'ManOp is paused');
@@ -484,7 +483,7 @@ contract OpMan is OwnedOpMan {
   // -----------------
   // 7. Signer to sign a manOp for approval
   // Accessed by its Key
-  function SignManOp(uint256 vManOpK) external IsConfirmedSigner returns (bool) {
+  function SignManOp(uint256 vManOpK) external IsConfirmedSigner IsActive returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known'); // op is defined
     require(!srManOpR.pausedB,         'ManOp is paused');
@@ -505,7 +504,7 @@ contract OpMan is OwnedOpMan {
   // -----------------------
   // Called from a contract function using operation management to check if approval for the manOp has been given by the required number of signers
   // Process: 8. Approve or reject a request by a contract function to perform a managed op
-  function IsManOpApproved(uint256 vManOpX) external returns (bool) {
+  function IsManOpApproved(uint256 vManOpX) external IsContractCaller IsActive returns (bool) {
     uint256 cX = pContractsAddrMX[msg.sender];
     require(cX > 0 || msg.sender == address(this), 'Not called from known contract'); // The '|| msg.sender == address(this)' test is because cX == 0 (OP_MAN_CONTRACT_X) for OpMan itself.
     return pIsManOpApproved(cX * 100 + vManOpX);  // key = cX * 100 + manOpX
@@ -540,7 +539,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.ResumeContractMO()
   // ---------------------
   // A.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
-  function ResumeContractMO(uint256 vContractX) external IsConfirmedSigner returns (bool) {
+  function ResumeContractMO(uint256 vContractX) external IsConfirmedSigner IsActive returns (bool) {
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
     srContractR.pausedB = false;
@@ -555,7 +554,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.ResumeManOpMO()
   // ---------------------
   // A.2 Signer to resume a manOp as a managed op
-  function ResumeManOpMO(uint256 vManOpK) external IsConfirmedSigner returns (bool) {
+  function ResumeManOpMO(uint256 vManOpK) external IsConfirmedSigner IsActive returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[vManOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known'); // op is defined
     require(srManOpR.pausedB,         'ManOp not paused');
@@ -569,7 +568,7 @@ contract OpMan is OwnedOpMan {
   // OpMan.ChangeContractOwnerMO()
   // -----------------------------
   // B. Admin signer to change a contract owner as a managed op
-  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminCaller IsConfirmedSigner returns (bool) {
+  function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminCaller IsConfirmedSigner IsActive returns (bool) {
     require(vOwnerX > 0 && vOwnerX < NUM_OWNERS // NUM_OWNERS is defined in Owned*.sol. > 0 to prevent change of owner 0 which is always the deployer
          && vNewOwnerA != address(0));
     require(vContractX < pContractsYR.length, 'Contract not known');

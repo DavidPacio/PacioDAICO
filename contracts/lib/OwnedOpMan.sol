@@ -55,6 +55,10 @@ contract OwnedOpMan is Constants {
     require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !iIsContractCallerB(), "Not required Admin caller");
     _;
   }
+  modifier IsContractCaller {
+    require(iIsContractCallerB(), "Not contract caller");
+    _;
+  }
   modifier IsActive {
     require(!iPausedB, "Contract is Paused");
     _;
