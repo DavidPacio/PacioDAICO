@@ -316,12 +316,14 @@ contract Hub is OwnedHub, Math {
       if (refundBit > 0)
         refundWei = Min(pListC.WeiContributed(toA), pPfundC.FundWei());
     }else if (bits & LE_PICOS_B > 0) {
-      // Mfund or Presale Refund
-      if (bits & LE_EVER_PRESALE_COMBO_B == 0)
-        (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA);
-      // else no refund for a Presale investor unless done manually
+      // Mfund Refund which could be for a presale or tranche 1 investor not entitled to a soft cap miss refund
+      if (vOnceOffB || ( pState & STATE_S_CAP_MISS_REFUND_B == 0 || bits & LE_EVER_PRESALE_COMBO_B == 0))
+        // is a manual once off refund or is not for a soft cap miss presale/Tranche1 investor
+        (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA); // returns refundBit = LE_MNP_REFUND_S_CAP_MISS_B || LE_M_REFUND_TERMINATION_B || 0
+      // else no refund for a non once off Presale/Tranche1 investor unless done manually
       if (vOnceOffB)
         refundBit = LE_M_REFUND_ONCE_OFF_B;
+
     }
     require(refundWei > 0, 'No refund available');
     pTokenC.Refund(++pRefundId, toA, refundWei, refundBit); // IsHubContractCaller IsActive -> List.refund()
