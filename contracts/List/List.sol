@@ -376,11 +376,6 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
           pUpdateProxyData(entryA, rsEntryR.picosBalance, 0); // 0 for no change to numProxyVotesFor
       }
     }
-    if (bits & LE_PRESALE_B > 0) {
-      // Presale entry now whitelisted. Unset LE_PRESALE_B and set LE_WAS_PRESALE_B bits
-      rsEntryR.bits &= ~LE_PRESALE_B;
-      bitsToSet |= LE_WAS_PRESALE_B;
-    }
     rsEntryR.whiteT = vWhiteT;
     rsEntryR.bits |= bitsToSet;
     emit WhitelistV(entryA, vWhiteT);
@@ -420,28 +415,29 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // List.Issue()
   // ------------
   // Cases:
-  // a. Hub.PresaleIssue() -> Sale.PresaleIssue()                                 -> Token.Issue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
-  // b. Sale.Buy()                                                 -> Sale.pBuy() -> Token.Issue() -> here for normal buying
-  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> Token.Issue() -> here for Pfund to Mfund transfers on whitelisting
-  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> Token.Issue() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
-  function Issue(address toA, uint256 vPicos, uint256 vWei) external IsTokenContractCaller {
+  // a. Hub.PresaleIssue()                                         -> Sale.PresaleIssue() -> Token.Issue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
+  // b. Sale.pBuy()                                                -> Sale.pProcessSale() -> Token.Issue() -> here for normal buying
+  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> Token.Issue() -> here for Pfund to Mfund transfers on whitelisting
+  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> Token.Issue() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // with transche1B set if this is a Tranche 1 issue
+  function Issue(address toA, uint256 vPicos, uint256 vWei, bool tranche1B) external IsTokenContractCaller {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
-    uint32 bitsToSet = LE_M_FUND_B | LE_PICOS_B;
-    require(bits > 0 && bits & LE_NO_SEND_FUNDS_COMBO_B == 0 && bits & LE_WHITELISTED_B > 0); // already checked by Sale.Buy() so expected to be ok
+    uint32 bitsToSet = LE_M_FUND_B | LE_PICOS_B | (tranche1B ? LE_TRANCH1_B : 0);
+    require(bits > 0 && bits & LE_NO_SEND_FUNDS_COMBO_B == 0 && bits & LE_WHITELISTED_B > 0); // already checked by Sale.pProcessSale() so expected to be ok
     require(pListMR[pSaleA].picosBalance >= vPicos, "Picos not available"); // Check that the Picos are available
     require(vPicos > 0, "Cannot issue 0 picos");  // Make sure not here for 0 picos re counts below
     if (bits & LE_P_FUND_B > 0) {
       // Cases c and d Pfund to Mfund transfers
-      // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> Token.Issue() -> here for Pfund to Mfund transfers on whitelisting
-      // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy() -> Token.Issue() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+      // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> Token.Issue() -> here for Pfund to Mfund transfers on whitelisting
+      // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> Token.Issue() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
       // List.PrepurchaseDeposit() has been run so firstContribT, pNumPfund, weiContributed, contributions have been updated and the LE_P_FUND_B bit set
       rsEntryR.bits &= ~LE_P_FUND_B;           // unset the Pfund bit
       pNumPfund = decrementMaxZero(pNumPfund); // decrement pNumPfund
     }else{
       // Cases a and b
       // a. Hub.PresaleIssue() -> Sale.PresaleIssue() -> Token.Issue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
-      // b. Sale.Buy()         -> Sale.pBuy()         -> Token.Issue() -> here for normal buying
+      // b. Sale.pBuy()        -> Sale.pProcessSale() -> Token.Issue() -> here for normal buying
       if (rsEntryR.weiContributed == 0) {
         rsEntryR.firstContribT = uint32(now);
         if (rsEntryR.whiteT > 0) { // case b
@@ -465,19 +461,19 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // List.PrepurchaseDeposit()
   // -------------------------
-  // Is called from Sale.Buy() for prepurchase funds being deposited
-  //   In this case Sale.Buy() also calls Pfund.Deposit()
-  function PrepurchaseDeposit(address toA, uint256 vWei) external IsSaleContractCaller {
+  // Is called from Sale.pBuy() for prepurchase funds being deposited, with tranche1B set if from Sale.BuyTranche1()
+  //   In this case Sale.pBuy() also calls Pfund.Deposit()
+  function PrepurchaseDeposit(address toA, uint256 vWei, bool tranche1B) external IsSaleContractCaller {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
-    require(bits > 0 && bits & LE_NO_SEND_FUNDS_COMBO_B == 0 && (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0)); // already checked by Sale.Buy() so expected to be ok
+    require(bits > 0 && bits & LE_NO_SEND_FUNDS_COMBO_B == 0 && (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0)); // already checked by Sale.pBuy() so expected to be ok
     if (rsEntryR.weiContributed == 0) {
       rsEntryR.firstContribT = uint32(now);
       pNumPfund++;
     }
     rsEntryR.weiContributed = safeAdd(rsEntryR.weiContributed, vWei);
     rsEntryR.contributions++;
-    rsEntryR.bits |= LE_P_FUND_B; // means funded too
+    rsEntryR.bits |= LE_P_FUND_B | (tranche1B ? LE_TRANCH1_B : 0); // means funded too
     emit PrepurchaseDepositV(toA, vWei);
   }
 
@@ -536,8 +532,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external IsTokenContractCaller returns (uint256 refundPicos)  {
     R_List storage rsEntryR = pListMR[toA];
     uint32 bits = rsEntryR.bits;
-    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0); // Already checked by Hub.pRefund() so expected to be ok
-    if (vRefundBit >= LE_P_REFUND_S_CAP_MISS_B) {
+    require(bits > 0 && bits & LE_NO_REFUNDS_COMBO_B == 0); // Already checked by Hub.pRefund() so expected to be ok
+    if (vRefundBit >= LE_P_REFUNDED_S_CAP_MISS_B) {
       // Pfund refundBit
       require(bits & LE_P_FUND_B > 0, "Invalid list type for Prepurchase Refund");
       require(rsEntryR.weiContributed == vRefundWei, "Invalid List Prepurchase Refund call");
@@ -561,7 +557,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       rsEntryR.bits &= ~LE_MF_PICOS_MEMBER_PROXY_APP_B; // LE_M_FUND_B | LE_PICOS_B | LE_MEMBER_B | LE_PROXY_APPOINTER_B
     }
     rsEntryR.refundT = uint32(now);
-    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since will fail LE_NO_REFUND_COMBO_B after thids
+    rsEntryR.weiRefunded = vRefundWei; // No need to add as can come here only once since will fail LE_NO_REFUNDS_COMBO_B after thids
     rsEntryR.bits |= vRefundBit;
     // Token.Refund() emits RefundV(vRefundId, toA, refundPicos, vRefundWei, vRefundBit);
   }

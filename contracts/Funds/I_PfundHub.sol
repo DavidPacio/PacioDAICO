@@ -8,8 +8,9 @@ pragma solidity ^0.4.24;
 
 interface I_PfundHub {
   function FundWei() external view returns (uint256);
+  function SetPclAccount(address vPclAccountA) external;
   function StateChange(uint32 vState) external;
-  function PMTransfer(address vSenderA, uint256 vWei) external;
+  function PMTransfer(address vSenderA, uint256 vWei, bool tranche1B) external;
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
 }
 // End I_PfundHub interface

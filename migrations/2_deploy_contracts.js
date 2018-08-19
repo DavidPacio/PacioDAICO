@@ -46,6 +46,7 @@ Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address)
 Hub.ChangeOwnerMO(HUB_WEB_OWNER_X, Web account address)
 Hub.Initialise() to set the contract address variables and the initial STATE_PRIOR_TO_OPEN_B state
+Hub.SetPclAccountMO(address vPclAccountA) external
 
 Sale owned by Deployer OpMan Hub Admin Poll
 ----
@@ -85,7 +86,6 @@ Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Mfund.ChangeOwnerMO(POLL_OWNER_X, Poll address)
 Mfund.ChangeOwnerMO(PFUND_OWNER_X, Pfund address)
 Mfund.Initialise() to initialise the Mfund contract
-Mfund.SetPclAccountMO(address vPclAccountA) external
 Mfund.EndInitialise() to end initialising
 
 Pfund owned by Deployer OpMan Hub Sale

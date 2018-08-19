@@ -18,7 +18,7 @@ OpMan.ResumeContractMO(SALE_CONTRACT_X) IsConfirmedSigner which is a managed op
 
 Sale Fallback function
 ======================
-Sending Ether is allowed - calls Buy()
+Sending Ether is allowed - calls pBuy()
 
 */
 
@@ -39,37 +39,31 @@ import "../Funds/I_PfundSale.sol";
 // 3. 350 million     for >= 0.1 ETH && < 5 ETH  at 10 Cents
 
 contract Sale is OwnedSale, Math {
-  uint256 private constant NUM_TRANCHES = 5; // presale, T1, T2, T3, T4
-  uint256 private constant TRANCHE_PRESALE_X = 0; // presale tranche
-//uint256 private constant TRANCHE_1_X = 1; // tranche 1 Just use 1
-//uint256 private constant TRANCHE_2_X = 2; // tranche 2          2
-//uint256 private constant TRANCHE_3_X = 3; // tranche 3          3
-//uint256 private constant TRANCHE_4_X = 4; // tranche 4          4
-
   string  public  name = "Pacio DAICO Sale";
-  uint32  private pState;         // DAICO state using the STATE_ bits. Replicated from Hub on a change
-  uint256 private pSaleStartT;    // i Sale start time
-  uint256 private pSaleEndT;      // i Sale end time.            Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
-  uint256 private pUsdSoftCap;    // i USD soft cap $8,000,000   Can be changed by a POLL_CHANGE_S_CAP_USD_N poll
-  uint256 private pPicoSoftCap;   // i Pico soft cap             Can be changed by a POLL_CHANGE_S_CAP_PIO_N poll
-  uint256 private pUsdHardCap;    // i USD hard cap $42,300,000  Can be changed by a POLL_CHANGE_H_CAP_USD_N poll
-  uint256 private pPicoHardCap;   // i Pico hard cap             Can be changed by a POLL_CHANGE_H_CAP_PIO_N poll
-  uint256[NUM_TRANCHES] private pPicoHardCapTranchesA; // i Pico hard caps for tranches 1 to 4
-  uint256[NUM_TRANCHES] private pMinWeiTranchesA;      // i Minimum wei contribution for tranches 1 to 4
-  uint256[NUM_TRANCHES] private pPriceCCentsTranchesA; // i PIO price for tranche 1 to 4 in centi-cents i.e.  750 for 7.50
-  uint256[NUM_TRANCHES] private pPicosPerEthTranchesA; // c Picos per Ether for tranche 1 to 4  pUsdEtherPrice * 10**16 / pPriceCCentsTx
-  uint256[NUM_TRANCHES] private pPicosSoldTranchesA;   // s Picos sold in tranches 0 to 4
-  uint256 private pPicosSold;     // s Total Picos sold = sum of pPicosSoldTranchesA[]
-  uint256 private pWeiRaised;     // s Cumulative wei raised for picos issued. Does not include prepurchases -> Pfund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
-  uint256 private pUsdRaised;     // c pWeiRaised @ current pUsdEtherPrice = pWeiRaised * pUsdEtherPrice / 10**18
-  uint256 private pUsdEtherPrice; // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
-                                  // |- i  initialised via setup fn calls
-                                  // |- c calculated when pUsdEtherPrice is set/updated
-                                  // |- s summed
-                                  // |- u updated during running
-                                  // |- t initialised to true but can be changed manually
-                                  // |- f initialised to false
-  I_ListSale  private pListC;  // the List contract   -  read only use so List does not need to have Sale as an owner
+  uint256 private constant NUM_TRNCHS = 5;         // number of tranches: Presale, T1, T2, T3, T4
+  uint256 private constant TRNCH_PRESALE_X = 0;    // presale tranche, #s 1 to 4 used for tranches 1 to 4
+  uint32  private pState;                          // DAICO state using the STATE_ bits. Replicated from Hub on a change
+  uint256 private pSaleStartT;                     // i Sale start time
+  uint256 private pSaleEndT;                       // i Sale end time.            Can be changed by a POLL_CHANGE_SALE_END_TIME_N poll
+  uint256 private pUsdSoftCap;                     // i USD soft cap $8,000,000   Can be changed by a POLL_CHANGE_S_CAP_USD_N poll
+  uint256 private pPicoSoftCap;                    // i Pico soft cap             Can be changed by a POLL_CHANGE_S_CAP_PIO_N poll
+  uint256 private pUsdHardCap;                     // i USD hard cap $42,300,000  Can be changed by a POLL_CHANGE_H_CAP_USD_N poll
+  uint256 private pPicoHardCap;                    // i Pico hard cap             Can be changed by a POLL_CHANGE_H_CAP_PIO_N poll
+  uint256 private pPicosSold;                      // s Total Picos sold = sum of pPicosSoldTrnchsA[]
+  uint256 private pWeiRaised;                      // s Cumulative wei raised for picos issued. Does not include prepurchases -> Pfund. Does not get reduced for refunds. USD Raised = pWeiRaised * pUsdEtherPrice / 10**18
+  uint256 private pUsdRaised;                      // c pWeiRaised @ current pUsdEtherPrice = pWeiRaised * pUsdEtherPrice / 10**18
+  uint256 private pUsdEtherPrice;                  // u Current US$ Ether price used for calculating pPicosPerEth? and USD calcs
+  address private pPclAccountA;                    // i The PCL account (wallet or multi sig contract) for Tranche 1 deposits
+  uint256[NUM_TRNCHS] private pPicoHardCapTrnchsA; // i Pico hard caps            tranches 1 to 4
+  uint256[NUM_TRNCHS] private pMinWeiTrnchsA;      // i Minimum wei contribution  tranches 1 to 4
+  uint256[NUM_TRNCHS] private pPriceCCentsTrnchsA; // i PIO price                 tranches 1 to 4 in centi-cents i.e.  750 for 7.50
+  uint256[NUM_TRNCHS] private pPicosPerEthTrnchsA; // c Picos per Ether           tranches 1 to 4 pUsdEtherPrice * 10**16 / pPriceCCentsTrnchsA[x]
+  uint256[NUM_TRNCHS] private pPicosSoldTrnchsA;   // s Picos sold in             tranches 0 to 4
+                                                   // |- i  initialised via setup fn calls
+                                                   // |- c calculated
+                                                   // |- s summed
+                                                   // |- u updated during running
+  I_ListSale  private pListC;  // the List contract  -  read only use so List does not need to have Sale as an owner
   I_Hub       private pHubC;   // the Hub contract   /- Sale makes state changing calls to these contracts so they need to have Sale as an owner. Hub does.
   I_TokenSale private pTokenC; // the Token contract |  Token is owned by Owners Deployer OpMan Hub Sale Admin     so includes Sale
   I_MfundSale private pMfundC; // the Mfund contract |  Mfund is owned by Deployer OpMan Hub Sale Poll Pfund Admin so includes Sale
@@ -111,27 +105,27 @@ contract Sale is OwnedSale, Math {
   }
   // Sale.PioHardCapTrancheX()
   function PioHardCapTrancheX(uint32 tX) external view returns (uint32) {
-    return tX < NUM_TRANCHES ? uint32(pPicoHardCapTranchesA[tX] / 10**12) : 0;
+    return tX < NUM_TRNCHS ? uint32(pPicoHardCapTrnchsA[tX] / 10**12) : 0;
   }
   // Sale.MinWeiTrancheX()
   function MinWeiTrancheX(uint32 tX) external view returns (uint256) {
-    return tX < NUM_TRANCHES ? pMinWeiTranchesA[tX] : 0;
+    return tX < NUM_TRNCHS ? pMinWeiTrnchsA[tX] : 0;
   }
   // Sale.PioPriceCentiCentsTrancheX()
   function PioPriceCentiCentsTrancheX(uint32 tX) external view returns (uint32) {
-    return tX < NUM_TRANCHES ? uint32(pPriceCCentsTranchesA[tX]) : 0; // PIO price for tranche in centi-cents i.e.  750 for 7.50
+    return tX < NUM_TRNCHS ? uint32(pPriceCCentsTrnchsA[tX]) : 0; // PIO price for tranche in centi-cents i.e.  750 for 7.50
   }
   // Sale.PicosPerEtherTranchX()
   function PicosPerEtherTranchX(uint32 tX) external view returns (uint32) {
-    return tX < NUM_TRANCHES ? uint32(pPicosPerEthTranchesA[tX]) : 0;
+    return tX < NUM_TRNCHS ? uint32(pPicosPerEthTrnchsA[tX]) : 0;
   }
   // Sale.PicosSold() -- should == Token.pPicosIssued unless refunding/transferring to Pacio Blockchain happens
   function PicosSold() external view returns (uint256) {
     return pPicosSold;
   }
   // Sale.PicosSoldTranches()
-  function PicosSoldTranches() external view returns (uint256[NUM_TRANCHES]) {
-    return pPicosSoldTranchesA;
+  function PicosSoldTranches() external view returns (uint256[NUM_TRNCHS]) {
+    return pPicosSoldTrnchsA;
   }
   // Sale.WeiRaised()
   function WeiRaised() external view returns (uint256) {
@@ -169,9 +163,10 @@ contract Sale is OwnedSale, Math {
   // Events
   // ======
   event InitialiseV(address TokenContract, address ListContract, address MfundContract, address PfundContract);
-  event SetCapsAndTranchesV(uint32[NUM_TRANCHES] PioHardCapTranches, uint32 UsdSoftCap, uint32 PioSoftCap, uint32 UsdHardCap, uint32 PioHardCap,
-                           uint256[NUM_TRANCHES] MinWeiTranches, uint256[NUM_TRANCHES] PioPriceCCentsTranches);
-  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256[NUM_TRANCHES] PicosPerEthTranches, uint256 UsdRaised);
+  event SetCapsAndTranchesV(uint32[NUM_TRNCHS] PioHardCapTranches, uint32 UsdSoftCap, uint32 PioSoftCap, uint32 UsdHardCap, uint32 PioHardCap,
+                           uint256[NUM_TRNCHS] MinWeiTranches, uint256[NUM_TRNCHS] PioPriceCCentsTranches);
+  event SetUsdEtherPriceV(uint256 UsdEtherPrice, uint256[NUM_TRNCHS] PicosPerEthTranches, uint256 UsdRaised);
+  event SetPclAccountV(address PclAccount);
   event PresaleIssueV(address indexed toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleTimesV(uint32 SaleStartTime, uint32 SaleEndTime);
@@ -212,19 +207,28 @@ contract Sale is OwnedSale, Math {
   // Sale.SetCapsAndTranchesMO()
   // ---------------------------
   // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
-  function SetCapsAndTranchesMO(uint32[NUM_TRANCHES] vPioHardCapTranchesA, uint32 vUsdSoftCap, uint32 vPioSoftCap, uint32 vUsdHardCap, uint32 vPioHardCap,
-                               uint256[NUM_TRANCHES] vMinWeiTranchesA, uint256[NUM_TRANCHES] vPriceCCentsTranchesA) external {
+  function SetCapsAndTranchesMO(uint32[NUM_TRNCHS] vPioHardCapTrnchsA, uint32 vUsdSoftCap, uint32 vPioSoftCap, uint32 vUsdHardCap, uint32 vPioHardCap,
+                               uint256[NUM_TRNCHS] vMinWeiTrnchsA, uint256[NUM_TRNCHS] vPriceCCentsTrnchsA) external {
     require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
-    for (uint256 j=0; j<NUM_TRANCHES; j++) {
-      pPicoHardCapTranchesA[j] = vPioHardCapTranchesA[j-1] * 10**12; // Hard cap for the sale tranches 1-4
-      pMinWeiTranchesA[j]      = vMinWeiTranchesA[j-1];
-      pPriceCCentsTranchesA[j] = vPriceCCentsTranchesA[j-1];
+    for (uint256 j=0; j<NUM_TRNCHS; j++) {
+      pPicoHardCapTrnchsA[j] = vPioHardCapTrnchsA[j-1] * 10**12; // Hard cap for the sale tranches 1-4
+      pMinWeiTrnchsA[j]      = vMinWeiTrnchsA[j-1];
+      pPriceCCentsTrnchsA[j] = vPriceCCentsTrnchsA[j-1];
     }
     pUsdSoftCap    = vUsdSoftCap; // USD soft cap $8,000,000
     pPicoSoftCap   = vPioSoftCap * 10**12;
     pUsdHardCap    = vUsdHardCap; // USD soft cap $42,300,000
     pPicoHardCap   = vPioHardCap * 10**12;
-    emit SetCapsAndTranchesV(vPioHardCapTranchesA, vUsdSoftCap, vPioSoftCap, vUsdHardCap, vPioHardCap, vMinWeiTranchesA,  vPriceCCentsTranchesA);
+    emit SetCapsAndTranchesV(vPioHardCapTrnchsA, vUsdSoftCap, vPioSoftCap, vUsdHardCap, vPioHardCap, vMinWeiTrnchsA,  vPriceCCentsTrnchsA);
+  }
+
+  // Sale.SetPclAccount()
+  // --------------------
+  // Called from Hub.SetPclAccountMO() to set/update the PCL withdrawal account
+  function SetPclAccount(address vPclAccountA) external IsHubContractCaller IsActive {
+    require(vPclAccountA != address(0));
+    pPclAccountA = vPclAccountA;
+    emit SetPclAccountV(vPclAccountA);
   }
 
   // Sale.SetUsdEtherPrice()
@@ -234,9 +238,9 @@ contract Sale is OwnedSale, Math {
     require(iIsInitialisingB() || iIsAdminCallerB());
     pUsdEtherPrice = vUsdEtherPrice; // e.g. 500
     pUsdRaised     = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
-    for (uint256 j=1; j<NUM_TRANCHES; j++)
-      pPicosPerEthTranchesA[j] = pUsdEtherPrice * 10**16 / pPriceCCentsTranchesA[j]; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT2   16 = 12 (picos per Pio) + 4 from pPriceCCentsT2 -> $s = 6,666,666,666,666,666
-    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthTranchesA, pUsdRaised);
+    for (uint256 j=1; j<NUM_TRNCHS; j++)
+      pPicosPerEthTrnchsA[j] = pUsdEtherPrice * 10**16 / pPriceCCentsTrnchsA[j]; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT2   16 = 12 (picos per Pio) + 4 from pPriceCCentsT2 -> $s = 6,666,666,666,666,666
+    emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthTrnchsA, pUsdRaised);
   }
 
   // Sale.EndInitialise()
@@ -254,9 +258,9 @@ contract Sale is OwnedSale, Math {
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
     require(pSaleStartT == 0); // check that sale hasn't started yet
-    pTokenC.Issue(toA, vPicos, vWei); // which calls List.Issue()
+    pTokenC.Issue(toA, vPicos, vWei, false); // which calls List.Issue()
     pWeiRaised = safeAdd(pWeiRaised, vWei);
-    pPicosSoldTranchesA[TRANCHE_PRESALE_X] += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
+    pPicosSoldTrnchsA[TRNCH_PRESALE_X] += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
     pPicosSold    += vPicos;
     emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
     // No event emit as List.Issue() does it
@@ -328,36 +332,6 @@ contract Sale is OwnedSale, Math {
     emit PollSetPioHardCapV(vPioHardCap);
   }
 
-  // Sale.Buy()
-  // ----------
-  // Main function for funds being sent to the DAICO. Plus BuyTranche1())
-  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be not whitelisted.
-  // Cases:
-  // - sending when not yet whitelisted                  -> Pfund whether sale open or not
-  // - sending when whitelisted but sale is not yet open -> Pfund
-  // - sending when whitelisted and sale is open         -> Mfund via pBuy()
-  function Buy() payable public IsActive returns (bool) { // public because it is called from the fallback fn
-    require(msg.value >= pMinWeiTranchesA[4], "Ether less than minimum"); // sent >= tranche 4 min ETH
-    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
-    (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
-    require(bits > 0, 'Account not registered');
-    require(bits & LE_NO_SEND_FUNDS_COMBO_B == 0, 'Sending not allowed');
-    if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pSaleStartT)
-      // Sale hasn't started yet but the time come
-      pHubC.StartSaleMO(); // changes state to STATE_OPEN_B
-    if (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0) {
-      // Not whitelisted yet || sale hasn't started yet -> Prepurchase
-      pListC.PrepurchaseDeposit(msg.sender, msg.value); // updates the list entry
-      pPfundC.Deposit.value(msg.value)(msg.sender);   // transfers msg.value to the Prepurchase escrow account
-      emit PrepurchaseDepositV(msg.sender, msg.value);
-      return true;
-    }
-    // Whitelisted and ok to buy
-    pBuy(msg.sender, msg.value, bonusCentiPc);
-    pMfundC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Mfund account
-    return true;
-  }
-
   // Sale.BuyTranche1()
   // ------------------
   // Function for funds being sent to the DAICO to buy the Tranche1 deal
@@ -365,57 +339,87 @@ contract Sale is OwnedSale, Math {
   // Cases:
   // - sending when not yet whitelisted                  -> Pfund whether sale open or not
   // - sending when whitelisted but sale is not yet open -> Pfund
-  // - sending when whitelisted and sale is open         -> Mfund via pBuy()
-  function BuyTranche1() payable external IsActive returns (bool) {
-    require(msg.value >= pMinWeiTranchesA[4], "Ether less than minimum"); // sent >= tranche 4 min ETH
+  // - sending when whitelisted and sale is open         -> Mfund via pProcessSale()
+  function BuyTranche1() payable external {
+    pBuy(true);
+  }
+
+  // Sale.pBuy() private
+  // -----------
+  // Function for funds being sent to the DAICO
+  // Called from fallback() with tranche1B false and BuyTranche1() with tranche1B true
+  // A list entry for msg.sender is expected to exist for msg.sender created via a Hub.CreateListEntry() call. Could be not whitelisted.
+  // Cases:
+  // - sending when not yet whitelisted                  -> Pfund whether sale open or not
+  // - sending when whitelisted but sale is not yet open -> Pfund
+  // - sending when whitelisted and sale is open         -> Mfund via pProcessSale()
+  function pBuy(bool tranche1B) private IsActive returns (bool) { // public because it is called from the fallback fn
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
     require(bits > 0, 'Account not registered');
     require(bits & LE_NO_SEND_FUNDS_COMBO_B == 0, 'Sending not allowed');
+    if (tranche1B) {
+      // Here from BuyTranche1()
+      require(msg.value >= pMinWeiTrnchsA[1], "Ether less than minimum"); // check that sent >= tranche 1 min ETH
+      // Can't buy Tranche 1 if have already made T2 to T4 purchases unless soft cap has been reached
+      require(bits & LE_M_FUND_B == 0 || pState & STATE_S_CAP_REACHED_B > 0, 'Cant buy T1 before soft cap as have soft cap miss refundable funds');
+      // need to set bit LE_TRANCH1_B
+    }else{
+      // Here for std buy from fallback()
+      require(msg.value >= pMinWeiTrnchsA[4], "Ether less than minimum"); // check that sent >= tranche 4 min ETH
+      require(bits & LE_PRESALE_TRANCH1_B == 0 || pState & STATE_S_CAP_REACHED_B > 0, 'Cant buy T2-4 before soft cap as have soft cap miss non-refundable funds');
+    }
     if (pState & STATE_PRIOR_TO_OPEN_B > 0 && now >= pSaleStartT)
       // Sale hasn't started yet but the time come
       pHubC.StartSaleMO(); // changes state to STATE_OPEN_B
     if (bits & LE_WHITELISTED_B == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0) {
       // Not whitelisted yet || sale hasn't started yet -> Prepurchase
-      pListC.PrepurchaseDeposit(msg.sender, msg.value); // updates the list entry
-      pPfundC.Deposit.value(msg.value)(msg.sender);   // transfers msg.value to the Prepurchase escrow account
+      pListC.PrepurchaseDeposit(msg.sender, msg.value, tranche1B); // updates the list entry
+      pPfundC.Deposit.value(msg.value)(msg.sender);     // transfers msg.value to the Prepurchase escrow account
       emit PrepurchaseDepositV(msg.sender, msg.value);
       return true;
     }
     // Whitelisted and ok to buy
-    pBuy(msg.sender, msg.value, bonusCentiPc);
-    pMfundC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Mfund account
+    pProcessSale(msg.sender, msg.value, bonusCentiPc, tranche1B);
+    if (tranche1B)
+    //pPclAccountA.transfer(this.balance);
+      pPclAccountA.transfer(msg.value);
+    else
+      pMfundC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Mfund account
     return true;
   }
 
-  // Sale.pBuy() private
-  // -----------
-  // Split from Buy() to handle the Pfund -> Mfund cases:
-  // a. Sale.Buy()                                                 -> here -> Token.Issue() -> List.Issue() for normal buying
+  // Sale.pProcessSale() private
+  // -------------------
+  // a. Sale.pBuy()                                                -> here -> Token.Issue() -> List.Issue() for normal buying
   // b. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
   // c. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // Decides on the tranche, calculates the picos, checks for softcap being reached, or the sale ending via hard cap being reached or time being up
-  // djh add tranche1 case
-  function pBuy(address senderA, uint256 weiContributed, uint32 bonusCentiPc) private {
-    // Which tranche? 2-4 not 0 (presale) here
-    uint32 tranche = 4; // assume 4 to start, the most likely
-    if (weiContributed >= pMinWeiTranchesA[3]) {
-      // Tranche 2 or 3
-      if (weiContributed >= pMinWeiTranchesA[2] && pPicosSoldTranchesA[2] < pPicoHardCapTranchesA[2])
-        tranche = 2;
-      else if (pPicosSoldTranchesA[3] < pPicoHardCapTranchesA[3])
-        tranche = 3;
-      // else 4 as tranches 2 and 3 don't pass
+  function pProcessSale(address senderA, uint256 weiContributed, uint32 bonusCentiPc, bool tranche1B) private {
+    // Which tranche? 1-4 not 0 (presale) here
+    uint32 tranche;
+    if (tranche1B)
+      tranche = 1;
+    else{
+      tranche = 4; // assume 4 to start, the most likely
+      if (weiContributed >= pMinWeiTrnchsA[3]) {
+        // Tranche 2 or 3
+        if (weiContributed >= pMinWeiTrnchsA[2] && pPicosSoldTrnchsA[2] < pPicoHardCapTrnchsA[2])
+          tranche = 2;
+        else if (pPicosSoldTrnchsA[3] < pPicoHardCapTrnchsA[3])
+          tranche = 3;
+        // else 4 as tranches 2 and 3 don't pass
+      }
     }
-    uint256 picos = safeMul(pPicosPerEthTranchesA[tranche], weiContributed) / 10**18; // Picos = Picos per ETH * Wei / 10^18
+    uint256 picos = safeMul(pPicosPerEthTrnchsA[tranche], weiContributed) / 10**18; // Picos = Picos per ETH * Wei / 10^18
     // Bonus?
     if (bonusCentiPc > 0) // 675 for 6.75%
       picos += safeMul(picos, bonusCentiPc) / 10000;
     pWeiRaised = safeAdd(pWeiRaised, weiContributed);
-    pTokenC.Issue(senderA, picos, weiContributed); // which calls List.Issue()
+    pTokenC.Issue(senderA, picos, weiContributed, tranche1B); // which calls List.Issue()
     pUsdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     emit SaleV(senderA, picos, weiContributed, tranche, pUsdEtherPrice, bonusCentiPc);
-    pPicosSoldTranchesA[tranche] += picos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
+    pPicosSoldTrnchsA[tranche] += picos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
     pPicosSold += picos;
     // Test for reaching soft cap
     if (pState & STATE_S_CAP_REACHED_B == 0 && (pPicosSold >= pPicoSoftCap || pUsdRaised >= pUsdSoftCap))
@@ -434,14 +438,15 @@ contract Sale is OwnedSale, Math {
   // Sale.PMtransfer()
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
-  // then finally Hub.pPMtransfer() transfer the Ether from Pfund to Mfund
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // then finally Hub.pPMtransfer() transfers the Ether from Pfund to Mfund
   function PMtransfer(address senderA, uint256 weiContributed) external IsHubContractCaller {
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
-    require(bits > 0 && bits & LE_WHITELISTED_B == 0 && bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0); // Checked by Hub.Whitelist()/Hub.PMtransfer() so expected to be ok here
-    pBuy(senderA, weiContributed, bonusCentiPc);
+    require(bits > 0 && bits & LE_WHITELISTED_P_FUND_B > 0 && pState & STATE_OPEN_B > 0); // Checked by Hub.Whitelist()/Hub.PMtransfer() so expected to be ok here
+    pProcessSale(senderA, weiContributed, bonusCentiPc, bits & LE_TRANCH1_B > 0);
   }
+
 
   // Sale.pSoftCapReached()
   // ----------------------
@@ -451,7 +456,7 @@ contract Sale is OwnedSale, Math {
 
   // Sale.pCloseSale()
   // -----------------
-  // Called from Buy() for hard cap reached or time up
+  // Called from pBuy() for hard cap reached or time up
   function pCloseSale(uint32 vBit) private {
     pHubC.CloseSaleMO(vBit);
   }
@@ -460,7 +465,7 @@ contract Sale is OwnedSale, Math {
   // ======================
   // Allow buying via the fallback fn
   function () payable external {
-    Buy();
+    pBuy(false); // false == not tranche1 deal
   }
 
 } // End Sale contract

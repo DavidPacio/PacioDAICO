@@ -26,10 +26,11 @@ contract Pfund is OwnedPfund, Math {
   string  public name = "Pacio DAICO Prepurchase Escrow Fund";
   uint32  private pState;             // DAICO state using the STATE_ bits. Replicated from Hub on a change
   uint256 private pTotalDepositedWei; // Total wei deposited in Prepurchase escrow before any whitelist transfers or refunds.
-  uint256 private pDepositId;    // Deposit Id
-  uint256 private pPMtransferId; // P to M transfer Id
-  uint256 private pRefundId;     // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
-  I_MfundPfund private pMfundC;  // the Mfund contract
+  uint256 private pDepositId;         // Deposit Id
+  uint256 private pPMtransferId;      // P to M transfer Id
+  uint256 private pRefundId;          // Id of refund in progress - RefundInfo() call followed by a Refund() caLL
+  address private pPclAccountA;       // The PCL account (wallet or multi sig contract) for Tranche 1 transfers
+  I_MfundPfund private pMfundC;       // the Mfund contract
 
   // View Methods
   // ============
@@ -61,9 +62,11 @@ contract Pfund is OwnedPfund, Math {
   // Events
   // ======
   event InitialiseV();
+  event SetPclAccountV(address PclAccount);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event    DepositV(uint256 indexed DepositId,    address indexed Account, uint256 Wei);
-  event PMTransferV(uint256 indexed PMtransferId, address indexed Account, uint256 Wei);
+  event Tranche1TransferV(uint256 indexed PMtransferId, address indexed Account, uint256 Wei, address To);
+  event       PMTransferV(uint256 indexed PMtransferId, address indexed Account, uint256 Wei);
   event     RefundV(uint256 indexed RefundId,     address indexed Account, uint256 RefundWei, uint32 RefundBit);
 
   // Initialisation/Setup Functions
@@ -84,6 +87,15 @@ contract Pfund is OwnedPfund, Math {
     emit InitialiseV();
   }
 
+  // Pfund.SetPclAccount()
+  // ---------------------
+  // Called from Hub.SetPclAccountMO() to set/update the PCL withdrawal account
+  function SetPclAccount(address vPclAccountA) external IsHubContractCaller IsActive {
+    require(vPclAccountA != address(0));
+    pPclAccountA = vPclAccountA;
+    emit SetPclAccountV(vPclAccountA);
+  }
+
   // Pfund.StateChange()
   // -------------------
   // Called from Hub.pSetState() on a change of state to replicate the new state setting and take any required actions
@@ -97,8 +109,8 @@ contract Pfund is OwnedPfund, Math {
 
   // Pfund.Deposit()
   // ---------------
-  // Called from Sale.Buy() for a prepurchase to transfer the contribution for escrow keeping here
-  //                        after a List.PrepurchaseDeposit() call to update the list entry
+  // Called from Sale.pBuy() for a prepurchase to transfer the contribution for escrow keeping here
+  //                         after a List.PrepurchaseDeposit() call to update the list entry
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit to Prepurchase escrow not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
@@ -107,12 +119,18 @@ contract Pfund is OwnedPfund, Math {
 
   // Pfund.PMTransfer()
   // ------------------
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally Hub.pPMtransfer() calls here to transfer the Ether from P to M
-  function PMTransfer(address vSenderA, uint256 vWei) external IsHubContractCaller {
-    pMfundC.Deposit.value(vWei)(vSenderA); // transfers vWei from Pfund to Mfund
-    emit PMTransferV(++pPMtransferId, vSenderA, vWei);
+  function PMTransfer(address vSenderA, uint256 vWei, bool tranch1B) external IsHubContractCaller {
+    pPMtransferId++;
+    if (tranch1B) {
+      pPclAccountA.transfer(vWei);
+      emit Tranche1TransferV(pPMtransferId, vSenderA, vWei, pPclAccountA);
+    }else{
+      pMfundC.Deposit.value(vWei)(vSenderA); // transfers vWei from Pfund to Mfund
+      emit PMTransferV(pPMtransferId, vSenderA, vWei);
+    }
   }
 
   // Pfund.Refund()
@@ -124,7 +142,7 @@ contract Pfund is OwnedPfund, Math {
   // Returns false refunding is complete
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
     require(vRefundId == pRefundId   // same hub call check                                                                           // /- expected to be true if called as intended
-         && (vRefundBit == LE_P_REFUND_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUND_B > 0 || pState & STATE_CLOSED_COMBO_B > 0)); // |
+         && (vRefundBit == LE_P_REFUNDED_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUNDED_B > 0 || pState & STATE_CLOSED_COMBO_B > 0)); // |
     uint256 refundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
     toA.transfer(refundWei);
     emit RefundV(pRefundId, toA, refundWei, vRefundBit);

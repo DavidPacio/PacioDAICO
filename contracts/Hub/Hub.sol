@@ -70,6 +70,7 @@ contract Hub is OwnedHub, Math {
   // Events
   // ======
   event InitialiseV(address OpManContract, address SaleContract, address TokenContract, address ListContractt, address PfundContract, address MfundContract, address PollContract);
+  event SetPclAccountV(address PclAccount);
   event StateChangeV(uint32 PrevState, uint32 NewState);
   event SetSaleTimesV(uint32 StartTime, uint32 EndTime);
   event StartSaleV();
@@ -110,6 +111,20 @@ contract Hub is OwnedHub, Math {
     iInitialisingB = false;
   }
 
+  // Hub.SetPclAccountMO()
+  // ---------------------
+  // Called by the deploy script when initialising
+  //  or manually as Admin as a managed op to set/update the PCL withdrawal account
+  // Is passed on to MFund for withdrawals, to Sale for Tranche 1 purchases, and to PFund for Tranche 1 PM transfers
+  function SetPclAccountMO(address vPclAccountA) external {
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SET_PCL_ACCOUNT_MO_X)));
+    require(vPclAccountA != address(0));
+    pMfundC.SetPclAccount(vPclAccountA);
+     pSaleC.SetPclAccount(vPclAccountA);
+    pPfundC.SetPclAccount(vPclAccountA);
+    emit SetPclAccountV(vPclAccountA);
+  }
+
   // Hub.PresaleIssue()
   // ------------------
   // To be called repeatedly for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
@@ -125,7 +140,7 @@ contract Hub is OwnedHub, Math {
   // ------------------
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
-  // The STATE_OPEN_B state bit gets set when the first Sale.Buy() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
+  // The STATE_OPEN_B state bit gets set when the first Sale.pProcessSale() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function SetSaleTimes(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
@@ -154,7 +169,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSaleMO()
   // -----------------
-  // Is called from Sale.Buy() when the first buy arrives after the sale pSaleStartT
+  // Is called from Sale.pProcessSale() when the first buy arrives after the sale pSaleStartT
   // Can be called manually by Admin as a managed op if necessary.
   function StartSaleMO() external {
     require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
@@ -214,7 +229,7 @@ contract Hub is OwnedHub, Math {
   // Called from Poll.pClosePoll() when a POLL_TERMINATE_FUNDING_N poll has voted to end funding the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
   function PollTerminateFunding() external IsPollContractCaller {
-    pSetState(pState |= STATE_TERMINATE_REFUND_B);
+    pSetState(pState |= STATE_TERMINATE_REFUNDED_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pListC.SetTransfersOkByDefault(false);
     emit PollTerminateFundingV();
@@ -262,13 +277,13 @@ contract Hub is OwnedHub, Math {
   // Hub.pPMtransfer() private
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pBuy()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
-  // then finally transfer the Ether from P to M
+  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // then finally calls Pfund.PMTransfer() to transfer the Ether from P to M or to pPclAccountA if it is a Tranche 1 case
   function pPMtransfer(address accountA) private returns (bool) {
     uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.FundWei());
-      pSaleC.PMtransfer(accountA, weiContributed);  // processes the issue
-    pPfundC.PMTransfer(accountA, weiContributed); // transfers weiContribured from the Pfund to the Mfund
+     pSaleC.PMtransfer(accountA, weiContributed); // processes the issue
+    pPfundC.PMTransfer(accountA, weiContributed, pListC.EntryBits(accountA) & LE_TRANCH1_B > 0); // transfers weiContribured from the Pfund to the Mfund or to pPclAccountA if it is a Tranche 1 case
     // Pfund.PMTransfer() emits an event
     return true;
   }
@@ -302,27 +317,27 @@ contract Hub is OwnedHub, Math {
     uint32  refundBit;
     uint32  bits = pListC.EntryBits(toA);
     bool pfundB;
-    require(bits > 0 && bits & LE_NO_REFUND_COMBO_B == 0          // LE_NO_REFUND_COMBO_B is not a complete check
+    require(bits > 0 && bits & LE_NO_REFUNDS_COMBO_B == 0          // LE_NO_REFUNDS_COMBO_B is not a complete check
          && (vOnceOffB || pState & STATE_REFUNDING_COMBO_B > 0));
     if (bits & LE_P_FUND_B > 0) {
       // Pfund Refund
       pfundB = true;
       if (vOnceOffB)
-        refundBit = LE_P_REFUND_ONCE_OFF_B;
-      else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
-        refundBit = LE_P_REFUND_S_CAP_MISS_B;
+        refundBit = LE_P_REFUNDED_ONCE_OFF_B;
+      else if (pState & STATE_S_CAP_MISS_REFUNDED_B > 0)
+        refundBit = LE_P_REFUNDED_S_CAP_MISS_B;
       else if (pState & STATE_CLOSED_COMBO_B > 0)
-        refundBit = LE_P_REFUND_SALE_CLOSE_B;
+        refundBit = LE_P_REFUNDED_SALE_CLOSE_B;
       if (refundBit > 0)
         refundWei = Min(pListC.WeiContributed(toA), pPfundC.FundWei());
     }else if (bits & LE_PICOS_B > 0) {
       // Mfund Refund which could be for a presale or tranche 1 investor not entitled to a soft cap miss refund
-      if (vOnceOffB || ( pState & STATE_S_CAP_MISS_REFUND_B == 0 || bits & LE_EVER_PRESALE_COMBO_B == 0))
-        // is a manual once off refund or is not for a soft cap miss presale/Tranche1 investor
-        (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA); // returns refundBit = LE_MNP_REFUND_S_CAP_MISS_B || LE_M_REFUND_TERMINATION_B || 0
-      // else no refund for a non once off Presale/Tranche1 investor unless done manually
+      if (vOnceOffB || ( pState & STATE_S_CAP_MISS_REFUNDED_B == 0 || bits & LE_PRESALE_TRANCH1_B == 0))
+        // is a manual once off refund or is not for a soft cap miss Presale/Tranche 1 investor
+        (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA); // returns refundBit = LE_M_REFUNDED_S_CAP_MISS_NPT1B || LE_M_REFUNDED_TERMINATION_B || 0
+      // else no refund for a non once off Presale/Tranche 1 investor unless done manually
       if (vOnceOffB)
-        refundBit = LE_M_REFUND_ONCE_OFF_B;
+        refundBit = LE_M_REFUNDED_ONCE_OFF_B;
 
     }
     require(refundWei > 0, 'No refund available');

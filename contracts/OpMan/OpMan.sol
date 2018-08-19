@@ -159,13 +159,13 @@ contract OpMan is OwnedOpMan {
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_SIGNER_MO_X,     3, HOUR); //  8 ChangeSignerMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_CONTRACT_MO_X,   3, HOUR); //  9 UpdateContractMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,     3, HOUR); // 10 UpdateManOpMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, HOUR); //  5 Hub.StartSaleMO();
-    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, HOUR); //  6 Hub.SoftCapReachedMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, HOUR); //  7 Hub.CloseSaleMO()
+    pAddManOp(MFUND_CONTRACT_X,  HUB_SET_PCL_ACCOUNT_MO_X,      3, HOUR); //  5 Hub.SetPclAccountMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, HOUR); //  6 Hub.StartSaleMO();
+    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, HOUR); //  7 Hub.SoftCapReachedMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, HOUR); //  8 Hub.CloseSaleMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_SET_LIST_ENTRY_BITS_MO_X,  3, HOUR); //  9 Hub.SetListEntryBitsMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, HOUR); //  8 Hub.SetTransferToPacioBcStateMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, HOUR); // 10 Hub.SetTransferToPacioBcStateMO()
     pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
-    pAddManOp(MFUND_CONTRACT_X,  MFUND_SET_PCL_ACCOUNT_MO_X,    3, HOUR); //  5 Mfund.SetPclAccountMO()
     pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_TAP_MO_X,       3, HOUR); //  6 Mfund.WithdrawTapMO()
     pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, HOUR); //  5 Poll.ClosePollYesMO()
     pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, HOUR); //  6 Poll.ClosePollNoMO()
