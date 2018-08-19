@@ -1,6 +1,6 @@
 // lib\OwnedHub.sol
 //
-// Version of Owned for Hub which is owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
+// Version of Owned for Hub which is owned by 0 Deployer OpMan Self Admin Sale Poll  Web
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,20 +9,15 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedHub is Constants {
-  uint256 internal constant NUM_OWNERS = 6;
+  uint256 internal constant NUM_OWNERS = 7;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner
-                                          // 2 Admin owner
-                                          // 3 Sale  owner
-                                          // 4 Poll  owner
-                                          // 5 Web   owner
-                                          // |- owner X
+  address[NUM_OWNERS] internal iOwnersYA;
+
   // Constructor NOT payable
   // -----------
   constructor() internal {
-    iOwnersYA[DEPLOYER_X] = msg.sender;  // only need Deployer to be set here
+    iOwnersYA = [msg.sender, address(0), address(this)];  // up to self with OpMan to be set by the deploy script
   }
 
   // View Methods

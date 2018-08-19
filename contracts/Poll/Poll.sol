@@ -176,7 +176,7 @@ contract Poll is OwnedPoll, Math {
   // Owners must first be set by deploy script calls:
   //   Poll.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Poll.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Poll.ChangeOwnerMO(POLL_ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Poll.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Poll.ChangeOwnerMO(POLL_WEB_OWNER_X, Web address)
 
   // Poll.Initialise()

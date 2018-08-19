@@ -35,7 +35,7 @@ contract OwnedPoll is Constants {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[POLL_ADMIN_OWNER_X] && !pIsContractCallerB();
+    return msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)

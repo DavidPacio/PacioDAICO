@@ -43,30 +43,26 @@ contract Constants {
 
   // Owner Indices
   // Contract Owned By
-  //          0        1     2     3     4       5     6
-  // OpMan    Deployer Self  Admin
-  // Hub      Deployer OpMan Admin Sale  Poll   Web
-  // Sale     Deployer OpMan Hub   Admin Poll
-  // Token    Deployer OpMan Hub   Sale  Admin
-  // List     Deployer OpMan Hub   Sale  Poll   Token
-  // Mfund    Deployer OpMan Hub   Sale  Poll   Pfund  Admin
-  // Pfund    Deployer OpMan Hub   Sale
-  // Poll     Deployer OpMan Hub   Admin Web
-
-  uint256 internal constant DEPLOYER_X          = 0; // /- same in all contracts where used
-  uint256 internal constant OP_MAN_OWNER_X      = 1; // V
-  uint256 internal constant HUB_OWNER_X         = 2;
-  uint256 internal constant ADMIN_OWNER_X       = 2;
-  uint256 internal constant SALE_OWNER_X        = 3;
-  uint256 internal constant POLL_OWNER_X        = 4;
-  uint256 internal constant HUB_WEB_OWNER_X     = 5; // /- specific to first contract in the name
-  uint256 internal constant SALE_ADMIN_OWNER_X  = 3; // V
-  uint256 internal constant TOKEN_ADMIN_OWNER_X = 4;
-  uint256 internal constant LIST_TOKEN_OWNER_X  = 5;
-  uint256 internal constant MFUND_PFUND_OWNER_X = 5;
-  uint256 internal constant MFUND_ADMIN_OWNER_X = 6;
-  uint256 internal constant POLL_ADMIN_OWNER_X  = 3;
-  uint256 internal constant POLL_WEB_OWNER_X    = 4;
+  //          0        1     2    3     4    5     6
+  // OpMan    Deployer Self  Hub  Admin
+  // Hub      Deployer OpMan Self Admin Sale Poll  Web
+  // Sale     Deployer OpMan Hub  Admin Poll
+  // Token    Deployer OpMan Hub  Admin Sale
+  // List     Deployer OpMan Hub  Token Sale Poll
+  // Mfund    Deployer OpMan Hub  Admin Sale Poll  Pfund
+  // Pfund    Deployer OpMan Hub  Sale
+  // Poll     Deployer OpMan Hub  Admin Web
+  uint256 internal constant DEPLOYER_X     = 0;
+  uint256 internal constant OP_MAN_OWNER_X = 1;
+  uint256 internal constant HUB_OWNER_X    = 2;
+  uint256 internal constant ADMIN_OWNER_X  = 3;
+  uint256 internal constant TOKEN_OWNER_X  = 3;
+  uint256 internal constant SALE_OWNER_X   = 4;
+  uint256 internal constant POLL_OWNER_X   = 5;
+  uint256 internal constant PFUND_OWNER_X  = 6;
+  uint256 internal constant HUB_WEB_OWNER_X    = 6; // /- specific to first contract in the name
+  uint256 internal constant PFUND_SALE_OWNER_X = 3; // |
+  uint256 internal constant POLL_WEB_OWNER_X   = 4; // |
 
   // Managed Operation Indices
   uint32 internal constant RESUME_MO_X                   =  0; // ResumeMO()

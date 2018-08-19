@@ -2,7 +2,7 @@
 
 The hub or management contract for the Pacio DAICO
 
-Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
+Owned by Deployer OpMan Self Admin Sale Poll  Web
 
 Calls OpMan; Sale; Token; List; Mfund; Pfund; Poll
 
@@ -85,8 +85,9 @@ contract Hub is OwnedHub, Math {
   // Initialisation/Setup Methods
   // ============================
 
-  // Owned by 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
-  // Owners must first be set by deploy script calls:
+  // Owned by Deployer OpMan Self Admin Sale Poll  Web
+  // Deployer and Self are set by the OwnedHub constructor
+  // Others must first be set by deploy script calls:
   //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
   //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)

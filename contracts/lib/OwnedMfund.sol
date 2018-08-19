@@ -1,6 +1,6 @@
 // lib\OwnedMfund.sol
 //
-// Version of Owned for Mfund which is owned by Deployer OpMan Hub Sale Poll Pfund Admin
+// Version of Owned for Mfund which is owned by Deployer OpMan Hub Admin Sale Poll Pfund
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -12,14 +12,8 @@ contract OwnedMfund is Constants {
   uint256 internal constant NUM_OWNERS = 7;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner
-                                          // 2 Hub owner
-                                          // 3 Sale  owner
-                                          // 4 Poll owner
-                                          // 5 Pfund owner
-                                          // 6 Admin owner
-                                          // |- owner X
+  address[NUM_OWNERS] internal iOwnersYA;
+
   // Constructor NOT payable
   // -----------
   constructor() internal {
@@ -44,10 +38,10 @@ contract OwnedMfund is Constants {
     return msg.sender == iOwnersYA[SALE_OWNER_X] && pIsContractCallerB();
   }
   function iIsPfundContractCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[MFUND_PFUND_OWNER_X] && pIsContractCallerB();
+    return msg.sender == iOwnersYA[PFUND_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
-    return msg.sender == iOwnersYA[MFUND_ADMIN_OWNER_X] && !pIsContractCallerB();
+    return msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB();
   }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)

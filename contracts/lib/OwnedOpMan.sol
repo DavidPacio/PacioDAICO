@@ -1,6 +1,6 @@
 // lib\OwnedOpMan.sol
 //
-// Version of Owned for OpMan which is owned by Deployer, self and an Admin account
+// Version of Owned for OpMan which is owned by Deployer Self Hub  Admin
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -9,13 +9,11 @@ import "./Constants.sol";
 import "../OpMan/I_OpMan.sol";
 
 contract OwnedOpMan is Constants {
-  uint256 internal constant NUM_OWNERS = 3;
+  uint256 internal constant NUM_OWNERS = 4;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner, in this OpMan case is self
-                                          // 2 Admin owner
-                                          // |- owner X
+  address[NUM_OWNERS] internal iOwnersYA;
+
   // Constructor NOT payable
   // -----------
   constructor() internal {
@@ -34,9 +32,9 @@ contract OwnedOpMan is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
+    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && iIsContractCallerB();
   }
-  function pIsContractCallerB() private view returns (bool) {
+  function iIsContractCallerB() internal view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
     uint256 codeSize;
     assembly {codeSize := extcodesize(callerA)}
@@ -54,7 +52,7 @@ contract OwnedOpMan is Constants {
     _;
   }
   modifier IsAdminCaller {
-    require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB(), "Not required Admin caller");
+    require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !iIsContractCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsActive {

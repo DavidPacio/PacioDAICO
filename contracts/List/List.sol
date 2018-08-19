@@ -2,8 +2,7 @@
 
 List of people/addresses to do with Pacio
 
-Owned by Deployer OpMan Hub Sale Poll Token
-
+Owned by Deployer OpMan Hub Token Sale Poll
 */
 
 pragma solidity ^0.4.24;
@@ -220,13 +219,13 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by Deployer OpMan Hub Sale Poll Token
+  // Owned by Deployer OpMan Hub Token Sale Poll
   // Owners must first be set by deploy script calls:
-  //   List.ChangeOwnerMO(OP_MAN_OWNER_X  OpMan address)
-  //   List.ChangeOwnerMO(HUB_OWNER_X,    Hub address)
-  //   List.ChangeOwnerMO(SALE_OWNER_X,   Sale address)
-  //   List.ChangeOwnerMO(POLL_OWNER_X,   Poll address)
-  //   List.ChangeOwnerMO(LIST_TOKEN_OWNER_X,  Token address)
+  //   List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+  //   List.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
+  //   List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+  //   List.ChangeOwnerMO(SALE_OWNER_X,  Sale address)
+  //   List.ChangeOwnerMO(POLL_OWNER_X,  Poll address)
 
   // List.Initialise()
   // -----------------

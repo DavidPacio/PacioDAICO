@@ -7,11 +7,11 @@ All contracts, including OpMan, should use managed ops for:
 - ownership changes
 - any administrator type operations
 
-Owners Deployer, Self,  Admin
+Owners Deployer OpMan (self) Hub Admin
 ------
 0. Deployer
-1. OpMan (self)                          - Set by OwnedOpMan.sol constructor
-2. Admin, a PCL hardware wallet account  - Set by deploy script
+1. OpMan (self)  - Set by OwnedOpMan.sol constructor
+2. Hub abd Admin - Set by deploy script
 
 OpMan Processes
 ---------------
@@ -118,20 +118,16 @@ contract OpMan is OwnedOpMan {
   // Initialisation/Setup Functions
   // ==============================
 
-  // Owners
-  // ------
-  // 0. Deployer                              - Set to msg.sender by OwnedOpMan.sol constructor
-  // 1. OpMan (self)                          - Set to this       by OwnedOpMan.sol constructor
-  // 2. Admin, a PCL hardware wallet account  - Set by deploy script
+  // Owners Deployer OpMan (self) Hub Admin
+  // The OwnedOpMan constructor sets Deployer and OpMan (self)
+  // Others must first be set by deploy script calls:
+  //   OpMan.ChangeOwnerMO(HUB_OWNER_X, Hub contract)
+  //   OpMan.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 
   // Initialise()
   // ------------
   // To be called by deploy script to:
   // 1. Add initial contracts, signers, and manOps
-  // Admin owner is set this way because that can't be be done from the deploy script as ChangeOwnerMO() requires IsOpManContractCaller.
-  // (Other contracts can have all their owners set via the deploy script because their constructor set OpMan owner to msg.sender (deployment account) initially,
-  //  so 'ChangeOwnerMO() IsOpManContractCaller' calls can be made by the deploy script, provided that OpMan owner is set last.)
-  // After this call all of OpMan's owners are set.
   // Can only be called once.
   //
   // Arguments:
@@ -244,11 +240,11 @@ contract OpMan is OwnedOpMan {
     _;
   }
   modifier IsConfirmedSigner {
-    require(pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a confirmed signer');
+    require(pIsConfirmedSignerB(), 'Not called by a confirmed signer');
     _;
   }
   modifier IsHubContractCallerOrConfirmedSigner {
-    require(pContractsYR[HUB_CONTRACT_X].contractA == msg.sender || pSignersAddrMR[msg.sender].confirmedT > 0, 'Not called by a Hub or confirmed signer');
+    require((iOwnersYA[HUB_OWNER_X] == msg.sender && iIsContractCallerB())  || pIsConfirmedSignerB(), 'Not called by Hub or a confirmed signer');
     _;
   }
 
@@ -314,6 +310,12 @@ contract OpMan is OwnedOpMan {
     pContractsYR[vContractX].numManOps++;
     pContractsYR[vContractX].manOpsOpxMB[vManOpX] = true;
     emit AddManOpV(vContractX, vManOpX, vSigsRequired, vSecsToSign);
+  }
+
+  // OpMan.pIsConfirmedSignerB()
+  // ---------------------------
+  function pIsConfirmedSignerB() private view returns (bool) {
+    return pSignersAddrMR[msg.sender].confirmedT > 0 && !iIsContractCallerB();
   }
 
   // OpMan.pIsManOpApproved()

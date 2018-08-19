@@ -1,6 +1,6 @@
 // lib\OwnedToken.sol
 //
-// Version of Owned for Token which is owned by Deployer, OpMan, Hub, Sale, Admin
+// Version of Owned for Token which is owned by Deployer OpMan Hub Admin Sale
 // Is pausable
 
 pragma solidity ^0.4.24;
@@ -12,12 +12,8 @@ contract OwnedToken is Constants {
   uint256 internal constant NUM_OWNERS = 5;
   bool    internal iInitialisingB = true; // Starts in the initialising state
   bool    internal iPausedB = true;       // Starts paused
-  address[NUM_OWNERS] internal iOwnersYA; // 0 Deployer
-                                          // 1 OpMan owner
-                                          // 2 Hub  owner
-                                          // 3 Sale owner
-                                          // 4 Admin owner
-                                          // |- owner X
+  address[NUM_OWNERS] internal iOwnersYA;
+
   // Constructor NOT payable
   // -----------
   constructor() internal {
@@ -64,7 +60,7 @@ contract OwnedToken is Constants {
     _;
   }
   modifier IsAdminCaller {
-    require(msg.sender == iOwnersYA[TOKEN_ADMIN_OWNER_X] && !pIsContractCallerB(), "Not required Admin caller");
+    require(msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB(), "Not required Admin caller");
     _;
   }
   modifier IsNotContractCaller {

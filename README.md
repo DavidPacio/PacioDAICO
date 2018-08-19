@@ -9,10 +9,10 @@ Contracts
 =========
 Contract Description                                      Owned By                                        External Calls
 -------- -----------                                      --------                                        --------------
-OpMan    Operations management: multisig for critical ops Deployer Self  Admin                            All including self
-Hub      Hub or management contract                       Deployer OpMan Admin Sale  Poll   Web           OpMan Sale Token List Mfund Pfund Poll
+OpMan    Operations management: multisig for critical ops Deployer Self  Hub   Admin                      All including self
+Hub      Hub or management contract                       Deployer OpMan Self  Admin Sale   Poll   Web    OpMan Sale Token List Mfund Pfund Poll
 Sale     Sale                                             Deployer OpMan Hub   Admin Poll                 OpMan Hub List Token Mfund Pfund
-Token    PIO Token with EIP-20 functions                  Deployer OpMan Hub   Sale  Admin                OpMan List
+Token    PIO Token with EIP-20 functions                  Deployer OpMan Hub   Admin Sale                 OpMan List
 List     List of participants                             Deployer OpMan Hub   Sale  Poll   Token         OpMan
 Mfund    Managed fund for PIO purchases or transfers      Deployer OpMan Hub   Sale  Poll   Pfund  Admin  OpMan
 Pfund    Prepurchases escrow fund                         Deployer OpMan Hub   Sale                       OpMan Mfund

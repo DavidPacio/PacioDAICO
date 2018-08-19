@@ -68,11 +68,11 @@ contract Pfund is OwnedPfund, Math {
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Sale
+  // Owned by Deployer OpMan Hub Sale
   // Owners must first be set by deploy script calls:
   //   Pfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
   //   Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Pfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
+  //   Pfund.ChangeOwnerMO(PFUND_SALE_OWNER_X, Sale address)
 
   // Pfund.Initialise()
   // ------------------
