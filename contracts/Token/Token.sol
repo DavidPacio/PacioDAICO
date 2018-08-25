@@ -144,9 +144,9 @@ contract Token is EIP20Token, Math {
   // -------------
   // Cases:
   // a. Hub.PresaleIssue()                                         -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
-  // b. Sale.pBuy()                                                -> Sale.pProcessSale() -> here for normal buying
-  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> here for Pfund to Mfund transfers on whitelisting
-  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcessSale() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // b. Sale.pBuy()                                                -> Sale.pSale() -> here for normal buying
+  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale() -> here for Pfund to Mfund transfers on whitelisting
+  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // with transche1B set if this is a Tranche 1 issue
   function Issue(address toA, uint256 vPicos, uint256 vWei, bool tranche1B) external IsSaleContractCaller IsActive returns (bool) {
     if (iListC.PicosBought(toA) == 0)

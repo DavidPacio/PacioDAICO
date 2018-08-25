@@ -8,6 +8,7 @@ pragma solidity ^0.4.24;
 
 interface I_MfundHub {
   function FundWei() external view returns (uint256);
+//function PclAccount() external view returns (address);
   function SetPclAccount(address vPclAccountA) external;
   function StateChange(uint32 vState) external;
   function RefundInfo(uint256 vRefundId, address accountA) external returns (uint256 refundPicos, uint256 refundWei, uint32 refundBit);

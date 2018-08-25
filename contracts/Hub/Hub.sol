@@ -37,15 +37,16 @@ import "../Poll/I_Poll.sol";
 
 contract Hub is OwnedHub, Math {
   string public name = "Pacio DAICO Hub"; // contract name
-  uint32     private pState;  // DAICO state using the STATE_ bits. Passed through to Sale, Token, Mfund, and Pfund on change
-  uint8      private pPollN;  // Enum of Poll in progress, if any
-  I_OpMan    private pOpManC; // the OpMan contract
-  I_Sale     private pSaleC;  // the Sale contract
-  I_TokenHub private pTokenC; // the Token contract
-  I_ListHub  private pListC;  // the List contract
-  I_MfundHub private pMfundC; // the Mfund contract
-  I_PfundHub private pPfundC; // the Pfund contract
-  I_Poll     private pPollC;  // the Poll contract
+  uint32     private pState;       // DAICO state using the STATE_ bits. Passed through to Sale, Token, Mfund, and Pfund on change
+  uint8      private pPollN;       // Enum of Poll in progress, if any
+  address    private pPclAccountA; // The PCL account for withdrawals. Stored here just to avoid an Mfund.PclAccount() call in pIsAccountOkB()
+  I_OpMan    private pOpManC;      // the OpMan contract
+  I_Sale     private pSaleC;       // the Sale contract
+  I_TokenHub private pTokenC;      // the Token contract
+  I_ListHub  private pListC;       // the List contract
+  I_MfundHub private pMfundC;      // the Mfund contract
+  I_PfundHub private pPfundC;      // the Pfund contract
+  I_Poll     private pPollC;       // the Poll contract
   bool private pRefundInProgressB; // to prevent re-entrant refund calls
   uint256 private pRefundId;       // Refund Id
 
@@ -76,6 +77,7 @@ contract Hub is OwnedHub, Math {
   event StartSaleV();
   event SoftCapReachedV();
   event CloseSaleV();
+  event TokenSwapV(address To, uint256 Picos, uint32 Tranche, uint32 DbId);
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
   event PfundRefundingCompleteV();
   event MfundRefundingCompleteV();
@@ -106,6 +108,7 @@ contract Hub is OwnedHub, Math {
     pListC  =  I_ListHub(pOpManC.ContractXA(LIST_CONTRACT_X));
     pPfundC = I_PfundHub(pOpManC.ContractXA(PFUND_CONTRACT_X));
     pMfundC = I_MfundHub(pOpManC.ContractXA(MFUND_CONTRACT_X));
+  //pSetState(STATE_PRIOR_TO_OPEN_B); Leave as 0 until SetSaleTimes() sets state
     emit InitialiseV(pOpManC, pSaleC, pTokenC, pListC, pPfundC, pMfundC, pPollC);
     iPausedB       =        // make active
     iInitialisingB = false;
@@ -118,7 +121,8 @@ contract Hub is OwnedHub, Math {
   // Is passed on to MFund for withdrawals, to Sale for Tranche 1 purchases, and to PFund for Tranche 1 PM transfers
   function SetPclAccountMO(address vPclAccountA) external {
     require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SET_PCL_ACCOUNT_MO_X)));
-    require(vPclAccountA != address(0));
+    require(pIsAccountOkB(vPclAccountA)); // will reject a vPclAccountA that is the same aas the current pPclAccountA
+    pPclAccountA = vPclAccountA; // The PCL account for withdrawals. Stored here just to avoid an Mfund.PclAccount() call in pIsAccountOkB()
     pMfundC.SetPclAccount(vPclAccountA);
      pSaleC.SetPclAccount(vPclAccountA);
     pPfundC.SetPclAccount(vPclAccountA);
@@ -130,17 +134,17 @@ contract Hub is OwnedHub, Math {
   // To be called repeatedly for all Seed Presale and Private Placement contributors (aggregated) to initialise the DAICO for tokens issued in the Seed Presale and the Private Placement`
   // no pPicosCap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
-  function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsWebOrAdminCaller {
+  function PresaleIssue(address toA, uint256 picos, uint256 vWei, uint32 dbId, uint32 vAddedT, uint32 vNumContribs) external IsAdminCaller {
     require(pIsAccountOkB(toA)); // Check that toA is defined and not any of the contracts or Admin
-    require(pListC.CreatePresaleEntry(toA, vDbId, vAddedT, vNumContribs));
-    pSaleC.PresaleIssue(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs); // reverts if sale has started
+    require(pListC.CreatePresaleEntry(toA, dbId, vAddedT, vNumContribs));
+    pSaleC.PresaleIssue(toA, picos, vWei, dbId, vAddedT, vNumContribs); // reverts if sale has started
   }
 
   // Hub.SetSaleTimes()
   // ------------------
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
-  // The STATE_OPEN_B state bit gets set when the first Sale.pProcessSale() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
+  // The STATE_OPEN_B state bit gets set when the first Sale.pSale() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function SetSaleTimes(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
@@ -169,7 +173,7 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSaleMO()
   // -----------------
-  // Is called from Sale.pProcessSale() when the first buy arrives after the sale pSaleStartT
+  // Is called from Sale.pSale() when the first buy arrives after the sale pSaleStartT
   // Can be called manually by Admin as a managed op if necessary.
   function StartSaleMO() external {
     require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
@@ -229,7 +233,7 @@ contract Hub is OwnedHub, Math {
   // Called from Poll.pClosePoll() when a POLL_TERMINATE_FUNDING_N poll has voted to end funding the project, Mfund funds to be refunded in proportion to Picos held
   // After this only refunds and view functions should work. No transfers. No Deposits.
   function PollTerminateFunding() external IsPollContractCaller {
-    pSetState(pState |= STATE_TERMINATE_REFUNDED_B);
+    pSetState(pState |= STATE_TERMINATE_REFUND_B);
     pOpManC.PauseContract(SALE_CONTRACT_X); // IsHubContractCallerOrConfirmedSigner
     pListC.SetTransfersOkByDefault(false);
     emit PollTerminateFundingV();
@@ -277,14 +281,34 @@ contract Hub is OwnedHub, Math {
   // Hub.pPMtransfer() private
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally calls Pfund.PMTransfer() to transfer the Ether from P to M or to pPclAccountA if it is a Tranche 1 case
   function pPMtransfer(address accountA) private returns (bool) {
     uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.FundWei());
      pSaleC.PMtransfer(accountA, weiContributed); // processes the issue
     pPfundC.PMTransfer(accountA, weiContributed, pListC.EntryBits(accountA) & LE_TRANCH1_B > 0); // transfers weiContribured from the Pfund to the Mfund or to pPclAccountA if it is a Tranche 1 case
     // Pfund.PMTransfer() emits an event
+    return true;
+  }
+
+  // Hub.TokenSwap()
+  // ---------------
+  // Called by Admin to perform the Pacio part of a token swap
+  //
+  function TokenSwap(address toA, uint256 picos, uint32 tranche, uint32 dbId) external IsAdminCaller IsActive returns (bool) {
+    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
+    require(pIsAccountOkB(toA)); // Check that toA is defined and is not a contract or Admin or Web or pPclAccountA
+    uint32 bits = pListC.EntryBits(toA);
+    if (bits > 0)
+      // Account exists. See if it is ok as a swap target
+      // Should not be the sale contract (or any contract actually) which pIsAccountOkB() checks, or hold funds
+      require(bits & LE_FUNDED_B == 0, 'Unfunded account required');
+    else
+      // Need to create the account
+      require(pListC.CreateListEntry(toA, 0, dbId)); // 0 for bits. List.CreateListEntry() adds LE_REGISTERED_B
+    pSaleC.TokenSwap(toA, picos, tranche);
+    emit TokenSwapV(toA, picos, tranche, dbId);
     return true;
   }
 
@@ -324,15 +348,15 @@ contract Hub is OwnedHub, Math {
       pfundB = true;
       if (vOnceOffB)
         refundBit = LE_P_REFUNDED_ONCE_OFF_B;
-      else if (pState & STATE_S_CAP_MISS_REFUNDED_B > 0)
+      else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
         refundBit = LE_P_REFUNDED_S_CAP_MISS_B;
       else if (pState & STATE_CLOSED_COMBO_B > 0)
         refundBit = LE_P_REFUNDED_SALE_CLOSE_B;
       if (refundBit > 0)
         refundWei = Min(pListC.WeiContributed(toA), pPfundC.FundWei());
-    }else if (bits & LE_PICOS_B > 0) {
+    }else if (bits & LE_HOLDS_PICOS_B > 0) {
       // Mfund Refund which could be for a presale or tranche 1 investor not entitled to a soft cap miss refund
-      if (vOnceOffB || ( pState & STATE_S_CAP_MISS_REFUNDED_B == 0 || bits & LE_PRESALE_TRANCH1_B == 0))
+      if (vOnceOffB || ( pState & STATE_S_CAP_MISS_REFUND_B == 0 || bits & LE_PRESALE_TRANCH1_B == 0))
         // is a manual once off refund or is not for a soft cap miss Presale/Tranche 1 investor
         (refundPicos, refundWei, refundBit) = pMfundC.RefundInfo(pRefundId, toA); // returns refundBit = LE_M_REFUNDED_S_CAP_MISS_NPT1B || LE_M_REFUNDED_TERMINATION_B || 0
       // else no refund for a non once off Presale/Tranche 1 investor unless done manually
@@ -436,21 +460,24 @@ djh??
   // Create a new list entry, and add it into the doubly linked list.
   // accountA Must be defined and not be a any of the contracts or Admin
   // List.CreateListEntry() sets the LE_REGISTERED_B bit so there is no need to include that in vBits
-  function CreateListEntry(address accountA, uint32 vBits, uint32 vDbId) external IsWebOrAdminCaller IsActive returns (bool) {
-    require(pIsAccountOkB(accountA)); // Check that accountA is defined and not any of the contracts or Admin
-    return pListC.CreateListEntry(accountA, vBits, vDbId);
+  function CreateListEntry(address accountA, uint32 vBits, uint32 dbId) external IsWebOrAdminCaller IsActive returns (bool) {
+    require(pIsAccountOkB(accountA)); // Check that accountA is defined and is not a contract or Admin or Web or pPclAccountA
+    return pListC.CreateListEntry(accountA, vBits, dbId);
   }
 
   // Hub.pIsAccountOkB() private
   // -------------------
-  // Checks that accountA is not any of the contracts or Admin
+  // Checks that accountA is defined and is not a contract or Admin or Web or pPclAccountA
+  // Owners: Deployer OpMan Hub (Self) 3: Admin 4: Sale 5: Poll  6: Web
   function pIsAccountOkB(address accountA) private view returns (bool) {
-    for (uint256 j=0; j<NUM_OWNERS; j++) // Checks 0 Deployer, 1 OpMan, 2 Admin, 3 Sale, 4 Poll, 5 Web
-      require(accountA != iOwnersYA[j], 'Account conflict');
-    // Now defined, self (Hub), Token
-    require(accountA != address(0)       // Defined
-         && accountA != address(this)
-         && accountA != pOpManC.ContractXA(TOKEN_CONTRACT_X), 'Account conflict');
+    uint256 codeSize;
+    assembly {codeSize := extcodesize(accountA)}
+    require(codeSize == 0
+         && accountA != address(0)
+         && accountA != iOwnersYA[ADMIN_OWNER_X]
+         && accountA != iOwnersYA[HUB_WEB_OWNER_X]
+       //&& accountA != pMfundC.PclAccount(), 'Account conflict');
+         && accountA != pPclAccountA, 'Invalid Account');
     return true;
   }
 

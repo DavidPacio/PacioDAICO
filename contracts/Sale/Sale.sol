@@ -239,7 +239,7 @@ contract Sale is OwnedSale, Math {
     pUsdEtherPrice = vUsdEtherPrice; // e.g. 500
     pUsdRaised     = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     for (uint256 j=1; j<NUM_TRNCHS; j++)
-      pPicosPerEthTrnchsA[j] = pUsdEtherPrice * 10**16 / pPriceCCentsTrnchsA[j]; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCentsT2   16 = 12 (picos per Pio) + 4 from pPriceCCentsT2 -> $s = 6,666,666,666,666,666
+      pPicosPerEthTrnchsA[j] = pUsdEtherPrice * 10**16 / pPriceCCentsTrnchsA[j]; // Picos per Ether for tranche 1 = pUsdEtherPrice * 10**16 / pPriceCCents   16 = 12 (picos per Pio) + 4 from pPriceCCents -> $s = 6,666,666,666,666,666
     emit SetUsdEtherPriceV(pUsdEtherPrice, pPicosPerEthTrnchsA, pUsdRaised);
   }
 
@@ -257,13 +257,12 @@ contract Sale is OwnedSale, Math {
   // no soft or hard cap check
   // Expects list account not to exist - multiple Seed Presale and Private Placement contributions to same account should be aggregated for calling this fn
   function PresaleIssue(address toA, uint256 vPicos, uint256 vWei, uint32 vDbId, uint32 vAddedT, uint32 vNumContribs) external IsHubContractCaller IsActive {
-    require(pSaleStartT == 0); // check that sale hasn't started yet
+    require(pState == 0 || pState & STATE_PRIOR_TO_OPEN_B > 0); // check that sale hasn't started yet
     pTokenC.Issue(toA, vPicos, vWei, false); // which calls List.Issue()
     pWeiRaised = safeAdd(pWeiRaised, vWei);
     pPicosSoldTrnchsA[TRNCH_PRESALE_X] += vPicos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
     pPicosSold    += vPicos;
     emit PresaleIssueV(toA, vPicos, vWei, vDbId, vAddedT, vNumContribs);
-    // No event emit as List.Issue() does it
   }
 
   // Sale.SetSaleTimes()
@@ -339,7 +338,7 @@ contract Sale is OwnedSale, Math {
   // Cases:
   // - sending when not yet whitelisted                  -> Pfund whether sale open or not
   // - sending when whitelisted but sale is not yet open -> Pfund
-  // - sending when whitelisted and sale is open         -> Mfund via pProcessSale()
+  // - sending when whitelisted and sale is open         -> Mfund via pSale()
   function BuyTranche1() payable external {
     pBuy(true);
   }
@@ -352,7 +351,7 @@ contract Sale is OwnedSale, Math {
   // Cases:
   // - sending when not yet whitelisted                  -> Pfund whether sale open or not
   // - sending when whitelisted but sale is not yet open -> Pfund
-  // - sending when whitelisted and sale is open         -> Mfund via pProcessSale()
+  // - sending when whitelisted and sale is open         -> Mfund via pSale()
   function pBuy(bool tranche1B) private IsActive returns (bool) { // public because it is called from the fallback fn
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
@@ -380,7 +379,7 @@ contract Sale is OwnedSale, Math {
       return true;
     }
     // Whitelisted and ok to buy
-    pProcessSale(msg.sender, msg.value, bonusCentiPc, tranche1B);
+    pSale(msg.sender, msg.value, bonusCentiPc, tranche1B ? 1 : 0);
     if (tranche1B)
     //pPclAccountA.transfer(this.balance);
       pPclAccountA.transfer(msg.value);
@@ -389,18 +388,15 @@ contract Sale is OwnedSale, Math {
     return true;
   }
 
-  // Sale.pProcessSale() private
-  // -------------------
+  // Sale.pSale() private to process the buy operation (sale)
+  // ------------
   // a. Sale.pBuy()                                                -> here -> Token.Issue() -> List.Issue() for normal buying
   // b. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
   // c. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> here -> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // Decides on the tranche, calculates the picos, checks for softcap being reached, or the sale ending via hard cap being reached or time being up
-  function pProcessSale(address senderA, uint256 weiContributed, uint32 bonusCentiPc, bool tranche1B) private {
-    // Which tranche? 1-4 not 0 (presale) here
-    uint32 tranche;
-    if (tranche1B)
-      tranche = 1;
-    else{
+  function pSale(address senderA, uint256 weiContributed, uint32 bonusCentiPc, uint32 tranche) private {
+    // Which tranche? Can be set as 1 BuyTranche1() or 1-4 via TokenSwap() or 0 othwrwise meaning work it out here
+    if (tranche == 0) {
       tranche = 4; // assume 4 to start, the most likely
       if (weiContributed >= pMinWeiTrnchsA[3]) {
         // Tranche 2 or 3
@@ -416,7 +412,7 @@ contract Sale is OwnedSale, Math {
     if (bonusCentiPc > 0) // 675 for 6.75%
       picos += safeMul(picos, bonusCentiPc) / 10000;
     pWeiRaised = safeAdd(pWeiRaised, weiContributed);
-    pTokenC.Issue(senderA, picos, weiContributed, tranche1B); // which calls List.Issue()
+    pTokenC.Issue(senderA, picos, weiContributed, tranche == 1); // which calls List.Issue()
     pUsdRaised = safeMul(pWeiRaised, pUsdEtherPrice) / 10**18;
     emit SaleV(senderA, picos, weiContributed, tranche, pUsdEtherPrice, bonusCentiPc);
     pPicosSoldTrnchsA[tranche] += picos; // ok wo overflow protection as pTokenC.Issue() would have thrown on overflow
@@ -438,15 +434,25 @@ contract Sale is OwnedSale, Math {
   // Sale.PMtransfer()
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> here -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> here -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally Hub.pPMtransfer() transfers the Ether from Pfund to Mfund
   function PMtransfer(address senderA, uint256 weiContributed) external IsHubContractCaller {
     (uint32 bonusCentiPc, uint32 bits) = pListC.BonusPcAndBits(msg.sender);
     require(bits > 0 && bits & LE_WHITELISTED_P_FUND_B > 0 && pState & STATE_OPEN_B > 0); // Checked by Hub.Whitelist()/Hub.PMtransfer() so expected to be ok here
-    pProcessSale(senderA, weiContributed, bonusCentiPc, bits & LE_TRANCH1_B > 0);
+    pSale(senderA, weiContributed, bonusCentiPc, bits & LE_TRANCH1_B > 0 ? 1 : 0);
   }
 
+  // Sale.TokenSwap()
+  // ----------------
+  // Hub.TokenSwap() -> here -> Sale.pSale()-> Token.Issue() -> List.Issue()
+  // Hub.TokenSwap() emits an event
+  function TokenSwap(address toA, uint256 picos, uint32 tranche) external IsHubContractCaller {
+    // require(bits > 0 && bits & LE_FUNDED_B == 0 && pState & STATE_DEPOSIT_OK_COMBO_B > 0); // Checked by Hub.TokenSwap()
+    // Calculate weiContributed pPicosPerEthTrnchsA
+    // weiContributed = Picos * 10^18 / Picos per Ether
+    pSale(toA, picos * 10**18 / pPicosPerEthTrnchsA[tranche], 0, tranche);
+  }
 
   // Sale.pSoftCapReached()
   // ----------------------

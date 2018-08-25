@@ -145,8 +145,8 @@ contract Mfund is OwnedMfund, Math {
       // Make the soft cap withdrawal
       pWithdraw(safeMul(address(this).balance, pSoftCapDispersalPc) / 100);
       emit SoftCapReachedV();
-    }else if ((vState & STATE_TERMINATE_REFUNDED_B) > 0 && (pState & STATE_TERMINATE_REFUNDED_B) == 0) {
-      // Change of state for STATE_TERMINATE_REFUNDED_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
+    }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
+      // Change of state for STATE_TERMINATE_REFUND_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
       pTerminationPicosIssued = I_TokenMfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
       emit TerminateV(pTerminationPicosIssued);
     }
@@ -198,8 +198,8 @@ contract Mfund is OwnedMfund, Math {
   // Mfund.Deposit()
   // ---------------
   // Called from:
-  // a. Sale.pBuy() to transfer the contribution here,   after a                      Sale.pProcessSale()-> Token.Issue() -> List.Issue() call
-  // b. Hub.pPMtransfer() to transfer from Pfund to here after a Sale.PMtransfer() -> Sale.pProcessSale()-> Token.Issue() -> List.Issue() call
+  // a. Sale.pBuy() to transfer the contribution here,   after a                      Sale.pSale()-> Token.Issue() -> List.Issue() call
+  // b. Hub.pPMtransfer() to transfer from Pfund to here after a Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() call
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
     require(iIsSaleContractCallerB() || iIsPfundContractCallerB(), 'Not Sale or Pfund caller');
     require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit not allowed");
@@ -233,12 +233,12 @@ contract Mfund is OwnedMfund, Math {
     pRefundInProgressB = true;
     pRefundId   = vRefundId;
     refundPicos = pListC.PicosBalance(accountA);
-    if (pState & STATE_S_CAP_MISS_REFUNDED_B > 0) {
+    if (pState & STATE_S_CAP_MISS_REFUND_B > 0) {
       // Soft Cap Miss Refund
       // Hub.pRefund() does not make the call for a presale entry
       refundWei = pListC.WeiContributed(accountA);
       refundBit = LE_M_REFUNDED_S_CAP_MISS_NPT1B; // Mfund but not presale Refund due to soft cap not being reached
-    }else if (pState & STATE_TERMINATE_REFUNDED_B > 0) {
+    }else if (pState & STATE_TERMINATE_REFUND_B > 0) {
       // Terminate Refund
     //refundWei =         pTotalDepositedWei * refundPicos / pTerminationPicosIssued;
       refundWei = safeMul(pTotalDepositedWei, refundPicos) / pTerminationPicosIssued;
