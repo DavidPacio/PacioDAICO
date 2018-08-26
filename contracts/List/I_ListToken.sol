@@ -12,7 +12,7 @@ interface I_ListToken {
   function PicosBought(address accountA) external view returns (uint256 balance);
   function IsTransferAllowedByDefault() external view returns (bool);
   function CreateSaleContractEntry(uint256 vPicos, uint32 vDbId) external returns (bool);
-  function Issue(address toA, uint256 vPicos, uint256 vWei, bool tranche1B) external returns (bool);
+  function Issue(address toA, uint256 vPicos, uint256 vWei, uint32 tranche1Bit) external returns (bool);
   function Refund(address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (uint256 refundPicos);
   function Transfer(address frA, address toA, uint256 value) external returns (bool success);
   function TransferIssuedPIOsToPacioBc(address accountA) external;

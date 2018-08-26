@@ -52,8 +52,8 @@ contract EIP20Token is OwnedToken {
 
   // IsTransferOK modifier function
   // ------------
-  // Checks that Token contract is active and toA is different from frA
-  // All transfer fns will also call List.IsTransferOK() which checks that both frA and toA exist in List; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
+  // Checks that Token contract is active, and toA is different from frA
+  // All transfer fns also call List.IsTransferOK() which checks that both frA and toA exist in List; state does not prohibit transfers; transfers are not prohibited from frA; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   // = requires that Token is active; toA is different from frA; both frA and toA exist in List; transfer from frA is ok; transfer to toA is ok (toA is whitelisted); and that frA has the tokens available
   modifier IsTransferOK(address frA, address toA) {
     require(!iPausedB    // The token IsActive

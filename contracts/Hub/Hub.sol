@@ -77,7 +77,8 @@ contract Hub is OwnedHub, Math {
   event StartSaleV();
   event SoftCapReachedV();
   event CloseSaleV();
-  event TokenSwapV(address To, uint256 Picos, uint32 Tranche, uint32 DbId);
+  event   TokenSwapV(address indexed To, uint256 Picos, uint32 Tranche);
+  event BountyIssueV(address indexed To, uint256 Picos, uint32 Tranche);
   event RefundV(uint256 indexed RefundId, address indexed Account, uint256 RefundWei, uint32 RefundBit);
   event PfundRefundingCompleteV();
   event MfundRefundingCompleteV();
@@ -144,12 +145,12 @@ contract Hub is OwnedHub, Math {
   // ------------------
   // To be called manually by Admin to set the sale dates. Can be called well before start time which allows registration, Prepurchase escrow deposits, and white listing but wo PIOs being issued until that is done after the sale opens
   // Can also be called to adjust settings.
-  // The STATE_OPEN_B state bit gets set when the first Sale.pSale() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
+  // The STATE_SALE_OPEN_B state bit gets set when the first Sale.pProcess() transaction >= Sale.pSaleStartT comes through, or here on a restart after a close.
   // Initialise(), Sale.SetCapsAndTranchesMO(), Sale.SetUsdEtherPrice(), Sale.EndInitialise(), Mfund.SetPclAccountMO(), Mfund.EndInitialise() and PresaleIssue() multiple times must have been called before this.
   function SetSaleTimes(uint32 vStartT, uint32 vEndT) external IsAdminCaller {
     // Could Have previous state settings = a restart
     // Unset everything except for STATE_S_CAP_REACHED_B.  Should not allow 2 soft cap state changes.
-    pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) | (uint32(now) >= vStartT ? STATE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
+    pSetState((pState & STATE_S_CAP_REACHED_B > 0 ? STATE_S_CAP_REACHED_B : 0) | (uint32(now) >= vStartT ? STATE_SALE_OPEN_B : STATE_PRIOR_TO_OPEN_B));
     pSaleC.SetSaleTimes(vStartT, vEndT);
     emit SetSaleTimesV(vStartT, vEndT);
   }
@@ -173,11 +174,11 @@ contract Hub is OwnedHub, Math {
 
   // Hub.StartSaleMO()
   // -----------------
-  // Is called from Sale.pSale() when the first buy arrives after the sale pSaleStartT
+  // Is called from Sale.pProcess() when the first buy arrives after the sale pSaleStartT
   // Can be called manually by Admin as a managed op if necessary.
   function StartSaleMO() external {
     require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
-    pSetState(STATE_OPEN_B);
+    pSetState(STATE_SALE_OPEN_B);
     emit StartSaleV();
   }
 
@@ -263,7 +264,7 @@ contract Hub is OwnedHub, Math {
     require(bits > 0, 'Unknown account');
     require(bits & LE_WHITELISTED_B == 0, 'Already whitelisted');
     pListC.Whitelist(accountA, vWhiteT > 0 ? vWhiteT : uint32(now)); // completes cases a, b, d
-    return (bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) Pfund -> Mfund with PIOs issued
+    return (bits & LE_P_FUND_B > 0 && pState & STATE_SALE_OPEN_B > 0) ? pPMtransfer(accountA) // Case c) Pfund -> Mfund with PIOs issued
                                                                  : true; // cases a, b, d
   }
 
@@ -274,15 +275,15 @@ contract Hub is OwnedHub, Math {
     uint32  bits = pListC.EntryBits(accountA);
     require(bits > 0, 'Unknown account');
     require(bits & LE_WHITELISTED_B > 0, 'Not whitelisted');
-    require(bits & LE_P_FUND_B > 0 && pState & STATE_OPEN_B > 0, 'Invalid PMtransfer call');
+    require(bits & LE_P_FUND_B > 0 && pState & STATE_SALE_OPEN_B > 0, 'Invalid PMtransfer call');
     return pPMtransfer(accountA);
   }
 
   // Hub.pPMtransfer() private
   // -----------------
   // Cases:
-  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> here -> Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> here -> Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally calls Pfund.PMTransfer() to transfer the Ether from P to M or to pPclAccountA if it is a Tranche 1 case
   function pPMtransfer(address accountA) private returns (bool) {
     uint256 weiContributed = Min(pListC.WeiContributed(accountA), pPfundC.FundWei());
@@ -295,20 +296,28 @@ contract Hub is OwnedHub, Math {
   // Hub.TokenSwap()
   // ---------------
   // Called by Admin to perform the Pacio part of a token swap
-  //
-  function TokenSwap(address toA, uint256 picos, uint32 tranche, uint32 dbId) external IsAdminCaller IsActive returns (bool) {
-    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
+  // toA is expected to exist and not to be funded
+  function TokenSwap(address toA, uint256 picos, uint32 tranche) external IsAdminCaller IsActive returns (bool) {
+    require(pState & STATE_DEPOSIT_OK_B > 0, 'Sale has closed'); // STATE_PRIOR_TO_OPEN_B | STATE_SALE_OPEN_B
     require(pIsAccountOkB(toA)); // Check that toA is defined and is not a contract or Admin or Web or pPclAccountA
     uint32 bits = pListC.EntryBits(toA);
-    if (bits > 0)
-      // Account exists. See if it is ok as a swap target
-      // Should not be the sale contract (or any contract actually) which pIsAccountOkB() checks, or hold funds
-      require(bits & LE_FUNDED_B == 0, 'Unfunded account required');
-    else
-      // Need to create the account
-      require(pListC.CreateListEntry(toA, 0, dbId)); // 0 for bits. List.CreateListEntry() adds LE_REGISTERED_B
-    pSaleC.TokenSwap(toA, picos, tranche);
-    emit TokenSwapV(toA, picos, tranche, dbId);
+    require(bits > 0 && bits & LE_FUNDED_B == 0, 'Existing unfunded account required');
+    pSaleC.TokenSwapAndBountyIssue(toA, picos, tranche);
+    emit TokenSwapV(toA, picos, tranche);
+    return true;
+  }
+
+  // Hub.BountyIssue()
+  // -----------------
+  // Called by Admin to issue bounty tokens
+  // toA is expected to exist
+  function BountyIssue(address toA, uint256 picos, uint32 tranche) external IsAdminCaller IsActive returns (bool) {
+    require(pState & STATE_TRANS_ISSUES_NOK_B == 0, 'Bounty issue nok'); // Check that state does not prohibit issues
+    require(pIsAccountOkB(toA)); // Check that toA is defined and is not a contract or Admin or Web or pPclAccountA
+    uint32 bits = pListC.EntryBits(toA);
+    require(bits > 0 && bits & LE_TRANSFERS_NOK_B == 0, 'Account NOK');
+    pSaleC.TokenSwapAndBountyIssue(toA, picos, tranche);
+    emit BountyIssueV(toA, picos, tranche);
     return true;
   }
 
@@ -341,8 +350,8 @@ contract Hub is OwnedHub, Math {
     uint32  refundBit;
     uint32  bits = pListC.EntryBits(toA);
     bool pfundB;
-    require(bits > 0 && bits & LE_NO_REFUNDS_COMBO_B == 0          // LE_NO_REFUNDS_COMBO_B is not a complete check
-         && (vOnceOffB || pState & STATE_REFUNDING_COMBO_B > 0));
+    require(bits > 0 && bits & LE_REFUNDS_NOK_B == 0   // LE_REFUNDS_NOK_B is not a complete check
+         && (vOnceOffB || pState & STATE_REFUNDING_B > 0));
     if (bits & LE_P_FUND_B > 0) {
       // Pfund Refund
       pfundB = true;
@@ -350,7 +359,7 @@ contract Hub is OwnedHub, Math {
         refundBit = LE_P_REFUNDED_ONCE_OFF_B;
       else if (pState & STATE_S_CAP_MISS_REFUND_B > 0)
         refundBit = LE_P_REFUNDED_S_CAP_MISS_B;
-      else if (pState & STATE_CLOSED_COMBO_B > 0)
+      else if (pState & STATE_SALE_CLOSED_B > 0)
         refundBit = LE_P_REFUNDED_SALE_CLOSE_B;
       if (refundBit > 0)
         refundWei = Min(pListC.WeiContributed(toA), pPfundC.FundWei());

@@ -52,7 +52,7 @@ contract Token is EIP20Token, Math {
   }
   // Token.IsSaleOpen()
   function IsSaleOpen() external view returns (bool) {
-    return pState & STATE_OPEN_B > 0;
+    return pState & STATE_SALE_OPEN_B > 0;
   }
   // Token.PicosIssued()
   function PicosIssued() external view returns (uint256) {
@@ -143,15 +143,16 @@ contract Token is EIP20Token, Math {
   // Token.Issue()
   // -------------
   // Cases:
-  // a. Hub.PresaleIssue()                                         -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
-  // b. Sale.pBuy()                                                -> Sale.pSale() -> here for normal buying
-  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale() -> here for Pfund to Mfund transfers on whitelisting
-  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.PresaleIssue()                                     -> Sale.PresaleIssue() -> here for all Seed Presale and Private Placement pContributors (aggregated)
+  // b. Sale.pBuy()                                                -> Sale.pProcess() -> here for normal buying
+  // c. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcess() -> here for Pfund to Mfund transfers on whitelisting
+  // d. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcess() -> here for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // with transche1B set if this is a Tranche 1 issue
-  function Issue(address toA, uint256 vPicos, uint256 vWei, bool tranche1B) external IsSaleContractCaller IsActive returns (bool) {
+  function Issue(address toA, uint256 vPicos, uint256 vWei, uint32 tranche1Bit) external IsSaleContractCaller IsActive returns (bool) {
+    require(pState & STATE_TRANS_ISSUES_NOK_B == 0); // State does not prohibit issues
     if (iListC.PicosBought(toA) == 0)
       pContributors++;
-    iListC.Issue(toA, vPicos, vWei, tranche1B); // Transfers from Sale as the minted tokens owner
+    iListC.Issue(toA, vPicos, vWei, tranche1Bit); // Transfers from Sale as the minted tokens owner
     pPicosIssued    = safeAdd(pPicosIssued,    vPicos);
     pPicosAvailable = safeSub(pPicosAvailable, vPicos); // Should never go neg due to reserve, even if final Buy() goes over the hardcap
     pWeiRaised      = safeAdd(pWeiRaised, vWei);

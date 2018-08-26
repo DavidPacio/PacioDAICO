@@ -11,25 +11,25 @@ contract Constants {
   // State Bits for use with pState                               /- Bit and description
   // All zero                                        =              Nothing started yet
   uint32 internal constant STATE_PRIOR_TO_OPEN_B     =     1; //  0 Open for registration, Prepurchase escrow deposits, and white listing
-  uint32 internal constant STATE_OPEN_B              =     2; //  1 Sale is open. Is unset on any of the closes
+  uint32 internal constant STATE_SALE_OPEN_B         =     2; //  1 Sale is open. Is unset on any of the closes
   uint32 internal constant STATE_S_CAP_REACHED_B     =     4; //  2 Soft cap reached -> initial draw
   uint32 internal constant STATE_CLOSED_H_CAP_B      =     8; //  3 Sale closed due to hitting hard cap
   uint32 internal constant STATE_CLOSED_TIME_UP_B    =    16; //  4 Sale closed due to running out of time
   uint32 internal constant STATE_CLOSED_POLL_B       =    32; //  5 Sale closed as the result of Yes Poll to close the sale
   uint32 internal constant STATE_CLOSED_MANUAL_B     =    64; //  6 Sale closed manually for whatever reason
-  uint32 internal constant STATE_TAPS_OK_B           =   128; //  7 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_OPEN_B must be unset.
-  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =   256; //  8 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_OPEN_B unset
-  uint32 internal constant STATE_TERMINATE_REFUND_B  =   512; //  9 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset
+  uint32 internal constant STATE_TAPS_OK_B           =   128; //  7 Sale closed with Soft Cap reached.  STATE_S_CAP_REACHED_B and one of the closes must be set. STATE_SALE_OPEN_B must be unset.
+  uint32 internal constant STATE_S_CAP_MISS_REFUND_B =   256; //  8 Failed to reach soft cap, contributions being refunded.                    STATE_CLOSED_TIME_UP_B || STATE_CLOSED_MANUAL_B must be set and STATE_SALE_OPEN_B unset
+  uint32 internal constant STATE_TERMINATE_REFUND_B  =   512; //  9 A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_SALE_OPEN_B unset
   uint32 internal constant STATE_MFUND_EMPTY_B       =  1024; // 10 Mfund is empty as a result of refunds or withdrawals emptying the pot
   uint32 internal constant STATE_PFUND_EMPTY_B       =  2048; // 11 Pfund is empty as a result of refunds or withdrawals emptying the pot
   uint32 internal constant STATE_TRANSFER_TO_PB_B    =  4096; // 12 PIOs are being transferred to the Pacio Blockchain
   uint32 internal constant STATE_TRANSFERRED_TO_PB_B =  8192; // 13 All PIOs have been transferred to the Pacio Blockchain = PIO is dead as an ERC-20/EIP-20 token
   uint32 internal constant STATE_POLL_RUNNING_B      = 16384; // 14 A Poll is running. See the Poll contract for details
-
-  // Combos for anding checks
-  uint32 internal constant STATE_DEPOSIT_OK_COMBO_B =    3; // STATE_PRIOR_TO_OPEN_B | STATE_OPEN_B
-  uint32 internal constant STATE_CLOSED_COMBO_B     =   56; // Sale closed = STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_POLL_B | STATE_CLOSED_MANUAL_B. Not STATE_OPEN_B is subtly different as that could be before anything starts.
-  uint32 internal constant STATE_REFUNDING_COMBO_B  =  384; // STATE_S_CAP_MISS_REFUND_B | STATE_TERMINATE_REFUND_B
+  // Combos
+  uint32 internal constant STATE_DEPOSIT_OK_B        =     3; // STATE_PRIOR_TO_OPEN_B | STATE_SALE_OPEN_B
+  uint32 internal constant STATE_SALE_CLOSED_B       =   120; // STATE_CLOSED_H_CAP_B | STATE_CLOSED_TIME_UP_B | STATE_CLOSED_POLL_B | STATE_CLOSED_MANUAL_B. Not STATE_SALE_OPEN_B is subtly different as that could be before anything starts.
+  uint32 internal constant STATE_REFUNDING_B         =   768; // STATE_S_CAP_MISS_REFUND_B | STATE_TERMINATE_REFUND_B
+  uint32 internal constant STATE_TRANS_ISSUES_NOK_B  = 13056; // STATE_REFUNDING_B | STATE_TRANSFER_TO_PB_B | STATE_TRANSFERRED_TO_PB_B
 
   // Contract Indices
   uint256 internal constant OP_MAN_CONTRACT_X   = 0;
@@ -155,16 +155,17 @@ contract Constants {
   uint32 internal constant LE_WHITELISTED_MEMBER_B        =     192; // LE_WHITELISTED_B | LE_MEMBER_B
   uint32 internal constant LE_PRESALE_TRANCH1_B           =     768; // LE_PRESALE_B | LE_TRANCH1_B == not eligible for a soft cap miss refund
   uint32 internal constant LE_MEMBER_PROXY_B              =    4224; // LE_MEMBER_B | LE_PROXY_B
-  uint32 internal constant LE_PROXY_INVOLVED_COMBO_B      =    6144; // LE_PROXY_APPOINTER_B | LE_PROXY_B
+  uint32 internal constant LE_PROXY_INVOLVED_B            =    6144; // LE_PROXY_APPOINTER_B | LE_PROXY_B
   uint32 internal constant LE_PROXY_APP_VOTE_BLOCK_B      =   18432; // LE_PROXY_APPOINTER_B | LE_BLOCKED_FROM_VOTING_B
   uint32 internal constant LE_MF_PICOS_MEMBER_PROXY_APP_B =    2216; // LE_M_FUND_B | LE_HOLDS_PICOS_B | LE_MEMBER_B | LE_PROXY_APPOINTER_B
-  uint32 internal constant LE_MF_PICOS_MEMBER_PROXY_ALL_B =    6312; // LE_M_FUND_B | LE_HOLDS_PICOS_B | LE_MEMBER_B | LE_PROXY_INVOLVED_COMBO_B
-  uint32 internal constant LE_REFUNDED_COMBO_B            = 4128768; // LE_P_REFUNDED_S_CAP_MISS_B | LE_P_REFUNDED_SALE_CLOSE_B | LE_P_REFUNDED_ONCE_OFF_B | LE_M_REFUNDED_S_CAP_MISS_NPT1B | LE_M_REFUNDED_TERMINATION_B | LE_M_REFUNDED_ONCE_OFF_B
-  uint32 internal constant LE_DEAD_COMBO_B                = 4161536; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_COMBO_B  or bits >= 8192
-  uint32 internal constant LE_NO_SEND_FUNDS_COMBO_B       = 4169986; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
-  uint32 internal constant LE_NO_REFUNDS_COMBO_B          = 4161538; // LE_DEAD_COMBO_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
+  uint32 internal constant LE_MF_PICOS_MEMBER_PROXY_ALL_B =    6312; // LE_M_FUND_B | LE_HOLDS_PICOS_B | LE_MEMBER_B | LE_PROXY_INVOLVED_B
+  uint32 internal constant LE_REFUNDED_B                  = 4128768; // LE_P_REFUNDED_S_CAP_MISS_B | LE_P_REFUNDED_SALE_CLOSE_B | LE_P_REFUNDED_ONCE_OFF_B | LE_M_REFUNDED_S_CAP_MISS_NPT1B | LE_M_REFUNDED_TERMINATION_B | LE_M_REFUNDED_ONCE_OFF_B
+  uint32 internal constant LE_DEAD_B                      = 4161536; // LE_TRANSFERRED_TO_PB_B | LE_REFUNDED_B  or bits >= 8192
+  uint32 internal constant LE_SEND_FUNDS_NOK_B            = 4169986; // LE_DEAD_B | LE_SALE_CONTRACT_B | LE_PRESALE | LE_DOWNGRADED_B
+  uint32 internal constant LE_TRANSFERS_NOK_B             = 4161538; // LE_DEAD_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no PIOs
+  uint32 internal constant LE_REFUNDS_NOK_B               = 4161538; // LE_DEAD_B | LE_SALE_CONTRACT_B Starting point check. Could also be more i.e. no funds or no PIOs
   // LE_M_FUND_B:
-  // Mfund funded (LE_FUNDED_B set)  whitelisted (LE_WHITELISTED_B set) with picos (LE_HOLDS_PICOS_B set) entry as a result of funds and picos via Sale.pSale() or a Pfund to Mfund transfer or the whitelisting of a presale entry
+  // Mfund funded (LE_FUNDED_B set)  whitelisted (LE_WHITELISTED_B set) with picos (LE_HOLDS_PICOS_B set) entry as a result of funds and picos via Sale.pProcess() or a Pfund to Mfund transfer or the whitelisting of a presale entry
   // or unfunded (LE_FUNDED_B unset) whitelisted (LE_WHITELISTED_B set) with picos (LE_HOLDS_PICOS_B set) entry as a result of a Transfer of picos.
   // There is no need for a Prepurchase refund termination bit as the sale must be closed before a termination vote can occur -> any prepurchase amounts being refundable anyway.
 

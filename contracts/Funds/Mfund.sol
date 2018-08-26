@@ -146,7 +146,7 @@ contract Mfund is OwnedMfund, Math {
       pWithdraw(safeMul(address(this).balance, pSoftCapDispersalPc) / 100);
       emit SoftCapReachedV();
     }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
-      // Change of state for STATE_TERMINATE_REFUND_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_OPEN_B unset) will have been set.
+      // Change of state for STATE_TERMINATE_REFUND_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_SALE_OPEN_B unset) will have been set.
       pTerminationPicosIssued = I_TokenMfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
       emit TerminateV(pTerminationPicosIssued);
     }
@@ -198,11 +198,11 @@ contract Mfund is OwnedMfund, Math {
   // Mfund.Deposit()
   // ---------------
   // Called from:
-  // a. Sale.pBuy() to transfer the contribution here,   after a                      Sale.pSale()-> Token.Issue() -> List.Issue() call
-  // b. Hub.pPMtransfer() to transfer from Pfund to here after a Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() call
+  // a. Sale.pBuy() to transfer the contribution here,   after a                      Sale.pProcess()-> Token.Issue() -> List.Issue() call
+  // b. Hub.pPMtransfer() to transfer from Pfund to here after a Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() call
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
     require(iIsSaleContractCallerB() || iIsPfundContractCallerB(), 'Not Sale or Pfund caller');
-    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit not allowed");
+    require(pState & STATE_DEPOSIT_OK_B > 0, "Deposit not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
@@ -257,9 +257,9 @@ contract Mfund is OwnedMfund, Math {
   //                      here                            - to do the actual refund                                      ********
   // Returns false if refunding is complete
   function Refund(uint256 vRefundId, address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
-    require(pRefundInProgressB                                                                    // /- all expected to be true if called as intended
-         && vRefundId == pRefundId   // same hub call check                                       // |
-         && (vRefundBit == LE_M_REFUNDED_ONCE_OFF_B || pState & STATE_REFUNDING_COMBO_B > 0)); // |
+    require(pRefundInProgressB                                                           // /- all expected to be true if called as intended
+         && vRefundId == pRefundId   // same hub call check                              // |
+         && (vRefundBit == LE_M_REFUNDED_ONCE_OFF_B || pState & STATE_REFUNDING_B > 0)); // |
     uint256 refundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
     toA.transfer(refundWei);
     emit RefundV(pRefundId, toA, vRefundPicos, refundWei, vRefundBit);

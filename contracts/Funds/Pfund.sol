@@ -112,19 +112,19 @@ contract Pfund is OwnedPfund, Math {
   // Called from Sale.pBuy() for a prepurchase to transfer the contribution for escrow keeping here
   //                         after a List.PrepurchaseDeposit() call to update the list entry
   function Deposit(address vSenderA) external payable IsSaleContractCaller {
-    require(pState & STATE_DEPOSIT_OK_COMBO_B > 0, "Deposit to Prepurchase escrow not allowed");
+    require(pState & STATE_DEPOSIT_OK_B > 0, "Deposit to Prepurchase escrow not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
     emit DepositV(++pDepositId, vSenderA, msg.value);
   }
 
   // Pfund.PMTransfer()
   // ------------------
-  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
-  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pSale()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
+  // a. Hub.Whitelist()  -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers on whitelisting
+  // b. Hub.PMtransfer() -> Hub.pPMtransfer() -> Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() for Pfund to Mfund transfers for an entry which was whitelisted and ready prior to opening of the sale which has now happened
   // then finally Hub.pPMtransfer() calls here to transfer the Ether from P to M
-  function PMTransfer(address vSenderA, uint256 vWei, bool tranch1B) external IsHubContractCaller {
+  function PMTransfer(address vSenderA, uint256 vWei, bool tranche1B) external IsHubContractCaller {
     pPMtransferId++;
-    if (tranch1B) {
+    if (tranche1B) {
       pPclAccountA.transfer(vWei);
       emit Tranche1TransferV(pPMtransferId, vSenderA, vWei, pPclAccountA);
     }else{
@@ -142,7 +142,7 @@ contract Pfund is OwnedPfund, Math {
   // Returns false refunding is complete
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
     require(vRefundId == pRefundId   // same hub call check                                                                           // /- expected to be true if called as intended
-         && (vRefundBit == LE_P_REFUNDED_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUND_B > 0 || pState & STATE_CLOSED_COMBO_B > 0)); // |
+         && (vRefundBit == LE_P_REFUNDED_ONCE_OFF_B || pState & STATE_S_CAP_MISS_REFUND_B > 0 || pState & STATE_SALE_CLOSED_B > 0)); // |
     uint256 refundWei = Min(vRefundWei, address(this).balance); // Should not need this but b&b
     toA.transfer(refundWei);
     emit RefundV(pRefundId, toA, refundWei, vRefundBit);

@@ -284,14 +284,14 @@ contract Poll is OwnedPoll, Math {
     // POLL_CHANGE_H_CAP_PIO_N      c Change Sale.pPicoHardCap the Pico (PIO) sale hard cap
     // POLL_CHANGE_SALE_END_TIME_N  c Change Sale.pSaleEndT       the sale end time
     // POLL_CHANGE_S_CAP_DISP_PC_N sc Change Mfund.pSoftCapDispersalPc the soft cap reached dispersal %
-    if (pState & STATE_CLOSED_COMBO_B > 0)
+    if (pState & STATE_SALE_CLOSED_B > 0)
       require(requestedPollN > POLL_CHANGE_S_CAP_DISP_PC_N, 'Inapplicable Poll'); // All polls up to POLL_CHANGE_S_CAP_DISP_PC_N are inapplicable after close
     if (pState & STATE_S_CAP_REACHED_B > 0)
       require(requestedPollN != POLL_CHANGE_S_CAP_USD_N && requestedPollN != POLL_CHANGE_S_CAP_PIO_N && requestedPollN != POLL_CHANGE_S_CAP_DISP_PC_N, 'Inapplicable Poll');
     // POLL_RELEASE_RESERVE_PIOS_N  c Release some of the PIOs held in reserve and restart the DAICO
     // POLL_TERMINATE_FUNDING_N     c Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
     //                              |- Require sale to have closed
-    require(requestedPollN < POLL_RELEASE_RESERVE_PIOS_N || pState & STATE_CLOSED_COMBO_B > 0, 'Inapplicable Poll');
+    require(requestedPollN < POLL_RELEASE_RESERVE_PIOS_N || pState & STATE_SALE_CLOSED_B > 0, 'Inapplicable Poll');
     // End of inapplicable poll requests checks
     if (!pPollRequestB && requestedPollN > POLL_CLOSE_SALE_N && requestedPollN < POLL_TERMINATE_FUNDING_N) {
       // First request - either Admin or Member request - for a change poll request
