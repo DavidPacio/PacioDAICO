@@ -64,27 +64,27 @@ contract Constants {
   uint256 internal constant PFUND_SALE_OWNER_X = 3; // |
   uint256 internal constant POLL_WEB_OWNER_X   = 4; // |
 
-  // Managed Operation Indices
-  uint32 internal constant RESUME_MO_X                   =  0; // ResumeMO()
-  uint32 internal constant CHANGE_OWNER_BASE_MO_X        =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
-  // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
-  uint32 internal constant OP_MAN_ADD_CONTRACT_MO_X       =  5; // AddContractMO()
-  uint32 internal constant OP_MAN_ADD_SIGNER_MO_X         =  6; // AddSignerMO()
-  uint32 internal constant OP_MAN_ADD_MAN_OP_MO_X         =  7; // AddManOpMO
-  uint32 internal constant OP_MAN_CHANGE_SIGNER_MO_X      =  8; // ChangeSignerMO()
-  uint32 internal constant OP_MAN_UPDATE_CONTRACT_MO_X    =  9; // UpdateContractMO()
-  uint32 internal constant OP_MAN_UPDATE_MAN_OP_MO_X      = 10; // UpdateManOpMO()
-  uint32 internal constant HUB_SET_PCL_ACCOUNT_MO_X       =  5; // Hub.SetPclAccountMO()
-  uint32 internal constant HUB_START_SALE_X               =  6; // Hub.StartSaleMO();
-  uint32 internal constant HUB_SOFT_CAP_REACHED_MO_X      =  7; // Hub.SoftCapReachedMO()
-  uint32 internal constant HUB_CLOSE_SALE_MO_X            =  8; // Hub.CloseSaleMO()
-  uint32 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X  =  9; // Hub.SetTransferToPacioBcStateMO()
-  uint32 internal constant HUB_SET_LIST_ENTRY_BITS_MO_X   = 10; // Hub.SetListEntryBitsMO()
-  uint32 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  5; // Sale.SetCapsAndTranchesMO()
-  uint32 internal constant MFUND_WITHDRAW_TAP_MO_X        =  6; // Mfund.WithdrawTapMO()
-  uint32 internal constant POLL_CLOSE_YES_MO_X            =  5; // Poll.ClosePollYesMO()
-  uint32 internal constant POLL_CLOSE_NO_MO_X             =  6; // Poll.ClosePollNoMO()
-  uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferUnIssuedPIOsToPacioBcMO()
+// Managed Operation Indices
+uint32 internal constant RESUME_MO_X                    =  0; // ResumeMO()
+uint32 internal constant CHANGE_OWNER_BASE_MO_X         =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
+// Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
+uint32 internal constant OP_MAN_ADD_CONTRACT_MO_X       =  5; // OpMan.AddContractMO()
+uint32 internal constant OP_MAN_ADD_SIGNER_MO_X         =  6; // OpMan.AddSignerMO()
+uint32 internal constant OP_MAN_ADD_MAN_OP_MO_X         =  7; // OpMan.AddManOpMO()
+uint32 internal constant OP_MAN_CHANGE_SIGNER_MO_X      =  8; // OpMan.ChangeSignerMO()
+uint32 internal constant OP_MAN_UPDATE_CONTRACT_MO_X    =  9; // OpMan.UpdateContractMO()
+uint32 internal constant OP_MAN_UPDATE_MAN_OP_MO_X      = 10; // OpMan.UpdateManOpMO()
+uint32 internal constant HUB_SET_PCL_ACCOUNT_MO_X       =  5; // Hub.SetPclAccountMO()
+uint32 internal constant HUB_START_SALE_X               =  6; // Hub.StartSaleMO();
+uint32 internal constant HUB_SOFT_CAP_REACHED_MO_X      =  7; // Hub.SoftCapReachedMO()
+uint32 internal constant HUB_CLOSE_SALE_MO_X            =  8; // Hub.CloseSaleMO()
+uint32 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X  =  9; // Hub.SetTransferToPacioBcStateMO()
+uint32 internal constant HUB_SET_LIST_ENTRY_BITS_MO_X   = 10; // Hub.SetListEntryBitsMO()
+uint32 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  5; // Sale.SetCapsAndTranchesMO()
+uint32 internal constant MFUND_WITHDRAW_TAP_MO_X        =  6; // Mfund.WithdrawTapMO()
+uint32 internal constant POLL_CLOSE_YES_MO_X            =  5; // Poll.ClosePollYesMO()
+uint32 internal constant POLL_CLOSE_NO_MO_X             =  6; // Poll.ClosePollNoMO()
+uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferUnIssuedPIOsToPacioBcMO()
 
   // Time
   uint32  internal constant HOUR       =  3600;
