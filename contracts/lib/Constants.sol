@@ -87,9 +87,10 @@ uint32 internal constant POLL_CLOSE_NO_MO_X             =  6; // Poll.ClosePollN
 uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferUnIssuedPIOsToPacioBcMO()
 
   // Time
-  uint32  internal constant HOUR       =  3600;
-  uint32  internal constant DAY        = 86400;
-  uint256 internal constant MONTH    = 2629800; // 365.25 * 24 * 3600 / 12
+  uint32  internal constant MIN     =    60;
+  uint32  internal constant HOUR    =  3600;
+  uint32  internal constant DAY     = 86400;
+  uint256 internal constant MONTH = 2629800; // 365.25 * 24 * 3600 / 12
   //                                                                /--- Not applicable after soft cap hit
   // Poll 'Enum'                                                    |/- Not applicable after sale close
   uint8 internal constant POLL_CLOSE_SALE_N               =  1; //  c Close the sale
@@ -154,6 +155,7 @@ uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  5; // Token.TransferU
   uint32 internal constant LE_WHITELISTED_P_FUND_B        =      80; // LE_WHITELISTED_B | LE_P_FUND_B
   uint32 internal constant LE_WHITELISTED_MEMBER_B        =     192; // LE_WHITELISTED_B | LE_MEMBER_B
   uint32 internal constant LE_PRESALE_TRANCH1_B           =     768; // LE_PRESALE_B | LE_TRANCH1_B == not eligible for a soft cap miss refund
+  uint32 internal constant LE_SALE_CON_PICOS_FR_TRAN_OK_B =    1034; // LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B for the sale contract bit settings
   uint32 internal constant LE_MEMBER_PROXY_B              =    4224; // LE_MEMBER_B | LE_PROXY_B
   uint32 internal constant LE_PROXY_INVOLVED_B            =    6144; // LE_PROXY_APPOINTER_B | LE_PROXY_B
   uint32 internal constant LE_PROXY_APP_VOTE_BLOCK_B      =   18432; // LE_PROXY_APPOINTER_B | LE_BLOCKED_FROM_VOTING_B

@@ -5,7 +5,6 @@
 pragma solidity ^0.4.24;
 interface I_OpMan {
   function ContractXA(uint256 cX) external view returns (address);
-  function PauseContract(uint256 cX) external returns (bool);
   function IsManOpApproved(uint256 vManOpX) external returns (bool);
 }
 // End I_OpMan interface

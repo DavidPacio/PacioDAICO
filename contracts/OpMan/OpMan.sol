@@ -46,7 +46,6 @@ OpMan.ResumeContractMO(OP_MAN_CONTRACT_X) IsConfirmedSigner which is a managed o
 */
 
 pragma solidity ^0.4.24;
-pragma experimental ABIEncoderV2; // to allow the bytes[] argument for ApproveManOp()
 
 import "../lib/I_Owned.sol";
 import "../lib/OwnedOpMan.sol";
@@ -79,6 +78,7 @@ contract OpMan is OwnedOpMan {
     uint32 secsValid;    // secs in which signing is to be completed and the approval used
     uint32 approvedT;    // time at which the op was approved
     uint32 approvals;    // number of times the manOp has been approved or used
+    bool   approvedB;    // true when op is approved, false when approval has been used
     bool   pausedB;      // true if manOP is paused
   }
 
@@ -144,31 +144,29 @@ contract OpMan is OwnedOpMan {
     for (j=0; j<vSignersYA.length; j++)
       pAddSigner(vSignersYA[j]);
     // Add initial (OpMan) manOps
-    // djh?? Review the values
-    // djh?? Move to deploy script?
     // pAddManOp(uint256 vContractX, uint32 vSigsRequired, uint32 vSecsValid) private
-    pAddManOp(OP_MAN_CONTRACT_X, RESUME_MO_X,                   3, HOUR); //  0 ResumeMO()
-  //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+1,      3, HOUR); //  1 OpMan.ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
-  //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+2,      3, HOUR); //  2 OpMan.ChangeOwnerMO() 2 Admin owner
-    pAddManOp(OP_MAN_CONTRACT_X, 1,                             3, HOUR); //  1 OpMan.ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
-    pAddManOp(OP_MAN_CONTRACT_X, 2,                             3, HOUR); //  2 OpMan.ChangeOwnerMO() 2 Admin owner
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_CONTRACT_MO_X,      3, HOUR); //  5 OpMan.AddContractMO()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_SIGNER_MO_X,        3, HOUR); //  6 OpMan.AddSignerMO()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_MAN_OP_MO_X,        3, HOUR); //  7 OpMan.AddManOp()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_SIGNER_MO_X,     3, HOUR); //  8 OpMan.ChangeSignerMO()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_CONTRACT_MO_X,   3, HOUR); //  9 OpMan.UpdateContractMO()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,     3, HOUR); // 10 OpMan.UpdateManOpMO()
-    pAddManOp(MFUND_CONTRACT_X,  HUB_SET_PCL_ACCOUNT_MO_X,      3, HOUR); //  5 Hub.SetPclAccountMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, HOUR); //  6 Hub.StartSaleMO();
-    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, HOUR); //  7 Hub.SoftCapReachedMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, HOUR); //  8 Hub.CloseSaleMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_SET_LIST_ENTRY_BITS_MO_X,  3, HOUR); //  9 Hub.SetListEntryBitsMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, HOUR); // 10 Hub.SetTransferToPacioBcStateMO()
-    pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, HOUR); //  5 Sale.SetCapsAndTranchesMO()
-    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_TAP_MO_X,       3, HOUR); //  6 Mfund.WithdrawTapMO()
-    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, HOUR); //  5 Poll.ClosePollYesMO()
-    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, HOUR); //  6 Poll.ClosePollNoMO()
-    pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, HOUR); //  5 Token.TransferUnIssuedPIOsToPacioBcMO()
+    pAddManOp(OP_MAN_CONTRACT_X, RESUME_MO_X,                   3, MIN); //  0 ResumeMO()
+  //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+1,      3, MIN); //  1 OpMan.ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
+  //pAddManOp(OP_MAN_CONTRACT_X, CHANGE_OWNER_BASE_MO_X+2,      3, MIN); //  2 OpMan.ChangeOwnerMO() 2 Admin owner
+    pAddManOp(OP_MAN_CONTRACT_X, 1,                             3, MIN); //  1 OpMan.ChangeOwnerMO() 1 OpMan owner, in this OpMan case is self
+    pAddManOp(OP_MAN_CONTRACT_X, 2,                             3, MIN); //  2 OpMan.ChangeOwnerMO() 2 Admin owner
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_CONTRACT_MO_X,      3, MIN); //  5 OpMan.AddContractMO()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_SIGNER_MO_X,        3, MIN); //  6 OpMan.AddSignerMO()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_MAN_OP_MO_X,        3, MIN); //  7 OpMan.AddManOp()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_SIGNER_MO_X,     3, MIN); //  8 OpMan.ChangeSignerMO()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_CONTRACT_MO_X,   3, MIN); //  9 OpMan.UpdateContractMO()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,     3, MIN); // 10 OpMan.UpdateManOpMO()
+    pAddManOp(MFUND_CONTRACT_X,  HUB_SET_PCL_ACCOUNT_MO_X,      3, MIN); //  5 Hub.SetPclAccountMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, MIN); //  6 Hub.StartSaleMO();
+    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, MIN); //  7 Hub.SoftCapReachedMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, MIN); //  8 Hub.CloseSaleMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_SET_LIST_ENTRY_BITS_MO_X,  3, MIN); //  9 Hub.SetListEntryBitsMO()
+    pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, MIN); // 10 Hub.SetTransferToPacioBcStateMO()
+    pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, MIN); //  5 Sale.SetCapsAndTranchesMO()
+    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_TAP_MO_X,       3, MIN); //  6 Mfund.WithdrawTapMO()
+    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, MIN); //  5 Poll.ClosePollYesMO()
+    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, MIN); //  6 Poll.ClosePollNoMO()
+    pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, MIN); //  5 Token.TransferUnIssuedPIOsToPacioBcMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
@@ -216,13 +214,24 @@ contract OpMan is OwnedOpMan {
     R_Signer storage srSignerR = pSignersAddrMR[pSignersYA[iX]];
     return (srSignerR.addedT, srSignerR.confirmedT, srSignerR.numSigs, srSignerR.lastSigT);
   }
+  function IsNotDuplicateContractB(address contractA) external view returns (bool) {
+    return pIsNotDuplicateContractB(contractA);
+  }
+  // pIsNotDuplicateContractB(address contractA)
+  // Returns false if contractA matches any current contract
+  //         true  if contractA does not match any current contract
+  function pIsNotDuplicateContractB(address contractA) private view returns (bool) {
+    for (uint256 j=0; j<pContractsYR.length; j++)
+      if (contractA == pContractsYR[j].contractA)
+        return false;
+    return true;
+  }
 
   // Modifier functions
   // ==================
-  modifier IsNotDuplicateContract(address vContractA) {
-  //require(pContractsAddrMX[vContractA] == 0,'Duplicate contract'); Can't use this because OpMan has a cX of 0
-    for (uint256 j=0; j<pContractsYR.length; j++)
-      require(vContractA != pContractsYR[j].contractA, 'Duplicate contract');
+  modifier IsNotDuplicateContract(address contractA) {
+  //require(pContractsAddrMX[contractA] == 0,'Duplicate contract'); Can't use this because OpMan has a cX of 0
+    require(pIsNotDuplicateContractB(contractA), 'Duplicate contract');
     _;
   }
   modifier IsNotDuplicateSigner(address vSignerA) {
@@ -245,10 +254,10 @@ contract OpMan is OwnedOpMan {
   // Called from constructor and AddContractMO() as part of processes:
   // 1.1 Add initial contracts
   // 2.1 Admin to add additional contract as a managed op
-  function pAddContract(uint256 vContractX, address vContractA, bool vPausableB) private IsNotDuplicateContract(vContractA) {
+  function pAddContract(uint256 vContractX, address contractA, bool vPausableB) private IsNotDuplicateContract(contractA) {
     require(pContractsYR.length == vContractX, 'AddContract call out of order');
     pContractsYR.push(R_Contract(
-      vContractA,  // address contractA;  // *
+      contractA,   // address contractA;  // *
       vPausableB,  // bool    pausableB;  // * true if contract is pausable i.e. that the contract has a SetPause(bool B) function
       false,       // bool    pausedB;    // * true if contract is paused
       uint32(now), // uint32  addedT;     //
@@ -257,8 +266,8 @@ contract OpMan is OwnedOpMan {
                    // mapping (uint32
                    // => bool) manOpsOpxMB;// * To confirm ownership of ops by contract
                                            // |- * = can be updated via a managed op
-    pContractsAddrMX[vContractA] = vContractX; // Mapping of contracts by address -> cX (contract index in pContractsYR)
-    emit AddContractV(vContractX, vContractA, vPausableB);
+    pContractsAddrMX[contractA] = vContractX; // Mapping of contracts by address -> cX (contract index in pContractsYR)
+    emit AddContractV(vContractX, contractA, vPausableB);
   }
 
   // OpMan.pAddSigner()
@@ -293,6 +302,7 @@ contract OpMan is OwnedOpMan {
       vSecsValid,    // uint32 secsValid;
       0,             // uint32 approvedT;
       0,             // uint32 approvals;   // number of times the manOp has been approved or used
+      false,         // bool   approvedB
       false);        // bool   pausedB;     // true if manOP is paused
     pManOpKsYU.push(manOpK);
     pContractsYR[vContractX].numManOps++;
@@ -311,11 +321,13 @@ contract OpMan is OwnedOpMan {
   // Called from IsManOpApproved() and OpMan *MO() functions to check if approval for the manOp has been given by the required number of signers
   function pIsManOpApproved(uint256 manOpK) private returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[manOpK];
-    require(uint32(now) - srManOpR.approvedT <= srManOpR.secsValid // within time
+    require(srManOpR.approvedB                                     // approved but approval not yet used
+         && uint32(now) - srManOpR.approvedT <= srManOpR.secsValid // within time
          && !pContractsYR[srManOpR.contractX].pausedB              // contract is active
          && !srManOpR.pausedB,                                     // manOp is active
             'ManOp not approved'); // also serves to confirm that the op is defined
     emit ApprovedManOpExecutedV(manOpK);
+    srManOpR.approvedB = false;
     srManOpR.approvals++;
     return true;
   }
@@ -327,9 +339,9 @@ contract OpMan is OwnedOpMan {
   // ---------------------
   // 2.1 Admin to add additional contract as a managed op
   // Called manually by Admin to add an additional contract not included in the initial deployment. Must be approved.
-  function AddContractMO(uint32 vContractX, address vContractA, bool vPausableB) external IsAdminCaller IsActive {
+  function AddContractMO(uint32 vContractX, address contractA, bool vPausableB) external IsAdminCaller IsActive {
     require(pIsManOpApproved(OP_MAN_ADD_CONTRACT_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_ADD_CONTRACT_MO_X since OP_MAN_CONTRACT_X is 0
-    pAddContract(vContractX, vContractA, vPausableB);
+    pAddContract(vContractX, contractA, vPausableB);
   }
 
   // OpMan.AddSignerMO()
@@ -438,11 +450,8 @@ contract OpMan is OwnedOpMan {
     require(pIsManOpApproved(OP_MAN_UPDATE_MAN_OP_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_UPDATE_MAN_OP_MO_X
     R_ManOp storage srManOpR = pManOpsOpkMR[manOpK];
     require(srManOpR.sigsRequired > 0, 'ManOp not known');
-                                           // uint32(vContractX), // uint32 contractX;   // index of the contract with the operation to be approved
     srManOpR.sigsRequired = vSigsRequired; // uint32 sigsRequired;
     srManOpR.secsValid    = vSecsValid;    // uint32 secsValid;
-                                           // uint32 approvedT;
-                                           // bool   pausedB;     // true if manOP is paused
     emit UpdateManOpV(manOpK, vSigsRequired, vSecsValid);
     return true;
   }
@@ -450,18 +459,18 @@ contract OpMan is OwnedOpMan {
   // OpMan.ApproveManOp()
   // --------------------
   // 6. Offline signatures to be submitted to approve a manOp  // Accessed by its Key
-  function ApproveManOp(uint256 manOpK, bytes[] sigs) external IsConfirmedSigner IsActive returns (bool) {
+  // Version with v, r, s being passed as bytes[] sigs to pass multiple messages for splitting into v, r, s here required: pragma experimental ABIEncoderV2; Code kept in \Pacio\Development\ICO Dapps\DAICO\Pacio\OpMan\OpMan with bytes[] sigs.sol
+  function ApproveManOp(uint256 manOpK, uint8[] sigV, bytes32[] sigR, bytes32[] sigS) external IsConfirmedSigner IsActive returns (bool) {
     R_ManOp storage srManOpR = pManOpsOpkMR[manOpK];
-    require(srManOpR.sigsRequired > 0,            'ManOp not known');
-    require(pContractsYR[srManOpR.contractX].manOpsOpxMB[manOpK%100], 'Contract ManOp Unknown');
-    require(srManOpR.sigsRequired <= sigs.length, 'Insufficient signatures');
-    require(!srManOpR.pausedB,                    'ManOp is paused');
-    bytes32 hash = prefixed(keccak256(abi.encodePacked(manOpK, pNOnce)));
+    require(srManOpR.sigsRequired > 0, 'ManOp not known');
+    require(!srManOpR.pausedB,         'ManOp is paused');
+    require(pContractsYR[srManOpR.contractX].manOpsOpxMB[manOpK%100], 'Contract ManOp Unknown'); // Gave a stock overflow on the manOpK%100
+    require(srManOpR.sigsRequired <= sigR.length, 'Insufficient signatures');
+    require(sigR.length == sigS.length && sigR.length == sigV.length);
+    bytes32 hash = pPrefixed(keccak256(abi.encodePacked(manOpK, pNOnce)));
     uint32 nowUint32 = uint32(now);
-    for (uint256 j = 0; j < sigs.length; j++) {
-      // this recreates the message that was signed on the client
-      address recoveredA = recoverSigner(hash, sigs[j]);
-      R_Signer storage srSignerR = pSignersAddrMR[recoveredA];
+    for (uint256 j = 0; j < sigR.length; j++) {
+      R_Signer storage srSignerR = pSignersAddrMR[ecrecover(hash, sigV[j], sigR[j], sigS[j])];
       // Check that is a confirmed signer
       require(srSignerR.confirmedT > 0,       'Msg not signed by confirmed signer');
       require(srSignerR.lastSigT < nowUint32, 'Duplicate signer');
@@ -469,38 +478,19 @@ contract OpMan is OwnedOpMan {
       srSignerR.numSigs++;
     }
     srManOpR.approvedT = nowUint32;
+    srManOpR.approvedB = true;
     emit ManOpApprovedV(manOpK);
     return true;
   }
 
-  // Builds a prefixed hash to mimic the behavior of eth_sign.
-  function prefixed(bytes32 hash) internal pure returns (bytes32) {
+  // Builds a prefixed hash to mimic the behaviour of eth_sign.
+  function pPrefixed(bytes32 hash) private pure returns (bytes32) {
     return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
   }
 
-  function recoverSigner(bytes32 message, bytes memory sig) private pure returns (address) {
-    (uint8 v, bytes32 r, bytes32 s) = splitSignature(sig);
-    return ecrecover(message, v, r, s);
-  }
-
-  // signature methods.
-  function splitSignature(bytes memory sig) private pure returns (uint8 v, bytes32 r, bytes32 s) {
-    require(sig.length == 65);
-    assembly {
-      // first 32 bytes, after the length prefix.
-      r := mload(add(sig, 32))
-      // second 32 bytes.
-      s := mload(add(sig, 64))
-      // final byte (first byte of the next 32 bytes).
-      v := byte(0, mload(add(sig, 96)))
-    }
-    return (v, r, s);
-  }
-
-
   // OpMan.IsManOpApproved()
   // -----------------------
-  // Called from a contract function using operation management to check if approval for the manOp has been given by the required number of signers
+  // Called from a contract function using operation management to check if approval for the manOp has been given
   // Process: 7. Approve or reject a request by a contract function to perform a managed op
   function IsManOpApproved(uint256 vManOpX) external IsContractCaller IsActive returns (bool) {
     uint256 cX = pContractsAddrMX[msg.sender];

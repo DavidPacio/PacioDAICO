@@ -10,7 +10,6 @@ pragma solidity ^0.4.24;
 import "../lib/OwnedList.sol";
 import "../lib/Math.sol";
 import "../lib/Constants.sol";
-import "../OpMan/I_OpMan.sol";
 
 contract List is OwnedList, Math {
   string  public  name = "Pacio DAICO Participants List";
@@ -26,7 +25,7 @@ contract List is OwnedList, Math {
   uint32  private pNumProxies;    // Number of proxy members or proxy appointees
   uint32  private pNumDowngraded; // Number downgraded (from whitelist)
   uint256 private pMaxPicosVote;  // Maximum vote in picos for a member = Sale.pPicoHardCap * Poll.pMaxVoteHardCapCentiPc / 100
-  address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need pSaleC
+  address private pSaleA;         // the Sale contract address - only used as an address here i.e. don't need C form here
   bool    private pTransfersOkB;  // false when sale is running = transfers are stopped by default but can be enabled manually globally or for particular members;
 
 // Struct to hold member data, with a doubly linked list of the List entries to permit traversing
@@ -292,7 +291,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // Is called from Hub.CreateListEntry() -> List.CreateListEntry()         -> here to create a list entry for a new participant via web or admin
   //                Hub.PresaleIssue()    -> CreatePresaleEntry()           -> here to create a Seed Presale or Private Placement list entry
   //              Token.Initialise()      -> List.CreateSaleContractEntry() -> here to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale sale contract
-  //              Token.NewSaleContract() -> List.CreateSaleContractEntry() -> here to create the new Sale contract list entry djh?? wip
+  //              Token.NewSaleContract() -> List.NewSaleContract()         -> here to create the new Sale contract list entry
   // Sets the LE_REGISTERED_B bit always so that bits for any entry which exists is > 0
   // Validity of entryA (defined and not any of the contracts or Admin) is checked by Hub.CreateListEntry() and Hub.PresaleIssue()
   // There is one exception for entryA being a contract which is for the Sale contract case for holding the minted PIOs, creatred via a List.CreateSaleContractEntry() call.
@@ -336,12 +335,12 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // List.CreateSaleContractEntry()
   // ------------------------------
   // Called from Token.Initialise() to create the Sale contract list entry which holds the minted Picos. pSaleA is the Sale contract
-  // Called from Token.NewSaleContract() to create a new Sale contract list entry djh?? wip
+  // Called from Token.NewSaleContract() to create a new Sale contract list entry
   // Have a special transfer fn TransferSaleContractBalance() for the case of a new Sale contract  djh?? wip
   // Transfers from it are done for issuing PIOs so set LE_FROM_TRANSFER_OK_B
   // Transfers to it are done for refunds involving PIOs by List.Refund()
-  function CreateSaleContractEntry(uint256 vPicos, uint32 vDbId) external IsTokenContractCaller returns (bool) {
-    require(pCreateEntry(pSaleA, LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B, vDbId));
+  function CreateSaleContractEntry(uint256 vPicos) external IsTokenContractCaller returns (bool) {
+    require(pCreateEntry(pSaleA, LE_SALE_CON_PICOS_FR_TRAN_OK_B, 1)); // assuming 1 for Sale contract Db ID. LE_SALE_CON_PICOS_FR_TRAN_OK_B =  LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B for the sale contract bit settings
     pListMR[pSaleA].picosBalance = vPicos;
     return true;
   }
@@ -515,15 +514,18 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     return true;
   } // End Transfer()
 
-  // // List.TransferSaleContractBalance()  djh?? wip
-  // // ----------------------------------
-  // // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
-  // // pSaleA is still the old Sale when this is called
-  // function TransferSaleContractBalance(address vNewSaleContractA) external IsTokenContractCaller returns (bool success) {
-  //   pListMR[vNewSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
-  //   pListMR[pSaleA].picosBalance = 0;
-  //   return true;
-  // }
+  // List.NewSaleContract()
+  // ----------------------
+  // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
+  // pSaleA is still the old Sale when this is called
+  function NewSaleContract(address newSaleContractA) external IsTokenContractCaller returns (bool success) {
+    require(pCreateEntry(newSaleContractA, LE_SALE_CON_PICOS_FR_TRAN_OK_B, 1)); // assuming 1 for Sale contract Db ID. LE_SALE_CON_PICOS_FR_TRAN_OK_B =  LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B for the sale contract bit settings
+    pListMR[newSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
+    pListMR[pSaleA].picosBalance = 0;
+    pListMR[pSaleA].bits &= ~LE_SALE_CON_PICOS_FR_TRAN_OK_B;
+    pSaleA = newSaleContractA;
+    return true;
+  }
 
   // List.Refund()
   // -------------

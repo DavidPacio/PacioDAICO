@@ -19,7 +19,6 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedPfund.sol";
 import "../lib/Math.sol";
-import "../OpMan/I_OpMan.sol";
 import "../Funds/I_MfundPfund.sol";
 
 contract Pfund is OwnedPfund, Math {

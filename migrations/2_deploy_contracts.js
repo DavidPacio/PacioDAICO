@@ -75,7 +75,7 @@ Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Token.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-Token.Initialise(1) To set the contract variable, and do the PIOE minting. Assumes dbId of 1 for the Sale Contract
+Token.Initialise() To set the contract variable, and do the PIOE minting
 
 Mfund owned by Deployer OpMan Hub Admin Sale Poll Pfund
 -----

@@ -19,7 +19,6 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedMfund.sol";
 import "../lib/Math.sol";
-import "../OpMan/I_OpMan.sol";
 import "../List/I_ListMfund.sol";
 import "../Token/I_TokenMfund.sol";
 
@@ -266,6 +265,14 @@ contract Mfund is OwnedMfund, Math {
     pRefundInProgressB = false;
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
+
+  // Mfund.NewListContract()
+  // -----------------------
+  // To be called manually via Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
+  // Only to be done if a new list contract has been constructed and data transferred
+  function NewListContract(address newListContractA) external IsHubContractCaller {
+    pListC = I_ListMfund(newListContractA); // The List contract
+  }
 
   // Mfund Fallback function
   // =======================

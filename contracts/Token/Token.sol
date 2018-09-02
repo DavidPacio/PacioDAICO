@@ -8,9 +8,6 @@ Calls
 OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
 List   as the contract for the list of participants
 
-To Do djh??
-- Add functions for changing contracts
-
 Pause/Resume
 ============
 OpMan.PauseContract(TOKEN_CONTRACT_X) IsHubContractCallerOrConfirmedSigner
@@ -25,7 +22,6 @@ No sending ether to this contract
 pragma solidity ^0.4.24;
 
 import "../lib/Math.sol";
-import "../OpMan/I_OpMan.sol";
 import "../List/I_ListToken.sol";
 import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
@@ -39,7 +35,7 @@ contract Token is EIP20Token, Math {
   uint256 private pPclPicosAllocated;// PCL Picos allocated
   uint256 private pIssueId;          // Issue Id
   uint256 private pTransferToPbId;   // Transfer to Pacio Blockchain Id
-  address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need pSaleC
+  address private pSaleA;            // the Sale contract address - only used as an address here i.e. don't need C form here
 
   // No Constructor
   // --------------
@@ -110,14 +106,14 @@ contract Token is EIP20Token, Math {
   //   Token.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-  function Initialise(uint32 vDbId) external IsInitialising {
+  function Initialise() external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract
     pSaleA   = iOwnersYA[SALE_OWNER_X];
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
     // Create the Sale sale contract list entry
-    iListC.CreateSaleContractEntry(10**21, vDbId);
+    iListC.CreateSaleContractEntry(10**21);
     // 10^20 = 100,000,000,000,000,000,000 picos
     //       = 100,000,000 or 100 million PIOEs
     // 10^19 = 10,000,000,000,000,000,000 picos
@@ -178,8 +174,28 @@ contract Token is EIP20Token, Math {
     return true;
   }
 
-  // Functions for calling via same name function in Hub()
-  // =====================================================
+  // Functions for manual calling via same name function in Hub()
+  // ============================================================
+
+  // Token.NewSaleContract()
+  // -----------------------
+  // Called manually via Hub.NewSaleContract() to change the Sale owner of the Token contract to a new Sale.
+  // Transfers any minted tokens from old Sale to new Sale
+  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
+    emit Transfer(pSaleA, newSaleContractA, iListC.PicosBalance(pSaleA)); // pSaleA is still the old Sale
+    iListC.NewSaleContract(newSaleContractA);
+    emit ChangeOwnerV(pSaleA, newSaleContractA, SALE_OWNER_X);
+    pSaleA                  =
+    iOwnersYA[SALE_OWNER_X] = newSaleContractA;
+  }
+
+  // Token.NewListContract()
+  // -----------------------
+  // To be called manually via Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
+  // Only to be done if a new list contract has been constructed and data transferred
+  function NewListContract(address newListContractA) external IsHubContractCaller {
+    iListC = I_ListToken(newListContractA); // The List contract
+  }
 
   // Functions for calling at MVP Launch Time
   // ========================================
