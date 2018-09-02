@@ -386,7 +386,7 @@ contract Sale is OwnedSale, Math {
     else
       pMfundC.Deposit.value(msg.value)(msg.sender); // transfers msg.value to the Mfund account
     return true;
-  }
+  } // end pBuy()
 
   // Sale.pProcess() private to process the buy/transfer operation, issue the PIOs, and check for caps being reached
   // ------------
@@ -429,7 +429,7 @@ contract Sale is OwnedSale, Math {
       pCloseSale(STATE_CLOSED_TIME_UP_B);
       emit TimeUpV(pPicosSold, pWeiRaised, pUsdRaised);
     }
-  }
+  } // end pProcess()
 
   // Sale.PMtransfer()
   // -----------------

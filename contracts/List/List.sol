@@ -523,7 +523,8 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     pListMR[newSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
     pListMR[pSaleA].picosBalance = 0;
     pListMR[pSaleA].bits &= ~LE_SALE_CON_PICOS_FR_TRAN_OK_B;
-    pSaleA = newSaleContractA;
+    pSaleA                  =
+    iOwnersYA[SALE_OWNER_X] = newSaleContractA;
     return true;
   }
 

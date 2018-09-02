@@ -9,6 +9,7 @@ Calls OpMan; Sale; Token; List; Mfund; Pfund; Poll
 djh??
 
 • fns for replacing contracts - all of them
+  To be MO fnd
 • Provide an emergency reset of the pRefundInProgressB bools
 • initialise new list contract
 
@@ -421,11 +422,11 @@ contract Hub is OwnedHub, Math {
   //   OpMan
   // * Hub   sale contract pSaleC
   //   Poll  sale contract pSaleC
-  //   Token sale address  pSaleA
-  //   List  sale address  pSaleA
+  // * Token sale address  pSaleA
+  // * List  sale address  pSaleA
   // * Hub   Sale owner    iOwnersYA[SALE_OWNER_X]
-  //   Token Sale owner    iOwnersYA[SALE_OWNER_X]
-  //   List  Sale owner    iOwnersYA[SALE_OWNER_X]
+  // * Token Sale owner    iOwnersYA[SALE_OWNER_X]
+  // * List  Sale owner    iOwnersYA[SALE_OWNER_X]
   //   Mfund Sale owner    iOwnersYA[SALE_OWNER_X]
   //   Pfund Sale owner    iOwnersYA[PFUND_SALE_OWNER_X]
   function NewSaleContract(address newSaleContractA) external IsAdminCaller {

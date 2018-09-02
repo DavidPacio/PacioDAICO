@@ -199,7 +199,7 @@ contract Mfund is OwnedMfund, Math {
   // Called from:
   // a. Sale.pBuy() to transfer the contribution here,   after a                      Sale.pProcess()-> Token.Issue() -> List.Issue() call
   // b. Hub.pPMtransfer() to transfer from Pfund to here after a Sale.PMtransfer() -> Sale.pProcess()-> Token.Issue() -> List.Issue() call
-  function Deposit(address vSenderA) external payable IsSaleContractCaller {
+  function Deposit(address vSenderA) external payable {
     require(iIsSaleContractCallerB() || iIsPfundContractCallerB(), 'Not Sale or Pfund caller');
     require(pState & STATE_DEPOSIT_OK_B > 0, "Deposit not allowed");
     pTotalDepositedWei = safeAdd(pTotalDepositedWei, msg.value);
