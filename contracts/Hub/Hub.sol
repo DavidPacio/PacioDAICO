@@ -416,27 +416,31 @@ contract Hub is OwnedHub, Math {
   // **********************************
   // Hub.NewSaleContract()
   // ---------------------
-  // To be called manually to change the Sale contract here and in the Poll contract, plus change the Sale owner for Hub, Token, List, Mfund, Pfund
+  // To be called manually as a managed op via the ChangeContractMO() call to change the Sale contract in OpMan, here and in the Poll contract, plus change the Sale owner for Hub, Token, List, Mfund, Pfund
   // Expects the old Sale contract to have been paused
   // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsSaleContractCaller functions from working
-  //   OpMan
+  // * OpMan
   // * Hub   sale contract pSaleC
-  //   Poll  sale contract pSaleC
+  // * Poll  sale contract pSaleC
   // * Token sale address  pSaleA
   // * List  sale address  pSaleA
   // * Hub   Sale owner    iOwnersYA[SALE_OWNER_X]
   // * Token Sale owner    iOwnersYA[SALE_OWNER_X]
   // * List  Sale owner    iOwnersYA[SALE_OWNER_X]
-  //   Mfund Sale owner    iOwnersYA[SALE_OWNER_X]
-  //   Pfund Sale owner    iOwnersYA[PFUND_SALE_OWNER_X]
+  // * Mfund Sale owner    iOwnersYA[SALE_OWNER_X]
+  // * Pfund Sale owner    iOwnersYA[PFUND_SALE_OWNER_X]
   function NewSaleContract(address newSaleContractA) external IsAdminCaller {
     require(pSaleC.Paused());
-    require(pIsContractOkB(newSaleContractA)); // Checks that contractA is a contract and not one of the current ones
+    require(pIsContractB(newSaleContractA)); // Checks that contractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
+    require(pOpManC.ChangeContractMO(SALE_CONTRACT_X, newSaleContractA)); // MO which also checks that newSaleContractA is not a duplicateContract
     emit ChangeOwnerV(pSaleC, newSaleContractA, SALE_OWNER_X);
     emit NewSaleContractV(pSaleC, newSaleContractA);
     pSaleC = I_Sale(newSaleContractA);
     iOwnersYA[SALE_OWNER_X] = newSaleContractA;
     pTokenC.NewSaleContract(newSaleContractA); // which creates a new Sale list entry and transfers the old Sale picos to the new entry
+    pMfundC.NewSaleContract(newSaleContractA);
+    pPfundC.NewSaleContract(newSaleContractA);
+     pPollC.NewSaleContract(newSaleContractA);
   }
 
   // If a New List contract is deployed
@@ -445,16 +449,16 @@ contract Hub is OwnedHub, Math {
   // ---------------------
   // To be called manually to change the List contract here and in the Sale, Token, Mfund, and Poll contracts.
   // The new List contract would need to have been initialised
-  //   OpMan
+  // * OpMan
   // * Hub   List contract pListC
   // * Sale  List contract pListC
   // * Token List contract iListC
   // * Mfund List contract pListC
   // * Poll  List contract pListC
   // No contract has List as an owner
-  function NewListContract(address ne
-    wListContractA) external IsAdminCaller {
-    require(pIsContractOkB(newListContractA)); // Checks that contractA is a contract and not one of the current ones
+  function NewListContract(address newListContractA) external IsAdminCaller {
+    require(pIsContractB(newListContractA)); // Checks that contractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
+    require(pOpManC.ChangeContractMO(LIST_CONTRACT_X, newListContractA)); // MO which also checks that newListContractA is not a duplicateContract
     emit NewListContractV(pListC, newListContractA);
     pListC = I_ListHub(newListContractA);
      pSaleC.NewListContract(newListContractA);
@@ -462,7 +466,6 @@ contract Hub is OwnedHub, Math {
     pMfundC.NewListContract(newListContractA);
      pPollC.NewListContract(newListContractA);
   }
-
 
   // If a New Token contract is deployed
   // ***********************************
@@ -474,15 +477,13 @@ contract Hub is OwnedHub, Math {
   //   pTokenC = I_TokenHub(vNewTokenContractA);
   // }
 
-  // Hub.pIsContractOkB() private
-  // --------------------
-  // Checks that contractA is a contract and not one of the current ones
-  function pIsContractOkB(address contractA) private view returns (bool) {
+  // Hub.pIsContractB() private
+  // ------------------
+  // Checks that contractA is a contract
+  function pIsContractB(address contractA) private view returns (bool) {
     uint256 codeSize;
     assembly {codeSize := extcodesize(contractA)}
-    require(codeSize > 0
-         && pOpManC.IsNotDuplicateContractB(contractA), 'Invalid Contract');
-    return true;
+    return codeSize > 0;
   }
 
   // Functions for Calling List IsHubContractCaller Functions

@@ -149,6 +149,13 @@ contract Pfund is OwnedPfund, Math {
   } // End Refund()
 
 
+  // Pfund.NewSaleContract()
+  // ----------------------
+  // Called from Hub.NewSaleContract() for the case of a new Sale contract
+  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
+    iOwnersYA[PFUND_SALE_OWNER_X] = newSaleContractA;
+  }
+
   // Pfund Fallback function
   // =======================
   // Not payable so trying to send ether will throw

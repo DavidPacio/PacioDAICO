@@ -3,6 +3,10 @@
 
 OpMan is the Operations Manager for the Pacio DAICO with Multisig signing required to approve critical operations, called 'managed ops' or manOps.
 
+djh??
+• Add owner property re is a contract or not then check this on changeowner
+• Add more arguments to the ofline signing for approvaing a MO
+
 All contracts, including OpMan, should use managed ops for:
 - ownership changes
 - any administrator type operations
@@ -11,7 +15,7 @@ Owners Deployer OpMan (self) Hub Admin
 ------
 0. Deployer
 1. OpMan (self)  - Set by OwnedOpMan.sol constructor
-2. Hub abd Admin - Set by deploy script
+2. Hub and Admin - Set by deploy script
 
 OpMan Processes
 ---------------
@@ -26,7 +30,7 @@ OpMan Processes
    4.1 Signer to confirm self as a signer
    4.2 Admin to unconfirm (pause) a signer
 5. Update a contract or manOp as a managed ops
-   5.1 Admin to update a contract as a managed op
+   5.1 Admin to change a contract as a managed op. Called from Hub.New*Contract() functions. This call serves as the MO for those functions.
    5.2 Admin to update a manOp as a managed op
 6. Offline signatures to be submitted to approve a manOp
 7. Approve or reject a request by a contract function to perform a managed op
@@ -89,7 +93,7 @@ contract OpMan is OwnedOpMan {
   uint256[] private pManOpKsYU;                         // Array of the manOps mapping keys manOpK = cX * 100 + manOpX
   mapping(address => R_Signer) private pSignersAddrMR;  // Mapping of the signers keyed by address
   address[] private pSignersYA;                         // Array of the signers to allow a traverse of pSignersAddrMR
-  uint256   private pNOnce;     // (only) mutable state
+  uint256   private pNOnce;                             // nonce for ManOp approvals. No view fn for this.
 
   // Events
   // ======
@@ -100,10 +104,10 @@ contract OpMan is OwnedOpMan {
   event ChangeSignerV(address OldSignerA, address NewSignerA);
   event ConfirmSignerV(address SignerA);
   event UnConfirmSignerV(address SignerA);
-  event UpdateContractV(uint256 ContractX, address ContractA, bool Pausable);
+  event ChangeContractV(uint256 ContractX, address OldContract, address NewContract);
   event UpdateManOpV(uint256 ManOpK, uint32 SigsRequired, uint32 SecsValid);
   event StartManOpApprovalV(uint256 ManOpK);
-  event ManOpApprovedV(uint256 ManOpK);
+  event ManOpApprovedV(uint256 ManOpK, uint256 Id);
   event ApprovedManOpExecutedV(uint256 ManOpK);
   event PauseContractV(uint256 ContractX);
   event ResumeContractV(uint256 ContractX);
@@ -154,7 +158,7 @@ contract OpMan is OwnedOpMan {
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_SIGNER_MO_X,        3, MIN); //  6 OpMan.AddSignerMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_ADD_MAN_OP_MO_X,        3, MIN); //  7 OpMan.AddManOp()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_SIGNER_MO_X,     3, MIN); //  8 OpMan.ChangeSignerMO()
-    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_CONTRACT_MO_X,   3, MIN); //  9 OpMan.UpdateContractMO()
+    pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_CHANGE_CONTRACT_MO_X,   3, MIN); //  9 OpMan.ChangeContractMO()
     pAddManOp(OP_MAN_CONTRACT_X, OP_MAN_UPDATE_MAN_OP_MO_X,     3, MIN); // 10 OpMan.UpdateManOpMO()
     pAddManOp(MFUND_CONTRACT_X,  HUB_SET_PCL_ACCOUNT_MO_X,      3, MIN); //  5 Hub.SetPclAccountMO()
     pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_X,              3, MIN); //  6 Hub.StartSaleMO();
@@ -243,7 +247,7 @@ contract OpMan is OwnedOpMan {
     _;
   }
   modifier IsHubContractCallerOrConfirmedSigner {
-    require((iOwnersYA[HUB_OWNER_X] == msg.sender && iIsContractCallerB())  || pIsConfirmedSignerB(), 'Not called by Hub or a confirmed signer');
+    require(iIsHubContractCallerB() || pIsConfirmedSignerB(), 'Not called by Hub or a confirmed signer');
     _;
   }
 
@@ -419,25 +423,20 @@ contract OpMan is OwnedOpMan {
     emit UnConfirmSignerV(vSignerA);
     return true;
   }
-  // OpMan.UpdateContractMO()
+  // OpMan.ChangeContractMO()
   // ------------------------
-  // 5.1 Admin to update a contract as a managed op
+  // 5.1 Admin to change a contract as a managed op. Called from Hub.New*Contract() functions. This call serves as the MO for those functions.
   // New contract address must be unique
-  function UpdateContractMO(uint256 vContractX, address vNewContractA, bool vPausableB) external IsAdminCaller IsNotDuplicateContract(vNewContractA) IsActive returns (bool) {
-    require(pIsManOpApproved(OP_MAN_UPDATE_CONTRACT_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_UPDATE_CONTRACT_MO_X
+  function ChangeContractMO(uint256 vContractX, address newContractA) external IsHubContractCaller IsNotDuplicateContract(newContractA) IsActive returns (bool) {
+    require(pIsManOpApproved(OP_MAN_CHANGE_CONTRACT_MO_X)); // Same as OP_MAN_CONTRACT_X * 100 + OP_MAN_CHANGE_CONTRACT_MO_X
     require(vContractX < pContractsYR.length, 'Contract not known');
     R_Contract storage srContractR = pContractsYR[vContractX];
     require(srContractR.addedT > 0, 'Contract not known'); // contract must exist
-    delete pContractsAddrMX[srContractR.contractA]; // Mapping of contracts by address -> cX (contract index in pContractsYR)
-    srContractR.contractA = vNewContractA; // contractA of R_Contract
-    srContractR.pausableB = vPausableB; // pausableB
-                                        // pausedB
-                                        // addedT
-    srContractR.updatedT = uint32(now); // updatedT
-                                        // numManOps
-                                        // mapping (uint32 => bool) manOpsOpxMB To confirm ownership of ops by contract
-    pContractsAddrMX[vNewContractA] = vContractX; // Mapping of contracts by address -> cX (contract index in pContractsYR)
-    emit UpdateContractV(vContractX, vNewContractA, vPausableB);
+    emit ChangeContractV(vContractX, srContractR.contractA, newContractA);
+    srContractR.contractA = newContractA; // contractA of R_Contract
+    srContractR.updatedT = uint32(now);    // updatedT
+    delete pContractsAddrMX[srContractR.contractA]; // /- Mapping of contracts by address -> cX (contract index in pContractsYR)
+    pContractsAddrMX[newContractA] = vContractX;    // |
     return true;
   }
 
@@ -479,7 +478,8 @@ contract OpMan is OwnedOpMan {
     }
     srManOpR.approvedT = nowUint32;
     srManOpR.approvedB = true;
-    emit ManOpApprovedV(manOpK);
+    emit ManOpApprovedV(manOpK, pNOnce);
+    pNOnce++;
     return true;
   }
 
@@ -552,10 +552,10 @@ contract OpMan is OwnedOpMan {
     return true;
   }
 
-
   // OpMan.ChangeContractOwnerMO()
   // -----------------------------
   // A. Admin signer to change a contract owner as a managed op
+  // djh?? Make this apply only for non-contract owners?
   function ChangeContractOwnerMO(uint256 vContractX, uint256 vOwnerX, address vNewOwnerA) external IsAdminCaller IsConfirmedSigner IsActive returns (bool) {
     require(vOwnerX > 0 && vOwnerX < NUM_OWNERS // NUM_OWNERS is defined in Owned*.sol. > 0 to prevent change of owner 0 which is always the deployer
          && vNewOwnerA != address(0));

@@ -34,6 +34,10 @@ contract OwnedOpMan is Constants {
   function pIsOpManContractCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && iIsContractCallerB();
   }
+  function iIsHubContractCallerB() internal view returns (bool) {
+    return msg.sender == iOwnersYA[HUB_OWNER_X] && iIsContractCallerB();
+  }
+
   function iIsContractCallerB() internal view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
     uint256 codeSize;
@@ -47,8 +51,12 @@ contract OwnedOpMan is Constants {
     require(iIsInitialisingB(), "Not initialising");
     _;
   }
-   modifier IsOpManContractCaller {
+  modifier IsOpManContractCaller {
     require(pIsOpManContractCallerB(), "Not required OpMan caller");
+    _;
+  }
+  modifier IsHubContractCaller {
+    require(iIsHubContractCallerB(), "Not required Hub caller");
     _;
   }
   modifier IsAdminCaller {

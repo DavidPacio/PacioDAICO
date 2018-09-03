@@ -2,10 +2,6 @@
 
 Managed fund for PIO purchases or transfers in the Pacio DAICO
 
-djh??
-Add IsActive modifier use
-
-
 Owned by Deployer OpMan Hub Admin Sale Poll Pfund
 
 Pause/Resume
@@ -209,7 +205,7 @@ contract Mfund is OwnedMfund, Math {
   // Mfund.WithdrawTapMO()
   // ---------------------
   // Is called by Admin to withdraw the available tap as a managed operation
-  function WithdrawTapMO() external IsAdminCaller {
+  function WithdrawTapMO() external IsAdminCaller IsActive {
     require(pState & STATE_TAPS_OK_B > 0, 'Tap not available');
     require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MFUND_WITHDRAW_TAP_MO_X));
     uint256 withdrawWei = TapAmountWei();
@@ -255,7 +251,7 @@ contract Mfund is OwnedMfund, Math {
   //                      Token.Refund() -> List.Refund() - to update Token and List data, in the reverse of an Issue
   //                      here                            - to do the actual refund                                      ********
   // Returns false if refunding is complete
-  function Refund(uint256 vRefundId, address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller returns (bool) {
+  function Refund(uint256 vRefundId, address toA, uint256 vRefundPicos, uint256 vRefundWei, uint32 vRefundBit) external IsHubContractCaller IsActive returns (bool) {
     require(pRefundInProgressB                                                           // /- all expected to be true if called as intended
          && vRefundId == pRefundId   // same hub call check                              // |
          && (vRefundBit == LE_M_REFUNDED_ONCE_OFF_B || pState & STATE_REFUNDING_B > 0)); // |
@@ -266,12 +262,19 @@ contract Mfund is OwnedMfund, Math {
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
 
+  // Mfund.NewSaleContract()
+  // ----------------------
+  // Called from Hub.NewSaleContract() for the case of a new Sale contract
+  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
+    iOwnersYA[SALE_OWNER_X] = newSaleContractA;
+  }
+
   // Mfund.NewListContract()
   // -----------------------
-  // To be called manually via Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
+  // Called from Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
   // Only to be done if a new list contract has been constructed and data transferred
   function NewListContract(address newListContractA) external IsHubContractCaller {
-    pListC = I_ListMfund(newListContractA); // The List contract
+    pListC = I_ListMfund(newListContractA);
   }
 
   // Mfund Fallback function

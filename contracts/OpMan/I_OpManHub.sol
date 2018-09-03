@@ -8,5 +8,6 @@ interface I_OpManHub {
   function IsNotDuplicateContractB(address contractA) external view returns (bool);
   function PauseContract(uint256 cX) external returns (bool);
   function IsManOpApproved(uint256 vManOpX) external returns (bool);
+  function ChangeContractMO(uint256 vContractX, address newContractA) external returns (bool);
 }
 // End I_OpManHub interface

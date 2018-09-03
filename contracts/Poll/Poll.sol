@@ -605,12 +605,18 @@ contract Poll is OwnedPoll, Math {
     pVote(voterA, VOTE_REVOKE_N);
   }
 
+  // Poll.NewSaleContract()
+  // ----------------------
+  // Called from Hub.NewSaleContract() if the Sale contract is changed.
+  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
+    pSaleC = I_SalePoll(newSaleContractA);
+  }
+
   // Poll.NewListContract()
   // ----------------------
-  // To be called manually via Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
-  // Only to be done if a new list contract has been constructed and data transferred
+  // Called from Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
   function NewListContract(address newListContractA) external IsHubContractCaller {
-    pListC = I_ListPoll(newListContractA); // The List contract
+    pListC = I_ListPoll(newListContractA);
   }
 
   // Poll Fallback function
