@@ -60,7 +60,7 @@ Sale.SetCapsAndTranchesMO(uint32 vPioHardCapT1, uint32 vPioHardCapT2, uint32 vPi
 Sale.SetUsdEtherPrice(uint256 vUsdEtherPrice)
 Sale.EndInitialise() to end initialising
 
-List owned by Deployer OpMan Hub Token Sale Poll
+List owned by Deployer Poll Hub Token Sale
 ----
 List.SetOwnerIO(LIST_POLL_OWNER_X, Poll address)
 List.SetOwnerIO(HUB_OWNER_X,   Hub address)

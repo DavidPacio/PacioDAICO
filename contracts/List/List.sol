@@ -2,7 +2,7 @@
 
 List of people/addresses to do with Pacio
 
-Owned by Deployer OpMan Hub Token Sale Poll
+Owned by Deployer Poll Hub Token Sale
 */
 
 pragma solidity ^0.4.24;

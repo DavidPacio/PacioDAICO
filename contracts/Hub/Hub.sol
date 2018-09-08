@@ -422,6 +422,7 @@ contract Hub is OwnedHub, Math {
   // Expects the old OpMan contract to have been paused
   // Expects the new OpMan contract to have been deployed and initialised
   // Expects HUB_NEW_OPMAN_CONTRACT_MO_X ManOp to have been approved at the NEW ManOp
+  // Does not cehck for newOpManContractA duplicating an existing contract.
   // * Hub   OpMan contract pOpManC
   // * Hub   OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   // * Sale  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
@@ -431,8 +432,7 @@ contract Hub is OwnedHub, Math {
   //   Poll  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   function NewOpManContract(address newOpManContractA) external IsAdminCaller {
     require(pOpManC.Paused()); // old OpMan contract
-    require(pIsContractB(newOpManContractA)); // Checks that newOpManContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
-    // djh?? what about duplicate contract check?
+    require(pIsContractB(newOpManContractA)); // Checks that newOpManContractA is a contract
     emit ChangeOwnerV(pOpManC, newOpManContractA, OPMAN_OWNER_X);
     emit NewOpManContractV(pOpManC, newOpManContractA);
     pOpManC = I_OpManHub(newOpManContractA);
