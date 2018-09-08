@@ -14,7 +14,8 @@ interface I_Sale {
   function SetSaleTimes(uint32 vStartT, uint32 vEndT) external;
   function TokenSwapAndBountyIssue(address toA, uint256 picos, uint32 tranche) external;
   function PMtransfer(address senderA, uint256 weiContributed) external;
-  function NewListContract(address newListContractA) external;
+  function NewTokenContract(address newTokenContractA) external;
+  function  NewListContract(address newListContractA) external;
 }
 // End I_Sale interface
 

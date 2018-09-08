@@ -467,12 +467,19 @@ contract Sale is OwnedSale, Math {
     pHubC.CloseSaleMO(vBit);
   }
 
+  // Sale.NewTokenContract()
+  // -----------------------
+  // Called from Hub.NewTokenContract() if the Token contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  function NewTokenContract(address newTokenContractA) external IsHubContractCaller {
+    pTokenC = I_TokenSale(newTokenContractA);
+  }
+
   // Sale.NewListContract()
   // ----------------------
-  // To be called manually via Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
+  // Called from Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
   // Only to be done if a new list contract has been constructed and data transferred
   function NewListContract(address newListContractA) external IsHubContractCaller {
-    pListC = I_ListSale(newListContractA); // The List contract
+    pListC = I_ListSale(newListContractA);
   }
 
   // Sale Fallback function

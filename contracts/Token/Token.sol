@@ -179,7 +179,7 @@ contract Token is EIP20Token, Math {
 
   // Token.NewSaleContract()
   // -----------------------
-  // Called manually via Hub.NewSaleContract() to change the Sale owner of the Token contract to a new Sale.
+  // Called from Hub.NewSaleContract() to change the Sale owner of the Token contract to a new Sale.
   // Transfers any minted tokens from old Sale to new Sale
   function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
     emit Transfer(pSaleA, newSaleContractA, iListC.PicosBalance(pSaleA)); // pSaleA is still the old Sale

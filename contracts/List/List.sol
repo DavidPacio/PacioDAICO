@@ -791,6 +791,13 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       rsEntryR.bits &= ~LE_HOLDS_PICOS_B; // unset the LE_HOLDS_PICOS_B bit
   }
 
+  // List.NewTokenContract()
+  // -----------------------
+  // Called from Hub.NewTokenContract() to change TOKEN_OWNER_X of the List contract to the new Token contract
+  function NewTokenContract(address newTokenContractA) external IsHubContractCaller {
+    iOwnersYA[TOKEN_OWNER_X] = newTokenContractA;
+  }
+
   // List.Fallback function
   // ======================
   // No sending ether to this contract!
