@@ -177,11 +177,15 @@ contract Token is EIP20Token, Math {
   // Functions for calling from Hub re new contract deployment
   // =========================================================
 
-  // Token.NewOpManContract()
-  // -----------------------
-  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
-  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
-     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  // Owners: Deployer OpMan Hub Admin Sale
+
+  // Token.NewOwner()
+  // ----------------
+  // Called from Hub.NewOpManContract() with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
+  //             Hub.NewHubContractMO() with ownerX = HUB_OWNER_X   if the Hub contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
   }
 
   // Token.NewSaleContract()

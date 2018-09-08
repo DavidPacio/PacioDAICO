@@ -55,7 +55,7 @@ contract OwnedList is Constants {
 
   // Events
   // ------
-  event SetOwnerV(address indexed Owner, uint256 OwnerId);
+  event ChangeOwnerV(address indexed PreviousOwner, address NewOwner, uint256 OwnerId);
 
   // State changing external methods
   // -------------------------------
@@ -65,7 +65,7 @@ contract OwnedList is Constants {
   function SetOwnerIO(uint256 vOwnerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(ownerA != iOwnersYA[j], 'Duplicate owner');
-    emit SetOwnerV(ownerA, vOwnerX);
+    emit ChangeOwnerV(0x0, ownerA, vOwnerX);
     iOwnersYA[vOwnerX] = ownerA;
   }
 

@@ -86,10 +86,7 @@ contract Hub is OwnedHub, Math {
   event PollStartV(uint32 PollId, uint8 PollN);
   event   PollEndV(uint32 PollId, uint8 PollN);
   event PollTerminateFundingV();
-  event NewOpManContractV(address OldContract, address NewContract);
-  event  NewSaleContractV(address OldContract, address NewContract);
-  event NewTokenContractV(address OldContract, address NewContract);
-  event  NewListContractV(address OldContract, address NewContract);
+  event NewContractV(uint256 ContractX, address OldContract, address NewContract);
 
   // Initialisation/Setup Methods
   // ============================
@@ -403,16 +400,16 @@ contract Hub is OwnedHub, Math {
   // New Contracts Being Deployed
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  //   Contract Owned By
-  //   -------- --------
-  //   OpMan    Deployer Self  Hub  Admin
-  //   Hub      Deployer OpMan Self Admin Sale Poll  Web
-  // * Sale     Deployer OpMan Hub  Admin Poll
-  // * Token    Deployer OpMan Hub  Admin Sale
+  //   Contract Owned By                                   External Calls
+  //   -------- --------                                   --------------
+  // * OpMan    Deployer Self  Hub  Admin                  All including self
+  // * Hub      Deployer OpMan Self Admin Sale Poll Web    OpMan Sale Token List Mfund Pfund Poll
+  // * Sale     Deployer OpMan Hub  Admin Poll             OpMan Hub List Token Mfund Pfund
+  // * Token    Deployer OpMan Hub  Admin Sale             OpMan List
   // * List     Deployer Poll  Hub  Token Sale
-  //   Mfund    Deployer OpMan Hub  Admin Sale Poll  Pfund
-  //   Pfund    Deployer OpMan Hub  Sale
-  //   Poll     Deployer OpMan Hub  Admin Web
+  //   Mfund    Deployer OpMan Hub  Admin Sale Poll Pfund  OpMan List
+  //   Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
+  //   Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
 
   // If a New OpMan contract is deployed
   // ***********************************
@@ -422,34 +419,67 @@ contract Hub is OwnedHub, Math {
   // Expects the old OpMan contract to have been paused
   // Expects the new OpMan contract to have been deployed and initialised
   // Expects HUB_NEW_OPMAN_CONTRACT_MO_X ManOp to have been approved at the NEW ManOp
-  // Does not cehck for newOpManContractA duplicating an existing contract.
+  // Does not check for newOpManContractA duplicating an existing contract.
   // * Hub   OpMan contract pOpManC
   // * Hub   OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   // * Sale  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   // * Token OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   // * Mfund OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   // * Pfund OpMan owner    iOwnersYA[OPMAN_OWNER_X]
-  //   Poll  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  // * Poll  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
   function NewOpManContract(address newOpManContractA) external IsAdminCaller {
     require(pOpManC.Paused()); // old OpMan contract
     require(pIsContractB(newOpManContractA)); // Checks that newOpManContractA is a contract
     emit ChangeOwnerV(pOpManC, newOpManContractA, OPMAN_OWNER_X);
-    emit NewOpManContractV(pOpManC, newOpManContractA);
+    emit NewContractV(OPMAN_CONTRACT_X, pOpManC, newOpManContractA);
     pOpManC = I_OpManHub(newOpManContractA);
     require(pOpManC.IsManOpApproved(HUB_NEW_OPMAN_CONTRACT_MO_X));
     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
-     pSaleC.NewOpManContract(newOpManContractA);
-    pTokenC.NewOpManContract(newOpManContractA);
-    pMfundC.NewOpManContract(newOpManContractA);
-    pPfundC.NewOpManContract(newOpManContractA);
-     pPollC.NewOpManContract(newOpManContractA);
+     pSaleC.NewOwner(OPMAN_OWNER_X, newOpManContractA);
+    pTokenC.NewOwner(OPMAN_OWNER_X, newOpManContractA);
+    pMfundC.NewOwner(OPMAN_OWNER_X, newOpManContractA);
+    pPfundC.NewOwner(OPMAN_OWNER_X, newOpManContractA);
+     pPollC.NewOwner(OPMAN_OWNER_X, newOpManContractA);
+  }
+
+  // Hub.NewHubContractMO()
+  // ----------------------
+  // To be called manually on the OLD contract as a managed op to change the Hub contract in OpMan, and the Sale and Poll contracts,
+  //  plus change the Hub owner for OpMan, Sale, Token, List, Mfund, Pfund and Poll
+  // Expects the old Hub contract to have been paused but doesn't check this
+  // Expects the new Hub contract to have been deployed and initialised
+  // Does not check for newHubContractA duplicating an existing contract.
+  // * OpMan
+  // * Sale  Hub contract pHubC
+  //   Poll  Hub contract pHubC
+  // * OpMan Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * Sale  Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * Token Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * List  Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * Mfund Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * Pfund Hub owner    iOwnersYA[Hub_OWNER_X]
+  // * Poll  Hub owner    iOwnersYA[Hub_OWNER_X]
+  function NewHubContractMO(address newHubContractA) external IsAdminCaller {
+    require(pIsContractB(newHubContractA)); // Checks that newHubContractA is a contract. The following ChangeContract() call checks that it is not one of the current contracts.
+    require(pOpManC.IsManOpApproved(HUB_NEW_HUB_CONTRACT_MO_X)
+         && pOpManC.ChangeContract(HUB_CONTRACT_X, newHubContractA)); // which also checks that newHubContractA is not a duplicateContract
+    emit ChangeOwnerV(this, newHubContractA, HUB_OWNER_X);
+    emit NewContractV(HUB_CONTRACT_X, this, newHubContractA);
+  //pHubC = I_HubHub(newHubContractA);        /- No, because this is the old HUB. New Hub will have this right.
+  //iOwnersYA[Hub_OWNER_X] = newHubContractA; |
+     pSaleC.NewHubContract(newHubContractA);
+    pTokenC.NewOwner(HUB_OWNER_X, newHubContractA);
+     pListC.NewOwner(HUB_OWNER_X, newHubContractA);
+    pMfundC.NewOwner(HUB_OWNER_X, newHubContractA);
+    pPfundC.NewOwner(HUB_OWNER_X, newHubContractA);
+     pPollC.NewOwner(HUB_OWNER_X, newHubContractA);
   }
 
   // If a New Sale contract is deployed
   // **********************************
-  // Hub.NewSaleContract()
-  // ---------------------
-  // To be called manually as a managed op via the ChangeContractMO() call to change the Sale contract in OpMan, here and in the Poll contract, plus change the Sale owner for Hub, Token, List, Mfund, Pfund
+  // Hub.NewSaleContractMO()
+  // -----------------------
+  // To be called manually as a managed op to change the Sale contract in OpMan, here and in the Poll contract, plus change the Sale owner for Hub, Token, List, Mfund, Pfund
   // Expects the old Sale contract to have been paused
   // Calling NewSaleContract() will stop calls from the old Sale contract to the Token contract IsSaleContractCaller functions from working
   // * OpMan
@@ -462,43 +492,44 @@ contract Hub is OwnedHub, Math {
   // * List  Sale owner    iOwnersYA[SALE_OWNER_X]
   // * Mfund Sale owner    iOwnersYA[SALE_OWNER_X]
   // * Pfund Sale owner    iOwnersYA[PFUND_SALE_OWNER_X]
-  function NewSaleContract(address newSaleContractA) external IsAdminCaller {
+  function NewSaleContractSO(address newSaleContractA) external IsAdminCaller {
     require(pSaleC.Paused()); // old sale contract
-    require(pIsContractB(newSaleContractA)); // Checks that newSaleContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
-    require(pOpManC.ChangeContractMO(SALE_CONTRACT_X, newSaleContractA)); // MO which also checks that newSaleContractA is not a duplicateContract
+    require(pIsContractB(newSaleContractA)); // Checks that newSaleContractA is a contract. The following ChangeContract() call checks that it is not one of the current contracts.
+    require(pOpManC.ChangeContract(SALE_CONTRACT_X, newSaleContractA)); // which also checks that newSaleContractA is not a duplicateContract
     emit ChangeOwnerV(pSaleC, newSaleContractA, SALE_OWNER_X);
-    emit NewSaleContractV(pSaleC, newSaleContractA);
+    emit NewContractV(SALE_CONTRACT_X, pSaleC, newSaleContractA);
     pSaleC = I_Sale(newSaleContractA);
     iOwnersYA[SALE_OWNER_X] = newSaleContractA;
     pTokenC.NewSaleContract(newSaleContractA); // which creates a new Sale list entry and transfers the old Sale picos to the new entry
-    pMfundC.NewSaleContract(newSaleContractA);
-    pPfundC.NewSaleContract(newSaleContractA);
+     pListC.NewOwner(SALE_OWNER_X, newSaleContractA);
+    pMfundC.NewOwner(SALE_OWNER_X, newSaleContractA);
+    pPfundC.NewOwner(SALE_OWNER_X, newSaleContractA);
      pPollC.NewSaleContract(newSaleContractA);
   }
 
   // If a New Token contract is deployed
   // ***********************************
-  // Hub.NewTokenContract()
-  // ----------------------
-  // To be called manually as a managed op via the ChangeContractMO() call to change the Token contract in OpMan, here and in the Sale contract, plus change the Token owner for List
+  // Hub.NewTokenContractMO()
+  // ------------------------
+  // To be called manually as a managed op call to change the Token contract in OpMan, here and in the Sale contract, plus change the Token owner for List
   // Expects the old Token contract to have been paused
   // * OpMan
   // * Hub   Token contract pTokenC
   // * Sale  Token address  pTokenC
   // * List  Token owner    iOwnersYA[TOKEN_OWNER_X]
-  function NewTokenContract(address newTokenContractA) external IsAdminCaller {
+  function NewTokenContractMO(address newTokenContractA) external IsAdminCaller {
     require(pTokenC.Paused()); // old Token contract
-    require(pIsContractB(newTokenContractA)); // Checks that newTokenContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
-    require(pOpManC.ChangeContractMO(TOKEN_CONTRACT_X, newTokenContractA)); // MO which also checks that newTokenContractA is not a duplicateContract
+    require(pIsContractB(newTokenContractA)); // Checks that newTokenContractA is a contract. The following ChangeContract() call checks that it is not one of the current contracts.
+    require(pOpManC.ChangeContract(TOKEN_CONTRACT_X, newTokenContractA)); // which also checks that newTokenContractA is not a duplicateContract
     emit ChangeOwnerV(pTokenC, newTokenContractA, TOKEN_CONTRACT_X);
-    emit NewTokenContractV(pTokenC, newTokenContractA);
+    emit NewContractV(TOKEN_CONTRACT_X, pTokenC, newTokenContractA);
     pTokenC = I_TokenHub(newTokenContractA);
-    pListC.NewTokenContract(newTokenContractA); // Changes Owner2 of the List contract to the new Token contract
+    pListC.NewOwner(TOKEN_OWNER_X, newTokenContractA);
   }
 
   // If a New List contract is deployed
   // **********************************
-  // Hub.NewListContract()
+  // Hub.NewListContractMO()
   // ---------------------
   // To be called manually to change the List contract here and in the Sale, Token, Mfund, and Poll contracts.
   // The new List contract would need to have been initialised
@@ -509,10 +540,10 @@ contract Hub is OwnedHub, Math {
   // * Mfund List contract pListC
   // * Poll  List contract pListC
   // No contract has List as an owner
-  function NewListContract(address newListContractA) external IsAdminCaller {
-    require(pIsContractB(newListContractA)); // Checks that newListContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
-    require(pOpManC.ChangeContractMO(LIST_CONTRACT_X, newListContractA)); // MO which also checks that newListContractA is not a duplicateContract
-    emit NewListContractV(pListC, newListContractA);
+  function NewListContractMO(address newListContractA) external IsAdminCaller {
+    require(pIsContractB(newListContractA)); // Checks that newListContractA is a contract. The following ChangeContract() call checks that it is not one of the current contracts.
+    require(pOpManC.ChangeContract(LIST_CONTRACT_X, newListContractA)); // which also checks that newListContractA is not a duplicateContract
+    emit NewContractV(LIST_CONTRACT_X, pListC, newListContractA);
     pListC = I_ListHub(newListContractA);
      pSaleC.NewListContract(newListContractA);
     pTokenC.NewListContract(newListContractA);

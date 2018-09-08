@@ -24,6 +24,6 @@ interface I_ListHub {
   function SetTransfersOkByDefault(bool B) external;
   function SetListEntryTransferOk(address entryA, bool B) external;
   function SetListEntryBits(address entryA, uint32 bitsToSet, bool setB) external;
-  function NewTokenContract(address newTokenContractA) external;
+  function NewOwner(uint256, address) external;
 }
 // End I_ListHub interface

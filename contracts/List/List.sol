@@ -2,7 +2,8 @@
 
 List of people/addresses to do with Pacio
 
-Owned by Deployer Poll Hub Token Sale
+Owners: Deployer Poll Hub Token Sale
+
 */
 
 pragma solidity ^0.4.24;
@@ -512,19 +513,6 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
     return true;
   } // End Transfer()
 
-  // List.NewSaleContract()
-  // ----------------------
-  // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
-  // pSaleA is still the old Sale when this is called
-  function NewSaleContract(address newSaleContractA) external IsTokenContractCaller {
-    require(pCreateEntry(newSaleContractA, LE_SALE_CON_PICOS_FR_TRAN_OK_B, 1)); // assuming 1 for Sale contract Db ID. LE_SALE_CON_PICOS_FR_TRAN_OK_B =  LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B for the sale contract bit settings
-    pListMR[newSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
-    pListMR[pSaleA].picosBalance = 0;
-    pListMR[pSaleA].bits &= ~LE_SALE_CON_PICOS_FR_TRAN_OK_B;
-    pSaleA                  =
-    iOwnersYA[SALE_OWNER_X] = newSaleContractA;
-  }
-
   // List.Refund()
   // -------------
   // Called from Token.Refund() IsHubContractCaller which is called from Hub.Refund()     IsNotContractCaller via Hub.pRefund()
@@ -789,11 +777,28 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
       rsEntryR.bits &= ~LE_HOLDS_PICOS_B; // unset the LE_HOLDS_PICOS_B bit
   }
 
-  // List.NewTokenContract()
-  // -----------------------
-  // Called from Hub.NewTokenContract() to change TOKEN_OWNER_X of the List contract to the new Token contract
-  function NewTokenContract(address newTokenContractA) external IsHubContractCaller {
-    iOwnersYA[TOKEN_OWNER_X] = newTokenContractA;
+  // Owners: Deployer Poll Hub Token Sale
+
+  // List.NewOwner()
+  // ---------------
+  // Called from Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewSaleContractMO()  with ownerX = SALE_OWNER_X  if the Sale  contract is changed
+  //             Hub.NewTokenContractMO() with ownerX = TOKEN_OWNER_X if the Token contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
+  }
+
+  // List.NewSaleContract()
+  // ----------------------
+  // Special transfer fn for the case of a new Sale being setup via manual call of the old Sale.NewSaleContract() -> Token.NewSaleContract() -> here
+  // pSaleA is still the old Sale when this is called
+  function NewSaleContract(address newSaleContractA) external IsTokenContractCaller {
+    require(pCreateEntry(newSaleContractA, LE_SALE_CON_PICOS_FR_TRAN_OK_B, 1)); // assuming 1 for Sale contract Db ID. LE_SALE_CON_PICOS_FR_TRAN_OK_B =  LE_SALE_CONTRACT_B | LE_HOLDS_PICOS_B | LE_FROM_TRANSFER_OK_B for the sale contract bit settings
+    pListMR[newSaleContractA].picosBalance = pListMR[pSaleA].picosBalance;
+    pListMR[pSaleA].picosBalance = 0;
+    pListMR[pSaleA].bits &= ~LE_SALE_CON_PICOS_FR_TRAN_OK_B;
+    pSaleA = newSaleContractA;
   }
 
   // List.Fallback function

@@ -2,7 +2,7 @@
 
 Managed fund for PIO purchases or transfers in the Pacio DAICO
 
-Owned by Deployer OpMan Hub Admin Sale Poll Pfund
+Owners: Deployer OpMan Hub Admin Sale Poll Pfund
 
 Pause/Resume
 ============
@@ -262,18 +262,16 @@ contract Mfund is OwnedMfund, Math {
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
 
-  // MFund.NewOpManContract()
-  // -----------------------
-  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
-  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
-     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
-  }
+  // Owners: Deployer OpMan Hub Admin Sale Poll Pfund
 
-  // Mfund.NewSaleContract()
-  // ----------------------
-  // Called from Hub.NewSaleContract() for the case of a new Sale contract
-  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
-    iOwnersYA[SALE_OWNER_X] = newSaleContractA;
+  // Mfund.NewOwner()
+  // ----------------
+  // Called from Hub.NewOpManContractMO() with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
+  //             Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewSaleContractMO()  with ownerX = SALE_OWNER_X  if the Hub   contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
   }
 
   // Mfund.NewListContract()

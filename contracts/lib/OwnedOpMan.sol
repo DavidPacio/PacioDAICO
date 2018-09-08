@@ -28,9 +28,6 @@ contract OwnedOpMan is Constants {
   function Paused() external view returns (bool) {
     return iPausedB;
   }
-  function iIsInitialisingB() internal view returns (bool) {
-    return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
-  }
   function pIsOpManContractCallerB() private view returns (bool) {
     return msg.sender == iOwnersYA[OPMAN_OWNER_X] && iIsContractCallerB();
   }
@@ -48,7 +45,7 @@ contract OwnedOpMan is Constants {
   // Modifier functions
   // ------------------
   modifier IsInitialising {
-    require(iIsInitialisingB(), "Not initialising");
+    require(iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X], "Not initialising");
     _;
   }
   modifier IsOpManContractCaller {
@@ -80,16 +77,14 @@ contract OwnedOpMan is Constants {
 
   // State changing external methods
   // -------------------------------
-  // ChangeOwnerMO()
+  // SetOwnerIO()
   // ---------------
-  // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
-  // Can be called directly during deployment when initialising
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(this).IsManOpApproved(vOwnerX)));
+  // Can be called only during deployment when initialising
+  function SetOwnerIO(uint256 vOwnerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
-      require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
-    emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
-    iOwnersYA[vOwnerX] = vNewOwnerA;
+      require(ownerA != iOwnersYA[j], 'Duplicate owner');
+    emit ChangeOwnerV(0x0, ownerA, vOwnerX);
+    iOwnersYA[vOwnerX] = ownerA;
   }
 
   // Pause()

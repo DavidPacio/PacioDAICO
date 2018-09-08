@@ -28,8 +28,8 @@ Then:
 OpMan owned by Deployer OpMan (self) Hub Admin
 -----
 The OwnedOpMan constructor sets Deployer and OpMan (self)
-OpMan.ChangeOwnerMO(HUB_OWNER_X, Hub contract)
-OpMan.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+OpMan.SetOwnerIO(HUB_OWNER_X, Hub contract)
+OpMan.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
   to set initial contracts, signers, and add the OpMan manOps
   After this call all of OpMan's owners are set.

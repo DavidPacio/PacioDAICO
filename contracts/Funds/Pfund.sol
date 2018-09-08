@@ -2,7 +2,7 @@
 
 Escrow management of prepurchase funds in the Pacio DAICO
 
-Owned by Deployer, OpMan, Hub, Sale
+Owners: Deployer, OpMan, Hub, Sale
 
 Pause/Resume
 ============
@@ -148,18 +148,16 @@ contract Pfund is OwnedPfund, Math {
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
 
-  // PFund.NewOpManContract()
-  // -----------------------
-  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
-  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
-     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
-  }
+  // Owners: Deployer, OpMan, Hub, Sale
 
-  // Pfund.NewSaleContract()
-  // ----------------------
-  // Called from Hub.NewSaleContract() for the case of a new Sale contract
-  function NewSaleContract(address newSaleContractA) external IsHubContractCaller {
-    iOwnersYA[PFUND_SALE_OWNER_X] = newSaleContractA;
+  // Pfund.NewOwner()
+  // ----------------
+  // Called from Hub.NewOpManContractMO() with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
+  //             Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewSaleContractMO()  with ownerX = SALE_OWNER_X  if the Hub   contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
   }
 
   // Pfund Fallback function

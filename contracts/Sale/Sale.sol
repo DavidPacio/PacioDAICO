@@ -467,24 +467,36 @@ contract Sale is OwnedSale, Math {
     pHubC.CloseSaleMO(vBit);
   }
 
+  // Owners: Deployer OpMan Hub Admin Poll
+
   // Sale.NewOpManContract()
-  // -----------------------
-  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newOpManContractA is checked and logged by Hub.NewOpManContractA()
-  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
-     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  // ----------------------
+  // Called from Hub.NewOpManContract()  with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
+  //             Hub.NewPollContractMO() with ownerX = POLL_OWNER_X  if the Hub contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
+  }
+
+  // Sale.NewHubContract()
+  // ---------------------
+  // Called from Hub.NewHubContract()
+  function NewHubContract(address newHubContractA) external IsHubContractCaller {
+    emit ChangeOwnerV(pHubC, newHubContractA, HUB_OWNER_X);
+    pHubC = I_Hub(newHubContractA);
+    iOwnersYA[HUB_OWNER_X] = newHubContractA;
   }
 
   // Sale.NewTokenContract()
   // -----------------------
-  // Called from Hub.NewTokenContract() if the Token contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  // Called from Hub.NewTokenContract()
   function NewTokenContract(address newTokenContractA) external IsHubContractCaller {
     pTokenC = I_TokenSale(newTokenContractA);
   }
 
   // Sale.NewListContract()
   // ----------------------
-  // Called from Hub.NewListContract() if the List contract is changed. newListContractA is checked and logged by Hub.NewListContract()
-  // Only to be done if a new list contract has been constructed and data transferred
+  // Called from Hub.NewListContract()
   function NewListContract(address newListContractA) external IsHubContractCaller {
     pListC = I_ListSale(newListContractA);
   }

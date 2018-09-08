@@ -2,7 +2,7 @@
 
 Contract to run Pacio DAICO Polls
 
-Owned by Deployer OpMan Hub Admin Web
+Owners: Deployer OpMan Hub Admin Web
 
 djh??
 • poll info for web purposes
@@ -605,11 +605,15 @@ contract Poll is OwnedPoll, Math {
     pVote(voterA, VOTE_REVOKE_N);
   }
 
-  // Poll.NewOpManContract()
-  // -----------------------
-  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
-  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
-     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  // Owners: Deployer OpMan Hub Admin Web
+
+  // Poll.NewOwner()
+  // ---------------
+  // Called from Hub.NewOpManContractMO() with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
+  //             Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
   }
 
   // Poll.NewSaleContract()

@@ -8,6 +8,6 @@ interface I_OpManHub {
   function ContractXA(uint256 cX) external view returns (address);
   function PauseContract(uint256 cX) external returns (bool);
   function IsManOpApproved(uint256 vManOpX) external returns (bool);
-  function ChangeContractMO(uint256 vContractX, address newContractA) external returns (bool);
+  function ChangeContract(uint256 vContractX, address newContractA) external returns (bool);
 }
 // End I_OpManHub interface
