@@ -32,7 +32,7 @@ contract OwnedOpMan is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && iIsContractCallerB();
+    return msg.sender == iOwnersYA[OPMAN_OWNER_X] && iIsContractCallerB();
   }
   function iIsHubContractCallerB() internal view returns (bool) {
     return msg.sender == iOwnersYA[HUB_OWNER_X] && iIsContractCallerB();

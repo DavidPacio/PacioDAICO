@@ -101,14 +101,14 @@ contract Token is EIP20Token, Math {
   // Can only be called once.
   // Owners Deployer OpMan Hub Admin Sale
   // Owners must first be set by deploy script calls:
-  //   Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+  //   Token.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
   //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Token.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
   function Initialise() external IsInitialising {
     iPausedB = false; // make active
-    iListC   = I_ListToken(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract
+    iListC   = I_ListToken(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract
     pSaleA   = iOwnersYA[SALE_OWNER_X];
     // Mint and create the owners account in List
     totalSupply = 10**21; // 1 Billion PIOEs = 1e21 Picos, all minted
@@ -174,8 +174,15 @@ contract Token is EIP20Token, Math {
     return true;
   }
 
-  // Functions for manual calling via same name function in Hub()
-  // ============================================================
+  // Functions for calling from Hub re new contract deployment
+  // =========================================================
+
+  // Token.NewOpManContract()
+  // -----------------------
+  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
+     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  }
 
   // Token.NewSaleContract()
   // -----------------------
@@ -224,7 +231,7 @@ contract Token is EIP20Token, Math {
   // Must be in the STATE_TRANSFERRED_TO_PB_B state for this to run.
   function TransferUnIssuedPIOsToPacioBcMO(uint256 vPicos) external IsAdminCaller {
     require(pState & STATE_TRANSFERRED_TO_PB_B > 0, 'Not in Transferred to PB state');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(TOKEN_TRAN_UNISSUED_TO_PB_MO_X));
+    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(TOKEN_TRAN_UNISSUED_TO_PB_MO_X));
     iListC.TransferUnIssuedPIOsToPacioBc(vPicos);
     totalSupply     = subMaxZero(totalSupply,     vPicos);
     pPicosAvailable = subMaxZero(pPicosAvailable, vPicos);

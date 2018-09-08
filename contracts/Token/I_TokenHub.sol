@@ -7,8 +7,10 @@ Interface for the Token contract for the external functions called from the Hub 
 pragma solidity ^0.4.24;
 
 interface I_TokenHub {
+  function Paused() external view returns (bool);
   function StateChange(uint32 vState) external;
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
+  function NewOpManContract(address newOpManContractA) external;
   function NewSaleContract(address newSaleContractA) external;
   function NewListContract(address newListContractA) external;
 }

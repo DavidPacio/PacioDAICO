@@ -36,7 +36,7 @@ contract OwnedSale is Constants {
     return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
   }
   function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
+    return msg.sender == iOwnersYA[OPMAN_OWNER_X] && pIsContractCallerB();
   }
   function iIsAdminCallerB() internal view returns (bool) {
     return msg.sender == iOwnersYA[ADMIN_OWNER_X] && !pIsContractCallerB();
@@ -67,7 +67,7 @@ contract OwnedSale is Constants {
     _;
   }
   modifier IsPollContractCaller {
-    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
+    require(msg.sender == iOwnersYA[SALE_POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsActive {
@@ -88,7 +88,7 @@ contract OwnedSale is Constants {
   // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
   // Can be called directly during deployment when initialising
   function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)));
+    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(vOwnerX)));
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
     emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
@@ -107,7 +107,7 @@ contract OwnedSale is Constants {
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
   function ResumeMO() external IsOpManContractCaller {
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(RESUME_MO_X));
+    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(RESUME_MO_X));
     iPausedB = false;
     emit ResumedV();
   }

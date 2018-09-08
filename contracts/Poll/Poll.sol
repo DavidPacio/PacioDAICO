@@ -174,7 +174,7 @@ contract Poll is OwnedPoll, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Admin Web
   // Owners must first be set by deploy script calls:
-  //   Poll.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+  //   Poll.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
   //   Poll.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Poll.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Poll.ChangeOwnerMO(POLL_WEB_OWNER_X, Web address)
@@ -183,7 +183,7 @@ contract Poll is OwnedPoll, Math {
   // -----------------
   // Called from the deploy script to initialise the Poll contract
   function Initialise() external IsInitialising {
-    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    I_OpMan opManC = I_OpMan(iOwnersYA[OPMAN_OWNER_X]);
     pHubC   = I_HubPoll(iOwnersYA[HUB_OWNER_X]);
     pSaleC  = I_SalePoll(opManC.ContractXA(SALE_CONTRACT_X));
     pListC  = I_ListPoll(opManC.ContractXA(LIST_CONTRACT_X));
@@ -416,7 +416,7 @@ contract Poll is OwnedPoll, Math {
   // Can be called manually by Admin as a managed op to force Yes result closing of a Poll if necessary.
   function ClosePollYesMO() external IsAdminCaller {
     require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_YES_MO_X));
+    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_YES_MO_X));
   //pClosePoll(uint32 validMemsPc, uint32 passVotePc, uint8 pollResultN) private returns (bool)
     pClosePoll(0, 0, POLL_YES_N); // the 0s for validMemsPc and passVotePc indicate that this was a forced close
   }
@@ -426,7 +426,7 @@ contract Poll is OwnedPoll, Math {
   // Can be called manually by Admin as a managed op to force Yes result closing of a Poll if necessary.
   function ClosePollNoMO() external IsAdminCaller {
     require(pState & STATE_POLL_RUNNING_B > 0, 'No poll in progress');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_NO_MO_X));
+    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(POLL_CLOSE_NO_MO_X));
   //pClosePoll(uint32 validMemsPc, uint32 passVotePc, uint8 pollResultN) private returns (bool)
     pClosePoll(0, 0, POLL_NO_N); // the 0s for validMemsPc and passVotePc indicate that this was a forced close
   }
@@ -603,6 +603,13 @@ contract Poll is OwnedPoll, Math {
   // To be called from a Pacio web site for revoking a vote by a logged in Member
   function WebVoteRevoke(address voterA) external IsWebCaller IsActive {
     pVote(voterA, VOTE_REVOKE_N);
+  }
+
+  // Poll.NewOpManContract()
+  // -----------------------
+  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
+     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
   }
 
   // Poll.NewSaleContract()

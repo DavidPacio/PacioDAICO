@@ -8,6 +8,7 @@ pragma solidity ^0.4.24;
 
 interface I_Poll {
   function StateChange(uint32 vState) external;
+  function NewOpManContract(address newOpManContractA) external;
   function NewSaleContract(address newListContractA) external;
   function NewListContract(address newListContractA) external;
 }

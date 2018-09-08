@@ -86,9 +86,10 @@ contract Hub is OwnedHub, Math {
   event PollStartV(uint32 PollId, uint8 PollN);
   event   PollEndV(uint32 PollId, uint8 PollN);
   event PollTerminateFundingV();
-  event  NewSaleContractV(address OldSaleContract,  address NewSaleContract);
-  event NewTokenContractV(address OldTokenContract, address NewTokenContract);
-  event  NewListContractV(address OldListContract,  address NewListContract);
+  event NewOpManContractV(address OldContract, address NewContract);
+  event  NewSaleContractV(address OldContract, address NewContract);
+  event NewTokenContractV(address OldContract, address NewContract);
+  event  NewListContractV(address OldContract, address NewContract);
 
   // Initialisation/Setup Methods
   // ============================
@@ -96,7 +97,7 @@ contract Hub is OwnedHub, Math {
   // Owned by Deployer OpMan Self Admin Sale Poll  Web
   // Deployer and Self are set by the OwnedHub constructor
   // Others must first be set by deploy script calls:
-  //   Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+  //   Hub.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
   //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
   //   Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address);
@@ -106,7 +107,7 @@ contract Hub is OwnedHub, Math {
   // ----------------
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
-    pOpManC = I_OpManHub(iOwnersYA[OP_MAN_OWNER_X]);
+    pOpManC = I_OpManHub(iOwnersYA[OPMAN_OWNER_X]);
     pSaleC  =  I_Sale(iOwnersYA[SALE_OWNER_X]);
     pPollC  =  I_Poll(iOwnersYA[POLL_OWNER_X]);
     pTokenC = I_TokenHub(pOpManC.ContractXA(TOKEN_CONTRACT_X));
@@ -125,7 +126,7 @@ contract Hub is OwnedHub, Math {
   //  or manually as Admin as a managed op to set/update the PCL withdrawal account
   // Is passed on to MFund for withdrawals, to Sale for Tranche 1 purchases, and to PFund for Tranche 1 PM transfers
   function SetPclAccountMO(address vPclAccountA) external {
-    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpManHub(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(HUB_SET_PCL_ACCOUNT_MO_X)));
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpManHub(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(HUB_SET_PCL_ACCOUNT_MO_X)));
     require(pIsAccountOkB(vPclAccountA)); // will reject a vPclAccountA that is the same aas the current pPclAccountA
     pPclAccountA = vPclAccountA; // The PCL account for withdrawals. Stored here just to avoid an Mfund.PclAccount() call in pIsAccountOkB()
     pMfundC.SetPclAccount(vPclAccountA);
@@ -181,7 +182,7 @@ contract Hub is OwnedHub, Math {
   // Is called from Sale.pProcess() when the first buy arrives after the sale pSaleStartT
   // Can be called manually by Admin as a managed op if necessary.
   function StartSaleMO() external {
-    require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_X)));
+    require(iIsSaleContractCallerB() || (iIsAdminCallerB() && pOpManC.IsManOpApproved(HUB_START_SALE_MO_X)));
     pSetState(STATE_SALE_OPEN_B);
     emit StartSaleV();
   }
@@ -402,16 +403,47 @@ contract Hub is OwnedHub, Math {
   // New Contracts Being Deployed
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  //   Contract Owned By                                   External Calls
-  //   -------- --------                                   --------------
-  //   OpMan    Deployer Self  Hub  Admin                  All including self
-  //   Hub      Deployer OpMan Self Admin Sale Poll Web    OpMan Sale Token List Mfund Pfund Poll
-  // * Sale     Deployer OpMan Hub  Admin Poll             OpMan Hub List Token Mfund Pfund
-  //   Token    Deployer OpMan Hub  Admin Sale             OpMan List
-  // * List     Deployer OpMan Hub  Token Sale Poll        OpMan
-  //   Mfund    Deployer OpMan Hub  Admin Sale Poll Pfund  OpMan List
-  //   Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
-  //   Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
+  //   Contract Owned By
+  //   -------- --------
+  //   OpMan    Deployer Self  Hub  Admin
+  //   Hub      Deployer OpMan Self Admin Sale Poll  Web
+  // * Sale     Deployer OpMan Hub  Admin Poll
+  // * Token    Deployer OpMan Hub  Admin Sale
+  // * List     Deployer Poll  Hub  Token Sale
+  //   Mfund    Deployer OpMan Hub  Admin Sale Poll  Pfund
+  //   Pfund    Deployer OpMan Hub  Sale
+  //   Poll     Deployer OpMan Hub  Admin Web
+
+  // If a New OpMan contract is deployed
+  // ***********************************
+  // Hub.NewOpManContractMO()
+  // ------------------------
+  // To be called manually as a managed op to change the OpMan contract here, plus change the OpMan owner for Hub, Sale, Token, MFund, Pfund, Poll
+  // Expects the old OpMan contract to have been paused
+  // Expects the new OpMan contract to have been deployed and initialised
+  // Expects HUB_NEW_OPMAN_CONTRACT_MO_X ManOp to have been approved at the NEW ManOp
+  // * Hub   OpMan contract pOpManC
+  // * Hub   OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  // * Sale  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  // * Token OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  // * Mfund OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  // * Pfund OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  //   Poll  OpMan owner    iOwnersYA[OPMAN_OWNER_X]
+  function NewOpManContract(address newOpManContractA) external IsAdminCaller {
+    require(pOpManC.Paused()); // old OpMan contract
+    require(pIsContractB(newOpManContractA)); // Checks that newOpManContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
+    // djh?? what about duplicate contract check?
+    emit ChangeOwnerV(pOpManC, newOpManContractA, OPMAN_OWNER_X);
+    emit NewOpManContractV(pOpManC, newOpManContractA);
+    pOpManC = I_OpManHub(newOpManContractA);
+    require(pOpManC.IsManOpApproved(HUB_NEW_OPMAN_CONTRACT_MO_X));
+    iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+     pSaleC.NewOpManContract(newOpManContractA);
+    pTokenC.NewOpManContract(newOpManContractA);
+    pMfundC.NewOpManContract(newOpManContractA);
+    pPfundC.NewOpManContract(newOpManContractA);
+     pPollC.NewOpManContract(newOpManContractA);
+  }
 
   // If a New Sale contract is deployed
   // **********************************
@@ -431,7 +463,7 @@ contract Hub is OwnedHub, Math {
   // * Mfund Sale owner    iOwnersYA[SALE_OWNER_X]
   // * Pfund Sale owner    iOwnersYA[PFUND_SALE_OWNER_X]
   function NewSaleContract(address newSaleContractA) external IsAdminCaller {
-    require(pSaleC.Paused());
+    require(pSaleC.Paused()); // old sale contract
     require(pIsContractB(newSaleContractA)); // Checks that newSaleContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
     require(pOpManC.ChangeContractMO(SALE_CONTRACT_X, newSaleContractA)); // MO which also checks that newSaleContractA is not a duplicateContract
     emit ChangeOwnerV(pSaleC, newSaleContractA, SALE_OWNER_X);
@@ -449,11 +481,13 @@ contract Hub is OwnedHub, Math {
   // Hub.NewTokenContract()
   // ----------------------
   // To be called manually as a managed op via the ChangeContractMO() call to change the Token contract in OpMan, here and in the Sale contract, plus change the Token owner for List
+  // Expects the old Token contract to have been paused
   // * OpMan
   // * Hub   Token contract pTokenC
   // * Sale  Token address  pTokenC
   // * List  Token owner    iOwnersYA[TOKEN_OWNER_X]
   function NewTokenContract(address newTokenContractA) external IsAdminCaller {
+    require(pTokenC.Paused()); // old Token contract
     require(pIsContractB(newTokenContractA)); // Checks that newTokenContractA is a contract. The following ChangeContractMO() call checks that it is not one of the current contracts.
     require(pOpManC.ChangeContractMO(TOKEN_CONTRACT_X, newTokenContractA)); // MO which also checks that newTokenContractA is not a duplicateContract
     emit ChangeOwnerV(pTokenC, newTokenContractA, TOKEN_CONTRACT_X);

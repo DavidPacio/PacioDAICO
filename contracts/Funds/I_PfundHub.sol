@@ -12,6 +12,7 @@ interface I_PfundHub {
   function StateChange(uint32 vState) external;
   function PMTransfer(address vSenderA, uint256 vWei, bool tranche1B) external;
   function Refund(uint256 vRefundId, address toA, uint256 vRefundWei, uint32 vRefundBit) external returns (bool);
+  function NewOpManContract(address newOpManContractA) external;
   function NewSaleContract(address newSaleContractA) external;
 }
 // End I_PfundHub interface

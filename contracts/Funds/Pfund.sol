@@ -72,7 +72,7 @@ contract Pfund is OwnedPfund, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Sale
   // Owners must first be set by deploy script calls:
-  //   Pfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+  //   Pfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
   //   Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Pfund.ChangeOwnerMO(PFUND_SALE_OWNER_X, Sale address)
 
@@ -80,7 +80,7 @@ contract Pfund is OwnedPfund, Math {
   // ------------------
   // Called from the deploy script to initialise the Pfund contract
   function Initialise() external IsInitialising {
-    pMfundC = I_MfundPfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(MFUND_CONTRACT_X));
+    pMfundC = I_MfundPfund(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).ContractXA(MFUND_CONTRACT_X));
     iPausedB       =        // make Prepurchase escrow active
     iInitialisingB = false;
     emit InitialiseV();
@@ -148,6 +148,12 @@ contract Pfund is OwnedPfund, Math {
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
 
+  // PFund.NewOpManContract()
+  // -----------------------
+  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
+     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  }
 
   // Pfund.NewSaleContract()
   // ----------------------

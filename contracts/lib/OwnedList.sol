@@ -6,7 +6,6 @@
 pragma solidity ^0.4.24;
 
 import "./Constants.sol";
-import "../OpMan/I_OpMan.sol";
 
 contract OwnedList is Constants {
   uint256 internal constant NUM_OWNERS = 6;
@@ -24,12 +23,6 @@ contract OwnedList is Constants {
   function Owners() external view returns (address[NUM_OWNERS]) {
     return iOwnersYA;
   }
-  function iIsInitialisingB() internal view returns (bool) {
-    return iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X];
-  }
-  function pIsOpManContractCallerB() private view returns (bool) {
-    return msg.sender == iOwnersYA[OP_MAN_OWNER_X] && pIsContractCallerB();
-  }
   function pIsContractCallerB() private view returns (bool) {
     address callerA = msg.sender; // need this because compilation fails on the '.' for extcodesize(msg.sender)
     uint256 codeSize;
@@ -40,11 +33,7 @@ contract OwnedList is Constants {
   // Modifier functions
   // ------------------
   modifier IsInitialising {
-    require(iIsInitialisingB(), "Not initialising");
-    _;
-  }
-  modifier IsOpManContractCaller {
-    require(pIsOpManContractCallerB(), "Not required OpMan caller");
+    require(iInitialisingB && msg.sender == iOwnersYA[DEPLOYER_X], "Not initialising");
     _;
   }
   modifier IsHubContractCaller {
@@ -56,7 +45,7 @@ contract OwnedList is Constants {
     _;
   }
   modifier IsPollContractCaller {
-    require(msg.sender == iOwnersYA[POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
+    require(msg.sender == iOwnersYA[LIST_POLL_OWNER_X] && pIsContractCallerB(), "Not required Poll caller");
     _;
   }
   modifier IsTokenContractCaller {
@@ -66,20 +55,18 @@ contract OwnedList is Constants {
 
   // Events
   // ------
-  event ChangeOwnerV(address indexed PreviousOwner, address NewOwner, uint256 OwnerId);
+  event SetOwnerV(address indexed Owner, uint256 OwnerId);
 
   // State changing external methods
   // -------------------------------
-  // ChangeOwnerMO()
-  // ---------------
-  // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
-  // Can be called directly during deployment when initialising
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(vOwnerX)));
+  // SetOwnerIO()
+  // ------------
+  // Can be called only during deployment when initialising
+  function SetOwnerIO(uint256 vOwnerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
-      require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
-    emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
-    iOwnersYA[vOwnerX] = vNewOwnerA;
+      require(ownerA != iOwnersYA[j], 'Duplicate owner');
+    emit SetOwnerV(ownerA, vOwnerX);
+    iOwnersYA[vOwnerX] = ownerA;
   }
 
 } // End OwnedList contract

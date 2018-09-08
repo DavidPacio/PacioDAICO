@@ -185,16 +185,16 @@ contract Sale is OwnedSale, Math {
   // ============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin, 4 Poll
   // Owners must first be set by deploy script calls:
-  //   Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+  //   Sale.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
   //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Sale.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Sale.ChangeOwnerMO(POLL_OWNER_X, Poll address)
+  //   Sale.ChangeOwnerMO(SALE_POLL_OWNER_X, Poll address)
 
   // Sale.Initialise()
   // -----------------
   // To be called by the deploy script to set the contract address variables.
   function Initialise() external IsInitialising {
-    I_OpMan opManC = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]);
+    I_OpMan opManC = I_OpMan(iOwnersYA[OPMAN_OWNER_X]);
     pHubC   = I_Hub(iOwnersYA[HUB_OWNER_X]);
     pTokenC = I_TokenSale(opManC.ContractXA(TOKEN_CONTRACT_X));
     pListC  = I_ListSale(opManC.ContractXA(LIST_CONTRACT_X));
@@ -209,16 +209,16 @@ contract Sale is OwnedSale, Math {
   // Called by the deploy script when initialising or manually as Admin as a managed op to set Sale caps and tranches.
   function SetCapsAndTranchesMO(uint32[NUM_TRNCHS] vPioHardCapTrnchsA, uint32 vUsdSoftCap, uint32 vPioSoftCap, uint32 vUsdHardCap, uint32 vPioHardCap,
                                uint256[NUM_TRNCHS] vMinWeiTrnchsA, uint256[NUM_TRNCHS] vPriceCCentsTrnchsA) external {
-    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
+    require(iIsInitialisingB() || (iIsAdminCallerB() && I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(SALE_SET_CAPS_TRANCHES_MO_X)));
     for (uint256 j=0; j<NUM_TRNCHS; j++) {
       pPicoHardCapTrnchsA[j] = vPioHardCapTrnchsA[j-1] * 10**12; // Hard cap for the sale tranches 1-4
       pMinWeiTrnchsA[j]      = vMinWeiTrnchsA[j-1];
       pPriceCCentsTrnchsA[j] = vPriceCCentsTrnchsA[j-1];
     }
-    pUsdSoftCap    = vUsdSoftCap; // USD soft cap $8,000,000
-    pPicoSoftCap   = vPioSoftCap * 10**12;
-    pUsdHardCap    = vUsdHardCap; // USD soft cap $42,300,000
-    pPicoHardCap   = vPioHardCap * 10**12;
+    pUsdSoftCap  = vUsdSoftCap; // USD soft cap $8,000,000
+    pPicoSoftCap = vPioSoftCap * 10**12;
+    pUsdHardCap  = vUsdHardCap; // USD soft cap $42,300,000
+    pPicoHardCap = vPioHardCap * 10**12;
     emit SetCapsAndTranchesV(vPioHardCapTrnchsA, vUsdSoftCap, vPioSoftCap, vUsdHardCap, vPioHardCap, vMinWeiTrnchsA,  vPriceCCentsTrnchsA);
   }
 
@@ -465,6 +465,13 @@ contract Sale is OwnedSale, Math {
   // Called from pBuy() for hard cap reached or time up
   function pCloseSale(uint32 vBit) private {
     pHubC.CloseSaleMO(vBit);
+  }
+
+  // Sale.NewOpManContract()
+  // -----------------------
+  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newOpManContractA is checked and logged by Hub.NewOpManContractA()
+  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
+     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
   }
 
   // Sale.NewTokenContract()

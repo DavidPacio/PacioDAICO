@@ -218,19 +218,17 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
 
   // Initialisation/Setup Functions
   // ==============================
-  // Owned by Deployer OpMan Hub Token Sale Poll
+  // Owned by Deployer Poll Hub Token Sale
   // Owners must first be set by deploy script calls:
-  //   List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-  //   List.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
-  //   List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-  //   List.ChangeOwnerMO(SALE_OWNER_X,  Sale address)
-  //   List.ChangeOwnerMO(POLL_OWNER_X,  Poll address)
+  //   List.SetOwnerIO(LIST_POLL_OWNER_X, Poll address)
+  //   List.SetOwnerIO(HUB_OWNER_X,   Hub address)
+  //   List.SetOwnerIO(TOKEN_OWNER_X, Token address)
+  //   List.SetOwnerIO(SALE_OWNER_X,  Sale address)
 
   // List.Initialise()
   // -----------------
-  // To be called by the deploy script to set the contract address variables.
+  // To be called by the deploy script to set the contract address variable.
   function Initialise() external IsInitialising {
-  //pSaleA = I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(SALE_CONTRACT_X);
     pSaleA = iOwnersYA[SALE_OWNER_X];
     iInitialisingB = false;
   }

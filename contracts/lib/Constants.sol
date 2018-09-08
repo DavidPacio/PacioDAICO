@@ -32,14 +32,14 @@ contract Constants {
   uint32 internal constant STATE_TRANS_ISSUES_NOK_B  = 13056; // STATE_REFUNDING_B | STATE_TRANSFER_TO_PB_B | STATE_TRANSFERRED_TO_PB_B
 
   // Contract Indices
-  uint256 internal constant OP_MAN_CONTRACT_X   = 0;
-  uint256 internal constant HUB_CONTRACT_X      = 1;
-  uint256 internal constant SALE_CONTRACT_X     = 2;
-  uint256 internal constant TOKEN_CONTRACT_X    = 3;
-  uint256 internal constant LIST_CONTRACT_X     = 4;
-  uint256 internal constant MFUND_CONTRACT_X    = 5;
-  uint256 internal constant PFUND_CONTRACT_X    = 6;
-  uint256 internal constant POLL_CONTRACT_X     = 7;
+  uint256 internal constant OPMAN_CONTRACT_X = 0;
+  uint256 internal constant HUB_CONTRACT_X   = 1;
+  uint256 internal constant SALE_CONTRACT_X  = 2;
+  uint256 internal constant TOKEN_CONTRACT_X = 3;
+  uint256 internal constant LIST_CONTRACT_X  = 4;
+  uint256 internal constant MFUND_CONTRACT_X = 5;
+  uint256 internal constant PFUND_CONTRACT_X = 6;
+  uint256 internal constant POLL_CONTRACT_X  = 7;
 
   // Owner Indices
   // Contract Owned By
@@ -48,19 +48,21 @@ contract Constants {
   // Hub      Deployer OpMan Self Admin Sale Poll  Web
   // Sale     Deployer OpMan Hub  Admin Poll
   // Token    Deployer OpMan Hub  Admin Sale
-  // List     Deployer OpMan Hub  Token Sale Poll
+  // List     Deployer Poll  Hub  Token Sale
   // Mfund    Deployer OpMan Hub  Admin Sale Poll  Pfund
   // Pfund    Deployer OpMan Hub  Sale
   // Poll     Deployer OpMan Hub  Admin Web
-  uint256 internal constant DEPLOYER_X     = 0;
-  uint256 internal constant OP_MAN_OWNER_X = 1;
-  uint256 internal constant HUB_OWNER_X    = 2;
-  uint256 internal constant ADMIN_OWNER_X  = 3;
-  uint256 internal constant TOKEN_OWNER_X  = 3;
-  uint256 internal constant SALE_OWNER_X   = 4;
-  uint256 internal constant POLL_OWNER_X   = 5;
-  uint256 internal constant PFUND_OWNER_X  = 6;
-  uint256 internal constant HUB_WEB_OWNER_X    = 6; // /- specific to first contract in the name
+  uint256 internal constant DEPLOYER_X    = 0;
+  uint256 internal constant OPMAN_OWNER_X = 1;
+  uint256 internal constant HUB_OWNER_X   = 2;
+  uint256 internal constant ADMIN_OWNER_X = 3;
+  uint256 internal constant TOKEN_OWNER_X = 3;
+  uint256 internal constant SALE_OWNER_X  = 4;
+  uint256 internal constant POLL_OWNER_X  = 5;
+  uint256 internal constant PFUND_OWNER_X = 6;
+  uint256 internal constant SALE_POLL_OWNER_X  = 4; // /- specific to first contract in the name
+  uint256 internal constant HUB_WEB_OWNER_X    = 6; // |
+  uint256 internal constant LIST_POLL_OWNER_X  = 1; // |
   uint256 internal constant PFUND_SALE_OWNER_X = 3; // |
   uint256 internal constant POLL_WEB_OWNER_X   = 4; // |
 
@@ -68,18 +70,19 @@ contract Constants {
 uint32 internal constant RESUME_MO_X                    =  0; // ResumeMO()
 uint32 internal constant CHANGE_OWNER_BASE_MO_X         =  0; // ChangeOwnerMO() -> 1 and up because actual ManOpX will always be +1 at least, 0 for deployer not being allowed, -> range 1 to 4 allowing for a max of 4 owners after deployer as required for Token
 // Individual contract indices start from 5 after allowing for up to 4 owners after the deployer
-uint32 internal constant OP_MAN_ADD_CONTRACT_MO_X       =  5; // OpMan.AddContractMO()
-uint32 internal constant OP_MAN_ADD_SIGNER_MO_X         =  6; // OpMan.AddSignerMO()
-uint32 internal constant OP_MAN_ADD_MAN_OP_MO_X         =  7; // OpMan.AddManOpMO()
-uint32 internal constant OP_MAN_CHANGE_SIGNER_MO_X      =  8; // OpMan.ChangeSignerMO()
-uint32 internal constant OP_MAN_CHANGE_CONTRACT_MO_X    =  9; // OpMan.ChangeContractMO()
-uint32 internal constant OP_MAN_UPDATE_MAN_OP_MO_X      = 10; // OpMan.UpdateManOpMO()
+uint32 internal constant OPMAN_ADD_CONTRACT_MO_X        =  5; // OpMan.AddContractMO()
+uint32 internal constant OPMAN_ADD_SIGNER_MO_X          =  6; // OpMan.AddSignerMO()
+uint32 internal constant OPMAN_ADD_MAN_OP_MO_X          =  7; // OpMan.AddManOpMO()
+uint32 internal constant OPMAN_CHANGE_SIGNER_MO_X       =  8; // OpMan.ChangeSignerMO()
+uint32 internal constant OPMAN_CHANGE_CONTRACT_MO_X     =  9; // OpMan.ChangeContractMO()
+uint32 internal constant OPMAN_UPDATE_MAN_OP_MO_X       = 10; // OpMan.UpdateManOpMO()
 uint32 internal constant HUB_SET_PCL_ACCOUNT_MO_X       =  5; // Hub.SetPclAccountMO()
-uint32 internal constant HUB_START_SALE_X               =  6; // Hub.StartSaleMO();
+uint32 internal constant HUB_START_SALE_MO_X            =  6; // Hub.StartSaleMO();
 uint32 internal constant HUB_SOFT_CAP_REACHED_MO_X      =  7; // Hub.SoftCapReachedMO()
 uint32 internal constant HUB_CLOSE_SALE_MO_X            =  8; // Hub.CloseSaleMO()
 uint32 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X  =  9; // Hub.SetTransferToPacioBcStateMO()
 uint32 internal constant HUB_SET_LIST_ENTRY_BITS_MO_X   = 10; // Hub.SetListEntryBitsMO()
+uint32 internal constant HUB_NEW_OPMAN_CONTRACT_MO_X    = 11; // Hub.NewOpManContractMO()
 uint32 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  5; // Sale.SetCapsAndTranchesMO()
 uint32 internal constant MFUND_WITHDRAW_TAP_MO_X        =  6; // Mfund.WithdrawTapMO()
 uint32 internal constant POLL_CLOSE_YES_MO_X            =  5; // Poll.ClosePollYesMO()

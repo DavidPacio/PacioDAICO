@@ -100,7 +100,7 @@ contract Mfund is OwnedMfund, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Admin Sale Poll Pfund
   // Owners must first be set by deploy script calls:
-  //   Mfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+  //   Mfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
   //   Mfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
   //   Mfund.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
   //   Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
@@ -111,7 +111,7 @@ contract Mfund is OwnedMfund, Math {
   // ------------------
   // Called from the deploy script to initialise the Mfund contract
   function Initialise() external IsInitialising {
-    pListC = I_ListMfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
+    pListC = I_ListMfund(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).ContractXA(LIST_CONTRACT_X));
   }
 
   // Mfund.SetPclAccount()
@@ -142,7 +142,7 @@ contract Mfund is OwnedMfund, Math {
       emit SoftCapReachedV();
     }else if ((vState & STATE_TERMINATE_REFUND_B) > 0 && (pState & STATE_TERMINATE_REFUND_B) == 0) {
       // Change of state for STATE_TERMINATE_REFUND_B = A Terminate poll has voted to end the project, contributions being refunded. Any of the closes must be set and STATE_SALE_OPEN_B unset) will have been set.
-      pTerminationPicosIssued = I_TokenMfund(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
+      pTerminationPicosIssued = I_TokenMfund(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).ContractXA(TOKEN_CONTRACT_X)).PicosIssued(); // Token.PicosIssued()
       emit TerminateV(pTerminationPicosIssued);
     }
     emit StateChangeV(pState, vState);
@@ -207,7 +207,7 @@ contract Mfund is OwnedMfund, Math {
   // Is called by Admin to withdraw the available tap as a managed operation
   function WithdrawTapMO() external IsAdminCaller IsActive {
     require(pState & STATE_TAPS_OK_B > 0, 'Tap not available');
-    require(I_OpMan(iOwnersYA[OP_MAN_OWNER_X]).IsManOpApproved(MFUND_WITHDRAW_TAP_MO_X));
+    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(MFUND_WITHDRAW_TAP_MO_X));
     uint256 withdrawWei = TapAmountWei();
     require(withdrawWei > 0, 'Available withdrawal is 0');
     pWithdraw(withdrawWei);
@@ -261,6 +261,13 @@ contract Mfund is OwnedMfund, Math {
     pRefundInProgressB = false;
     return address(this).balance == 0 ? false : true; // return false when refunding is complete
   } // End Refund()
+
+  // MFund.NewOpManContract()
+  // -----------------------
+  // Called from Hub.NewOpManContract() if the OpMan contract is changed. newTokenContractA is checked and logged by Hub.NewTokenContract()
+  function NewOpManContract(address newOpManContractA) external IsHubContractCaller {
+     iOwnersYA[OPMAN_OWNER_X] = newOpManContractA;
+  }
 
   // Mfund.NewSaleContract()
   // ----------------------

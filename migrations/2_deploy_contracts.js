@@ -40,7 +40,7 @@ OpMan.Initialise(address[] vContractsYA, address[] vSignersYA) IsInitialising
 Hub owned by Deployer OpMan Self Admin Sale Poll  Web
 ---
 Deployer and Self are set by the OwnedHub constructor
-Hub.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+Hub.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
 Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
 Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address)
@@ -50,10 +50,10 @@ Hub.SetPclAccountMO(address vPclAccountA) external
 
 Sale owned by Deployer OpMan Hub Admin Poll
 ----
-Sale.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+Sale.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
 Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Sale.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-Sale.ChangeOwnerMO(POLL_OWNER_X, Poll address)
+Sale.ChangeOwnerMO(SALE_POLL_OWNER_X, Poll address)
 Sale.Initialise()  to set the contract address variables.
 Sale.SetCapsAndTranchesMO(uint32 vPioHardCapT1, uint32 vPioHardCapT2, uint32 vPioHardCapT3, uint32 vUsdSoftCap, uint32 vPioSoftCap, uint32 vUsdHardCap, uint32 vPioHardCap,
                           uint256 vMinWeiT1, uint256 vMinWeiT2, uint256 vMinWeiT3, uint256 vPriceCCentsT1, uint256 vPriceCCentsT2, uint256 vPriceCCentsT3)
@@ -62,16 +62,15 @@ Sale.EndInitialise() to end initialising
 
 List owned by Deployer OpMan Hub Token Sale Poll
 ----
-List.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
-List.ChangeOwnerMO(HUB_OWNER_X,   Hub address)
-List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
-List.ChangeOwnerMO(SALE_OWNER_X,  Sale address)
-List.ChangeOwnerMO(POLL_OWNER_X,  Poll address)
-List.Initialise()  to set the contract address variables.
+List.SetOwnerIO(LIST_POLL_OWNER_X, Poll address)
+List.SetOwnerIO(HUB_OWNER_X,   Hub address)
+List.SetOwnerIO(TOKEN_OWNER_X, Token address)
+List.SetOwnerIO(SALE_OWNER_X,  Sale address)
+List.Initialise()  to set the contract address variable.
 
 Token owned by Deployer OpMan Hub Admin Sale
 -----
-Token.ChangeOwnerMO(OP_MAN_OWNER_X, OpMan address)
+Token.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
 Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Token.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
@@ -79,7 +78,7 @@ Token.Initialise() To set the contract variable, and do the PIOE minting
 
 Mfund owned by Deployer OpMan Hub Admin Sale Poll Pfund
 -----
-Mfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Mfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
 Mfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Mfund.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
@@ -90,14 +89,14 @@ Mfund.EndInitialise() to end initialising
 
 Pfund owned by Deployer OpMan Hub Sale
 -----
-Pfund.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Pfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
 Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Pfund.ChangeOwnerMO(PFUND_SALE_OWNER_X, Sale address)
 Pfund.Initialise()
 
 Poll owned by Deployer OpMan Hub Admin Web
 ----
-Poll.ChangeOwnerMO(OP_MAN_OWNER_X OpMan address)
+Poll.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
 Poll.ChangeOwnerMO(HUB_OWNER_X, Hub address)
 Poll.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
 Poll.ChangeOwnerMO(POLL_WEB_OWNER_X, Web address)
