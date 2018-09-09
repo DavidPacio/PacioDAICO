@@ -4,7 +4,6 @@
 //
 pragma solidity ^0.4.24;
 interface I_Owned {
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external;
   function Pause() external;
   function ResumeMO() external;
 }

@@ -29,6 +29,7 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedHub.sol";
 import "../lib/Math.sol";
+import "../OpMan/I_OpManHub.sol";
 import "../Sale/I_Sale.sol";
 import "../Token/I_TokenHub.sol";
 import "../List/I_ListHub.sol";
@@ -94,11 +95,11 @@ contract Hub is OwnedHub, Math {
   // Owned by Deployer OpMan Self Admin Sale Poll  Web
   // Deployer and Self are set by the OwnedHub constructor
   // Others must first be set by deploy script calls:
-  //   Hub.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
-  //   Hub.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Hub.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Hub.ChangeOwnerMO(POLL_OWNER_X, Poll address);
-  //   Hub.ChangeOwnerMO(HUB_WEB_OWNER_X, Web account address)
+  //   Hub.SetOwnerIO(OPMAN_OWNER_X, OpMan address)
+  //   Hub.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Hub.SetOwnerIO(SALE_OWNER_X, Sale address)
+  //   Hub.SetOwnerIO(POLL_OWNER_X, Poll address);
+  //   Hub.SetOwnerIO(HUB_WEB_OWNER_X, Web account address)
 
   // Hub.Initialise()
   // ----------------

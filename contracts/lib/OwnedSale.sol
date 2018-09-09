@@ -6,7 +6,6 @@
 pragma solidity ^0.4.24;
 
 import "./Constants.sol";
-import "../OpMan/I_OpMan.sol";
 
 contract OwnedSale is Constants {
   uint256 internal constant NUM_OWNERS = 5;
@@ -83,16 +82,14 @@ contract OwnedSale is Constants {
 
   // State changing external methods
   // -------------------------------
-  // ChangeOwnerMO()
-  // ---------------
-  // Called by OpMan.ChangeContractOwnerMO(vContractX, vOwnerX) IsAdminCaller IsConfirmedSigner which is a managed op
-  // Can be called directly during deployment when initialising
-  function ChangeOwnerMO(uint256 vOwnerX, address vNewOwnerA) external {
-    require(iIsInitialisingB() || (pIsOpManContractCallerB() && I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(vOwnerX)));
+  // SetOwnerIO()
+  // ------------
+  // Can be called only during deployment when initialising
+  function SetOwnerIO(uint256 ownerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
-      require(vNewOwnerA != iOwnersYA[j], 'Duplicate owner');
-    emit ChangeOwnerV(iOwnersYA[vOwnerX], vNewOwnerA, vOwnerX);
-    iOwnersYA[vOwnerX] = vNewOwnerA;
+      require(ownerA != iOwnersYA[j], 'Duplicate owner');
+    emit ChangeOwnerV(0x0, ownerA, ownerX);
+    iOwnersYA[ownerX] = ownerA;
   }
 
   // Pause()
@@ -107,7 +104,6 @@ contract OwnedSale is Constants {
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
   function ResumeMO() external IsOpManContractCaller {
-    require(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).IsManOpApproved(RESUME_MO_X));
     iPausedB = false;
     emit ResumedV();
   }

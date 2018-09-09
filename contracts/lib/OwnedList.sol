@@ -62,11 +62,11 @@ contract OwnedList is Constants {
   // SetOwnerIO()
   // ------------
   // Can be called only during deployment when initialising
-  function SetOwnerIO(uint256 vOwnerX, address ownerA) external IsInitialising {
+  function SetOwnerIO(uint256 ownerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(ownerA != iOwnersYA[j], 'Duplicate owner');
-    emit ChangeOwnerV(0x0, ownerA, vOwnerX);
-    iOwnersYA[vOwnerX] = ownerA;
+    emit ChangeOwnerV(0x0, ownerA, ownerX);
+    iOwnersYA[ownerX] = ownerA;
   }
 
 } // End OwnedList contract

@@ -25,8 +25,9 @@ Sending Ether is allowed - calls pBuy()
 pragma solidity ^0.4.24;
 //pragma experimental "v0.5.0";
 
-import "../lib/OwnedSale.sol";
 import "../lib/Math.sol";
+import "../lib/OwnedSale.sol";
+import "../OpMan/I_OpMan.sol";
 import "../Hub/I_Hub.sol";
 import "../List/I_ListSale.sol";
 import "../Token/I_TokenSale.sol";
@@ -185,10 +186,10 @@ contract Sale is OwnedSale, Math {
   // ============================
   // Owned by 0 Deployer, 1 OpMan, 2 Hub, 3 Admin, 4 Poll
   // Owners must first be set by deploy script calls:
-  //   Sale.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
-  //   Sale.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Sale.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Sale.ChangeOwnerMO(SALE_POLL_OWNER_X, Poll address)
+  //   Sale.SetOwnerIO(OPMAN_OWNER_X, OpMan address)
+  //   Sale.SetOwnerIO(HUB_OWNER_X, Hub address)
+  //   Sale.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Sale.SetOwnerIO(SALE_POLL_OWNER_X, Poll address)
 
   // Sale.Initialise()
   // -----------------

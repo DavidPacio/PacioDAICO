@@ -15,6 +15,7 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedMfund.sol";
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
 import "../List/I_ListMfund.sol";
 import "../Token/I_TokenMfund.sol";
 
@@ -100,12 +101,12 @@ contract Mfund is OwnedMfund, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Admin Sale Poll Pfund
   // Owners must first be set by deploy script calls:
-  //   Mfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
-  //   Mfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Mfund.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Mfund.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //   Mfund.ChangeOwnerMO(POLL_OWNER_X, Poll address)
-  //   Mfund.ChangeOwnerMO(PFUND_OWNER_X, Pfund address)
+  //   Mfund.SetOwnerIO(OPMAN_OWNER_X OpMan address)
+  //   Mfund.SetOwnerIO(HUB_OWNER_X, Hub address)
+  //   Mfund.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Mfund.SetOwnerIO(SALE_OWNER_X, Sale address)
+  //   Mfund.SetOwnerIO(POLL_OWNER_X, Poll address)
+  //   Mfund.SetOwnerIO(PFUND_OWNER_X, Pfund address)
 
   // Mfund.Initialise()
   // ------------------

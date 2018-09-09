@@ -67,7 +67,7 @@ contract Constants {
   uint256 internal constant POLL_WEB_OWNER_X   = 4; // |
 
 // Managed Operation Indices
-uint32 internal constant RESUME_MO_X                    =  0; // ResumeMO()
+uint32 internal constant RESUME_CONTRACT_MO_X           =  0; // OpMan.ResumeContractMO()
 uint32 internal constant OPMAN_ADD_CONTRACT_MO_X        =  1; // OpMan.AddContractMO()
 uint32 internal constant OPMAN_ADD_SIGNER_MO_X          =  2; // OpMan.AddSignerMO()
 uint32 internal constant OPMAN_ADD_MAN_OP_MO_X          =  3; // OpMan.AddManOpMO()
@@ -82,10 +82,10 @@ uint32 internal constant HUB_SET_LIST_ENTRY_BITS_MO_X   =  6; // Hub.SetListEntr
 uint32 internal constant HUB_NEW_OPMAN_CONTRACT_MO_X    =  7; // Hub.NewOpManContractMO()
 uint32 internal constant HUB_NEW_HUB_CONTRACT_MO_X      =  8; // Hub.NewHubContractMO()
 uint32 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  1; // Sale.SetCapsAndTranchesMO()
+uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  1; // Token.TransferUnIssuedPIOsToPacioBcMO()
 uint32 internal constant MFUND_WITHDRAW_TAP_MO_X        =  1; // Mfund.WithdrawTapMO()
 uint32 internal constant POLL_CLOSE_YES_MO_X            =  1; // Poll.ClosePollYesMO()
 uint32 internal constant POLL_CLOSE_NO_MO_X             =  2; // Poll.ClosePollNoMO()
-uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  1; // Token.TransferUnIssuedPIOsToPacioBcMO()
 
   // Time
   uint32  internal constant MIN     =    60;

@@ -5,7 +5,6 @@ The Pacio Token named PIOE for the Pacio DAICO
 Owners: Deployer OpMan Hub Admin Sale
 
 Calls
-OpMan  for IsManOpApproved() calls from Owned.ChangeOwnerMO() and  Owned.ResumeMO
 List   as the contract for the list of participants
 
 Pause/Resume
@@ -22,6 +21,7 @@ No sending ether to this contract
 pragma solidity ^0.4.24;
 
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
 import "../List/I_ListToken.sol";
 import "./EIP20Token.sol"; // Owned via OwnedToken.sol
 
@@ -101,11 +101,11 @@ contract Token is EIP20Token, Math {
   // Can only be called once.
   // Owners Deployer OpMan Hub Admin Sale
   // Owners must first be set by deploy script calls:
-  //   Token.ChangeOwnerMO(OPMAN_OWNER_X, OpMan address)
-  //   Token.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Token.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Token.ChangeOwnerMO(SALE_OWNER_X, Sale address)
-  //    List.ChangeOwnerMO(TOKEN_OWNER_X, Token address)
+  //   Token.SetOwnerIO(OPMAN_OWNER_X, OpMan address)
+  //   Token.SetOwnerIO(HUB_OWNER_X, Hub address)
+  //   Token.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Token.SetOwnerIO(SALE_OWNER_X, Sale address)
+  //    List.SetOwnerIO(TOKEN_OWNER_X, Token address)
   function Initialise() external IsInitialising {
     iPausedB = false; // make active
     iListC   = I_ListToken(I_OpMan(iOwnersYA[OPMAN_OWNER_X]).ContractXA(LIST_CONTRACT_X)); // The List contract

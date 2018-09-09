@@ -37,7 +37,6 @@ OpMan Processes
 9. Resume contract and ops as managed ops
    9.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
    9.2 Signer to resume a manOp as a managed op
-A. Admin signer to change a contract non-contract owner as a managed op
 
 Pause/Resume
 ============
@@ -86,7 +85,7 @@ contract OpMan is OwnedOpMan {
   // Storage
   R_Contract[] private pContractsYR;                    // Array of the contracts
   mapping(address => uint256) private pContractsAddrMX; // Mapping of contracts by address -> cX (contract index in pContractsYR)
-  mapping(uint256 => R_ManOp) private pManOpsOpkMR;     // mapping of  manOps by key manOpK = cX * 100 + manOpX keys so that opXs can repeat i.e. RESUME_MO_X for all Pausible contracts
+  mapping(uint256 => R_ManOp) private pManOpsOpkMR;     // mapping of  manOps by key manOpK = cX * 100 + manOpX keys so that opXs can repeat i.e. RESUME_CONTRACT_MO_X for all Pausible contracts
   uint256[] private pManOpKsYU;                         // Array of the manOps mapping keys manOpK = cX * 100 + manOpX
   mapping(address => R_Signer) private pSignersAddrMR;  // Mapping of the signers keyed by address
   address[] private pSignersYA;                         // Array of the signers to allow a traverse of pSignersAddrMR
@@ -147,25 +146,25 @@ contract OpMan is OwnedOpMan {
       pAddSigner(vSignersYA[j]);
     // Add initial (OpMan) manOps
     // pAddManOp(uint256 contractX, uint32 vSigsRequired, uint32 vSecsValid) private
-    pAddManOp(OPMAN_CONTRACT_X, RESUME_MO_X,                    3, MIN); // 0 ResumeMO()
+    pAddManOp(OPMAN_CONTRACT_X, RESUME_CONTRACT_MO_X,           3, MIN); // 0 OpMan.ResumeContractMO()
     pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_CONTRACT_MO_X,        3, MIN); // 1 OpMan.AddContractMO()
     pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_SIGNER_MO_X,          3, MIN); // 2 OpMan.AddSignerMO()
     pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_MAN_OP_MO_X,          3, MIN); // 3 OpMan.AddManOp()
     pAddManOp(OPMAN_CONTRACT_X, OPMAN_CHANGE_SIGNER_MO_X,       3, MIN); // 4 OpMan.ChangeSignerMO()
     pAddManOp(OPMAN_CONTRACT_X, OPMAN_UPDATE_MAN_OP_MO_X,       3, MIN); // 5 OpMan.UpdateManOpMO()
-    pAddManOp(MFUND_CONTRACT_X,  HUB_SET_PCL_ACCOUNT_MO_X,      3, MIN); // 1 Hub.SetPclAccountMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_START_SALE_MO_X,           3, MIN); // 2 Hub.StartSaleMO();
-    pAddManOp(HUB_CONTRACT_X,    HUB_SOFT_CAP_REACHED_MO_X,     3, MIN); // 3 Hub.SoftCapReachedMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_CLOSE_SALE_MO_X,           3, MIN); // 4 Hub.CloseSaleMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_SET_LIST_ENTRY_BITS_MO_X,  3, MIN); // 5 Hub.SetListEntryBitsMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_SET_TRAN_TO_PB_STATE_MO_X, 3, MIN); // 6 Hub.SetTransferToPacioBcStateMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_NEW_OPMAN_CONTRACT_MO_X,   3, MIN); // 7 Hub.NewOpManContractMO()
-    pAddManOp(HUB_CONTRACT_X,    HUB_NEW_HUB_CONTRACT_MO_X,     3, MIN); // 8 Hub.NewHubContractMO()
-    pAddManOp(SALE_CONTRACT_X,   SALE_SET_CAPS_TRANCHES_MO_X,   3, MIN); // 1 Sale.SetCapsAndTranchesMO()
-    pAddManOp(MFUND_CONTRACT_X,  MFUND_WITHDRAW_TAP_MO_X,       3, MIN); // 1 Mfund.WithdrawTapMO()
-    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_YES_MO_X,           3, MIN); // 1 Poll.ClosePollYesMO()
-    pAddManOp(POLL_CONTRACT_X,   POLL_CLOSE_NO_MO_X,            3, MIN); // 2 Poll.ClosePollNoMO()
-    pAddManOp(TOKEN_CONTRACT_X,  TOKEN_TRAN_UNISSUED_TO_PB_MO_X,3, MIN); // 1 Token.TransferUnIssuedPIOsToPacioBcMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_PCL_ACCOUNT_MO_X,       3, MIN); // 1 Hub.SetPclAccountMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_START_SALE_MO_X,            3, MIN); // 2 Hub.StartSaleMO();
+    pAddManOp(HUB_CONTRACT_X,   HUB_SOFT_CAP_REACHED_MO_X,      3, MIN); // 3 Hub.SoftCapReachedMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_CLOSE_SALE_MO_X,            3, MIN); // 4 Hub.CloseSaleMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_LIST_ENTRY_BITS_MO_X,   3, MIN); // 5 Hub.SetListEntryBitsMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_TRAN_TO_PB_STATE_MO_X,  3, MIN); // 6 Hub.SetTransferToPacioBcStateMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_OPMAN_CONTRACT_MO_X,    3, MIN); // 7 Hub.NewOpManContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_HUB_CONTRACT_MO_X,      3, MIN); // 8 Hub.NewHubContractMO()
+    pAddManOp(SALE_CONTRACT_X,  SALE_SET_CAPS_TRANCHES_MO_X,    3, MIN); // 1 Sale.SetCapsAndTranchesMO()
+    pAddManOp(TOKEN_CONTRACT_X, TOKEN_TRAN_UNISSUED_TO_PB_MO_X, 3, MIN); // 1 Token.TransferUnIssuedPIOsToPacioBcMO()
+    pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_TAP_MO_X,        3, MIN); // 1 Mfund.WithdrawTapMO()
+    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_YES_MO_X,            3, MIN); // 1 Poll.ClosePollYesMO()
+    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_NO_MO_X,             3, MIN); // 2 Poll.ClosePollNoMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
@@ -213,21 +212,13 @@ contract OpMan is OwnedOpMan {
     R_Signer storage srSignerR = pSignersAddrMR[pSignersYA[iX]];
     return (srSignerR.addedT, srSignerR.confirmedT, srSignerR.numSigs, srSignerR.lastSigT);
   }
-  // pIsNotDuplicateContractB(address contractA)
-  // Returns false if contractA matches any current contract
-  //         true  if contractA does not match any current contract
-  function pIsNotDuplicateContractB(address contractA) private view returns (bool) {
-    for (uint256 j=0; j<pContractsYR.length; j++)
-      if (contractA == pContractsYR[j].contractA)
-        return false;
-    return true;
-  }
 
   // Modifier functions
   // ==================
   modifier IsNotDuplicateContract(address contractA) {
   //require(pContractsAddrMX[contractA] == 0,'Duplicate contract'); Can't use this because OpMan has a cX of 0
-    require(pIsNotDuplicateContractB(contractA), 'Duplicate contract');
+    for (uint256 j=0; j<pContractsYR.length; j++)
+      require(contractA != pContractsYR[j].contractA, 'Duplicate contract');
     _;
   }
   modifier IsNotDuplicateSigner(address vSignerA) {
@@ -501,16 +492,15 @@ contract OpMan is OwnedOpMan {
   }
 
   // OpMan.ResumeContractMO()
-  // ---------------------
+  // ------------------------
   // 9.1 Signer to resume a contract as a managed op with a call to the contract's ResumeMO() fn if the contract has one
   function ResumeContractMO(uint256 contractX) external IsConfirmedSigner IsActive returns (bool) {
     require(contractX < pContractsYR.length, 'Contract not known');
+    require(pIsManOpApproved(contractX * 100)); // No need for + RESUME_CONTRACT_MO_X as RESUME_CONTRACT_MO_X is 0
     R_Contract storage srContractR = pContractsYR[contractX];
     srContractR.pausedB = false;
     if (srContractR.pausableB)
-      I_Owned(srContractR.contractA).ResumeMO();   // Owned.ResumeMO() does an IsManOpApproved(RESUME_MO_X) callback
-    else
-      require(pIsManOpApproved(contractX * 100)); // No need for + RESUME_MO_X as RESUME_MO_X is 0
+      I_Owned(srContractR.contractA).ResumeMO();
     emit ResumeContractV(contractX);
     return true;
   }
@@ -526,42 +516,6 @@ contract OpMan is OwnedOpMan {
     srManOpR.pausedB = false;
     emit ResumeManOpV(manOpK);
     return true;
-  }
-
-  // OpMan.ChangeContractOwnerMO()
-  // -----------------------------
-  // A. Admin signer to change a contract non-contract owner as a managed op
-  // Non-contract because contract owners are changed by the Hub.New*Cobtract() functions
-  // The only non-contract owners are Admin and Web:
-  // Contract Owned By
-  //          0        1     2    3     4    5     6       Non-Contract Owners
-  // OpMan    Deployer Self  Hub  Admin                    Admin
-  // Hub      Deployer OpMan Self Admin Sale Poll  Web     Admin and Web
-  // Sale     Deployer OpMan Hub  Admin Poll               Admin
-  // Token    Deployer OpMan Hub  Admin Sale               Admin
-  // List     Deployer Poll  Hub  Token Sale
-  // Mfund    Deployer OpMan Hub  Admin Sale Poll  Pfund   Admin
-  // Pfund    Deployer OpMan Hub  Sale
-  // Poll     Deployer OpMan Hub  Admin Web                Admin and Web
-  function ChangeContractOwnerMO(uint256 contractX, uint256 ownerX, address newOwnerA) external IsAdminCaller IsConfirmedSigner IsActive returns (bool) {
-    require((ownerX == ADMIN_OWNER_X && ((contractX >= OPMAN_CONTRACT_X && contractX <= TOKEN_CONTRACT_X) || contractX == MFUND_CONTRACT_X || contractX == POLL_CONTRACT_X))
-         || (ownerX == HUB_WEB_OWNER_X && contractX == HUB_CONTRACT_X)
-         || (ownerX == POLL_WEB_OWNER_X && contractX == POLL_CONTRACT_X), 'Invalid non-contract Owner');
-    require(newOwnerA  != address(0)
-         && pIsNotContractB(newOwnerA));
-  //require(pIsManOpApproved(contractX * 100 + CHANGE_OWNER_BASE_MO_X + ownerX)); No. Is done by Owned.ChangeOwnerMO()
-    I_Owned(pContractsYR[contractX].contractA).ChangeOwnerMO(ownerX, newOwnerA);
-    emit ChangeContractOwnerV(contractX, newOwnerA, ownerX);
-    return true;
-  }
-
-  // OpMan.pIsNotContractB() private
-  // -----------------------
-  // Checks that aA is a not a contract
-  function pIsNotContractB(address aA) private view returns (bool) {
-    uint256 codeSize;
-    assembly {codeSize := extcodesize(aA)}
-    return codeSize == 0;
   }
 
   // OpMan.ChangeContract()

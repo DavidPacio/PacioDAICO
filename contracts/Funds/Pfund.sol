@@ -19,6 +19,7 @@ pragma solidity ^0.4.24;
 
 import "../lib/OwnedPfund.sol";
 import "../lib/Math.sol";
+import "../OpMan/I_OpMan.sol";
 import "../Funds/I_MfundPfund.sol";
 
 contract Pfund is OwnedPfund, Math {
@@ -72,9 +73,9 @@ contract Pfund is OwnedPfund, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Sale
   // Owners must first be set by deploy script calls:
-  //   Pfund.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
-  //   Pfund.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Pfund.ChangeOwnerMO(PFUND_SALE_OWNER_X, Sale address)
+  //   Pfund.SetOwnerIO(OPMAN_OWNER_X OpMan address)
+  //   Pfund.SetOwnerIO(HUB_OWNER_X, Hub address)
+  //   Pfund.SetOwnerIO(PFUND_SALE_OWNER_X, Sale address)
 
   // Pfund.Initialise()
   // ------------------

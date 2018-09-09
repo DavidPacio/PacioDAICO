@@ -20,8 +20,9 @@ No sending ether to this contract!
 
 pragma solidity ^0.4.24;
 
-import "../lib/OwnedPoll.sol";
 import "../lib/Math.sol";
+import "../lib/OwnedPoll.sol";
+import "../OpMan/I_OpMan.sol";
 import "../Hub/I_HubPoll.sol";
 import "../Sale/I_SalePoll.sol";
 import "../List/I_ListPoll.sol";
@@ -174,10 +175,10 @@ contract Poll is OwnedPoll, Math {
   // ==============================
   // Owned by Deployer OpMan Hub Admin Web
   // Owners must first be set by deploy script calls:
-  //   Poll.ChangeOwnerMO(OPMAN_OWNER_X OpMan address)
-  //   Poll.ChangeOwnerMO(HUB_OWNER_X, Hub address)
-  //   Poll.ChangeOwnerMO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
-  //   Poll.ChangeOwnerMO(POLL_WEB_OWNER_X, Web address)
+  //   Poll.SetOwnerIO(OPMAN_OWNER_X OpMan address)
+  //   Poll.SetOwnerIO(HUB_OWNER_X, Hub address)
+  //   Poll.SetOwnerIO(ADMIN_OWNER_X, PCL hw wallet account address as Admin)
+  //   Poll.SetOwnerIO(POLL_WEB_OWNER_X, Web address)
 
   // Poll.Initialise()
   // -----------------

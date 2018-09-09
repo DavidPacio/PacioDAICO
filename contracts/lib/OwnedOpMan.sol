@@ -6,7 +6,6 @@
 pragma solidity ^0.4.24;
 
 import "./Constants.sol";
-import "../OpMan/I_OpMan.sol";
 
 contract OwnedOpMan is Constants {
   uint256 internal constant NUM_OWNERS = 4;
@@ -78,13 +77,13 @@ contract OwnedOpMan is Constants {
   // State changing external methods
   // -------------------------------
   // SetOwnerIO()
-  // ---------------
+  // ------------
   // Can be called only during deployment when initialising
-  function SetOwnerIO(uint256 vOwnerX, address ownerA) external IsInitialising {
+  function SetOwnerIO(uint256 ownerX, address ownerA) external IsInitialising {
     for (uint256 j=0; j<NUM_OWNERS; j++)
       require(ownerA != iOwnersYA[j], 'Duplicate owner');
-    emit ChangeOwnerV(0x0, ownerA, vOwnerX);
-    iOwnersYA[vOwnerX] = ownerA;
+    emit ChangeOwnerV(0x0, ownerA, ownerX);
+    iOwnersYA[ownerX] = ownerA;
   }
 
   // Pause()
@@ -99,7 +98,6 @@ contract OwnedOpMan is Constants {
   // ----------
   // Called by OpMan.ResumeContractMO(vContractX) IsConfirmedSigner which is a managed op
   function ResumeMO() external IsOpManContractCaller {
-    require(I_OpMan(this).IsManOpApproved(RESUME_MO_X));
     iPausedB = false;
     emit ResumedV();
   }
