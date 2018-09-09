@@ -409,7 +409,7 @@ contract Hub is OwnedHub, Math {
   // * Token    Deployer OpMan Hub  Admin Sale             OpMan List
   // * List     Deployer Poll  Hub  Token Sale
   // * Mfund    Deployer OpMan Hub  Admin Sale Poll Pfund  OpMan List
-  //   Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
+  // * Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
   //   Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
   //   Admin
   //   Web
@@ -542,6 +542,7 @@ contract Hub is OwnedHub, Math {
   // ---------------------
   // To be called manually to change the List contract here and in the Sale, Token, Mfund, and Poll contracts.
   // The new List contract would need to have been initialised
+  // There are no contracts for which List as an owner
   // * OpMan
   // * Hub   List contract pListC
   // * Sale  List contract pListC
@@ -563,7 +564,6 @@ contract Hub is OwnedHub, Math {
 
   // If a New Mfund contract is deployed
   // ***********************************
-
   // Hub.NewMfundContractMO()
   // ------------------------
   // To be called manually as a managed op call to change the Mfund contract in OpMan, here and in the Sale, Pfund, and Poll contracts.
@@ -585,6 +585,28 @@ contract Hub is OwnedHub, Math {
      pSaleC.NewMfundContract(newMfundContractA);
     pPfundC.NewMfundContract(newMfundContractA);
      pPollC.NewMfundContract(newMfundContractA);
+  }
+
+  // If a New Pfund contract is deployed
+  // ***********************************
+  // Hub.NewPfundContractMO()
+  // ------------------------
+  // To be called manually as a managed op call to change the Pfund contract in OpMan, here and in the Sale contract.
+  // Expects the old Pfund contract to have been paused
+  //   OpMan
+  //   Hub   Pfund contract pPfundC
+  //   Sale  Pfund contract pPfundC
+  //   Mfund Pfund owner    iOwnersYA[PFUND_OWNER_X]
+  function NewPfundContractMO(address newPfundContractA) external IsAdminCaller {
+    require(pOpManC.IsManOpApproved(HUB_NEW_PFUND_CONTRACT_MO_X)          // Check that MO has been approved
+         && pPfundC.Paused()                                              // Check that old Pfund contract is paused
+         && pIsContractB(newPfundContractA)                               // Check that newPfundContractA is a contract. The following ChangeContract() call checks that it is not one of the current contracts.
+         && pOpManC.ChangeContract(PFUND_CONTRACT_X, newPfundContractA)); // which also checks that newPfundContractA is not a duplicate contract
+    emit ChangeOwnerV(pPfundC, newPfundContractA, PFUND_CONTRACT_X);
+    emit NewContractV(PFUND_CONTRACT_X, pPfundC, newPfundContractA);
+    pPfundC = I_PfundHub(newPfundContractA);
+     pSaleC.NewPfundContract(newPfundContractA);
+    pMfundC.NewOwner(PFUND_OWNER_X, newPfundContractA);
   }
 
   // Hub.pIsContractB() private
