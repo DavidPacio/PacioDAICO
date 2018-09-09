@@ -611,7 +611,9 @@ contract Poll is OwnedPoll, Math {
   // Poll.NewOwner()
   // ---------------
   // Called from Hub.NewOpManContractMO() with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
-  //             Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewHubContractMO()                 HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewAdminAccountMO()                ADMIN_OWNER_X if the Admin account is changed
+  //             Hub.NewWebAccountMO                    POLL_WEB_OWNER_X if the Web account is changed
   function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
     emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
     iOwnersYA[ownerX] = newOwnerA;

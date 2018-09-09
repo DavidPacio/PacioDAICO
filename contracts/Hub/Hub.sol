@@ -8,10 +8,7 @@ Calls OpMan; Sale; Token; List; Mfund; Pfund; Poll
 
 djh??
 
-• fns for replacing contracts - all of them
-  To be MO fnd
 • Provide an emergency reset of the pRefundInProgressB bools
-• initialise new list contract
 
 Pause/Resume
 ============
@@ -25,7 +22,6 @@ Sending Ether is not allowed
 */
 
 pragma solidity ^0.4.24;
-//pragma experimental "v0.5.0";
 
 import "../lib/OwnedHub.sol";
 import "../lib/Math.sol";
@@ -400,8 +396,7 @@ contract Hub is OwnedHub, Math {
 
   // New Contracts Being Deployed
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  //   Contract Owned By                                   External Calls
+  //   New Cont Owned By                                   External Calls
   //   -------- --------                                   --------------
   // * OpMan    Deployer Self  Hub  Admin                  All including self
   // * Hub      Deployer OpMan Self Admin Sale Poll Web    OpMan Sale Token List Mfund Pfund Poll
@@ -410,9 +405,9 @@ contract Hub is OwnedHub, Math {
   // * List     Deployer Poll  Hub  Token Sale
   // * Mfund    Deployer OpMan Hub  Admin Sale Poll Pfund  OpMan List
   // * Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
-  //   Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
-  //   Admin
-  //   Web
+  // * Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
+  // * Admin account
+  // * Web   account
 
   // If a New OpMan contract is deployed
   // ***********************************
@@ -606,19 +601,6 @@ contract Hub is OwnedHub, Math {
     pMfundC.NewOwner(PFUND_OWNER_X, newPfundContractA);
   }
 
-  //   Contract Owned By                                   External Calls
-  //   -------- --------                                   --------------
-  // * OpMan    Deployer Self  Hub  Admin                  All including self
-  // * Hub      Deployer OpMan Self Admin Sale Poll Web    OpMan Sale Token List Mfund Pfund Poll
-  // * Sale     Deployer OpMan Hub  Admin Poll             OpMan Hub List Token Mfund Pfund
-  // * Token    Deployer OpMan Hub  Admin Sale             OpMan List
-  // * List     Deployer Poll  Hub  Token Sale
-  // * Mfund    Deployer OpMan Hub  Admin Sale Poll Pfund  OpMan List
-  // * Pfund    Deployer OpMan Hub  Sale                   OpMan Mfund
-  //   Poll     Deployer OpMan Hub  Admin Web              OpMan Hub Sale List Mfund
-  //   Admin
-  //   Web
-
   // If a New Poll contract is deployed
   // **********************************
   // Hub.NewPollContractMO()
@@ -644,6 +626,42 @@ contract Hub is OwnedHub, Math {
      pSaleC.NewOwner(SALE_POLL_OWNER_X, newPollContractA);
      pListC.NewOwner(LIST_POLL_OWNER_X, newPollContractA);
     pMfundC.NewOwner(POLL_OWNER_X, newPollContractA);
+  }
+
+  // Hub.NewAdminAccountMO()
+  // -----------------------
+  // To be called manually as a managed op call to change the Admin account which involves
+  //  changing the Admin owner for OpMan, Hub, Sale, Token, Mfund, Poll
+  //   OpMan Admin owner iOwnersYA[ADMIN_OWNER_X]
+  //   Hub   Admin owner iOwnersYA[ADMIN_OWNER_X]
+  //   Sale  Admin owner iOwnersYA[ADMIN_OWNER_X]
+  //   Token Admin owner iOwnersYA[ADMIN_OWNER_X]
+  //   MFund Admin owner iOwnersYA[ADMIN_OWNER_X]
+  //   Poll  Admin owner iOwnersYA[ADMIN_OWNER_X]
+  function NewAdminAccountMO(address newAdminAccountA) external IsAdminCaller {
+    require(pOpManC.IsManOpApproved(HUB_NEW_ADMIN_ACCOUNT_MO_X) // Check that MO has been approved
+         && pIsAccountOkB(newAdminAccountA));                   // Check that newAdminAccountA is defined and is not a contract or previous Admin or Web or pPclAccountA
+    pOpManC.NewOwner(ADMIN_OWNER_X, newAdminAccountA);
+    emit ChangeOwnerV(iOwnersYA[ADMIN_OWNER_X], newAdminAccountA, ADMIN_OWNER_X);
+    iOwnersYA[ADMIN_OWNER_X] = newAdminAccountA;
+     pSaleC.NewOwner(ADMIN_OWNER_X, newAdminAccountA);
+    pTokenC.NewOwner(ADMIN_OWNER_X, newAdminAccountA);
+    pMfundC.NewOwner(ADMIN_OWNER_X, newAdminAccountA);
+     pPollC.NewOwner(ADMIN_OWNER_X, newAdminAccountA);
+  }
+
+  // Hub.NewWebAccountMO()
+  // ---------------------
+  // To be called manually as a managed op call to change the Web account which involves
+  //  changing the Admin owner for Hub and Poll
+  // * Hub  Web owner iOwnersYA[HUB_WEB_OWNER_X]
+  // * Poll Web owner iOwnersYA[POLL_WEB_OWNER_X]
+  function NewWebAccountMO(address newWebAccountA) external IsAdminCaller {
+    require(pOpManC.IsManOpApproved(HUB_NEW_ADMIN_ACCOUNT_MO_X) // Check that MO has been approved
+         && pIsAccountOkB(newWebAccountA));                   // Check that newWebAccountA is defined and is not a contract or previous Admin or Web or pPclAccountA
+    emit ChangeOwnerV(iOwnersYA[HUB_WEB_OWNER_X], newWebAccountA, HUB_WEB_OWNER_X);
+    iOwnersYA[HUB_WEB_OWNER_X] = newWebAccountA;
+    pPollC.NewOwner(POLL_WEB_OWNER_X, newWebAccountA);
   }
 
   // Hub.pIsContractB() private

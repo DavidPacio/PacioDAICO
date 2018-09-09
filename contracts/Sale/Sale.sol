@@ -473,8 +473,9 @@ contract Sale is OwnedSale, Math {
   // Sale.NewOpManContract()
   // ----------------------
   // Called from Hub.NewOpManContract()  with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
-  //             Hub.NewHubContract()    with ownerX = HUB_OWNER_X   if the Hub   contract is changed
-  //             Hub.NewPollContractMO() with ownerX = SALE_POLL_OWNER_X if the Poll  contract is changed
+  //             Hub.NewHubContract()                  HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewPollContractMO()               SALE_POLL_OWNER_X if the Poll  contract is changed
+  //             Hub.NewAdminAccountMO()               ADMIN_OWNER_X     if the Admin account is changed
   function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
     emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
     iOwnersYA[ownerX] = newOwnerA;

@@ -98,14 +98,12 @@ contract OpMan is OwnedOpMan {
   event UnConfirmSignerV(address SignerA);
   event ChangeContractV(uint256 ContractX, address OldContract, address NewContract);
   event UpdateManOpV(uint256 ManOpK, uint32 SigsRequired, uint32 SecsValid);
-  event StartManOpApprovalV(uint256 ManOpK);
   event ManOpApprovedV(uint256 ManOpK, uint256 Id);
   event ApprovedManOpExecutedV(uint256 ManOpK);
   event PauseContractV(uint256 ContractX);
   event ResumeContractV(uint256 ContractX);
   event PauseManOpV(uint256 ManOpK);
   event ResumeManOpV(uint256 ManOpK);
-  event ChangeContractOwnerV(uint256 ContractX, address NewOwnerA, uint256 OwnerX);
 
   // No Constructor (Only the Owned one)
   // ==============
@@ -160,6 +158,8 @@ contract OpMan is OwnedOpMan {
     pAddManOp(HUB_CONTRACT_X,   HUB_NEW_MFUND_CONTRACT_MO_X,    3, MIN); // 12 Hub.NewMfundContractMO()
     pAddManOp(HUB_CONTRACT_X,   HUB_NEW_PFUND_CONTRACT_MO_X,    3, MIN); // 13 Hub.NewPfundContractMO()
     pAddManOp(HUB_CONTRACT_X,   HUB_NEW_POLL_CONTRACT_MO_X,     3, MIN); // 14 Hub.NewPollContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_ADMIN_ACCOUNT_MO_X,     3, MIN); // 15 Hub.NewAdminAccountMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_WEB_ACCOUNT_MO_X,       3, MIN); // 16 Hub.NewWebAccountMO()
     pAddManOp(SALE_CONTRACT_X,  SALE_SET_CAPS_TRANCHES_MO_X,    3, MIN); //  1 Sale.SetCapsAndTranchesMO()
     pAddManOp(TOKEN_CONTRACT_X, TOKEN_TRAN_UNISSUED_TO_PB_MO_X, 3, MIN); //  1 Token.TransferUnIssuedPIOsToPacioBcMO()
     pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_TAP_MO_X,        3, MIN); //  1 Mfund.WithdrawTapMO()
@@ -503,6 +503,14 @@ contract OpMan is OwnedOpMan {
     if (contractX == HUB_CONTRACT_X)
       iOwnersYA[HUB_OWNER_X] = newContractA;
     return true;
+  }
+
+  // OpMan.NewOwner()
+  // ---------------
+  // Called from Hub.NewAdminAccountMO()  with ownerX = ADMIN_OWNER_X if the Admin account is changed
+  function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
+    emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
+    iOwnersYA[ownerX] = newOwnerA;
   }
 
 } // End OpMan contract
