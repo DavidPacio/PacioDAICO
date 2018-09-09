@@ -18,6 +18,8 @@ interface I_Sale {
   function   NewHubContract(address) external;
   function NewTokenContract(address) external;
   function  NewListContract(address) external;
+  function NewMfundContract(address) external;
+  function NewPfundContract(address) external;
 }
 // End I_Sale interface
 

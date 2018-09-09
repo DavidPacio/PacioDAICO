@@ -7,6 +7,7 @@ Interface for the Mfund contract external functions which are called from the Hu
 pragma solidity ^0.4.24;
 
 interface I_MfundHub {
+  function Paused() external view returns (bool);
   function FundWei() external view returns (uint256);
 //function PclAccount() external view returns (address);
   function SetPclAccount(address vPclAccountA) external;

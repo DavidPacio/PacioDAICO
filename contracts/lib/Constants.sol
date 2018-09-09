@@ -68,11 +68,9 @@ contract Constants {
 
 // Managed Operation Indices
 uint32 internal constant RESUME_CONTRACT_MO_X           =  0; // OpMan.ResumeContractMO()
-uint32 internal constant OPMAN_ADD_CONTRACT_MO_X        =  1; // OpMan.AddContractMO()
-uint32 internal constant OPMAN_ADD_SIGNER_MO_X          =  2; // OpMan.AddSignerMO()
-uint32 internal constant OPMAN_ADD_MAN_OP_MO_X          =  3; // OpMan.AddManOpMO()
-uint32 internal constant OPMAN_CHANGE_SIGNER_MO_X       =  4; // OpMan.ChangeSignerMO()
-uint32 internal constant OPMAN_UPDATE_MAN_OP_MO_X       =  5; // OpMan.UpdateManOpMO()
+uint32 internal constant OPMAN_ADD_SIGNER_MO_X          =  1; // OpMan.AddSignerMO()
+uint32 internal constant OPMAN_CHANGE_SIGNER_MO_X       =  2; // OpMan.ChangeSignerMO()
+uint32 internal constant OPMAN_UPDATE_MAN_OP_MO_X       =  3; // OpMan.UpdateManOpMO()
 uint32 internal constant HUB_SET_PCL_ACCOUNT_MO_X       =  1; // Hub.SetPclAccountMO()
 uint32 internal constant HUB_START_SALE_MO_X            =  2; // Hub.StartSaleMO();
 uint32 internal constant HUB_SOFT_CAP_REACHED_MO_X      =  3; // Hub.SoftCapReachedMO()
@@ -81,6 +79,12 @@ uint32 internal constant HUB_SET_TRAN_TO_PB_STATE_MO_X  =  5; // Hub.SetTransfer
 uint32 internal constant HUB_SET_LIST_ENTRY_BITS_MO_X   =  6; // Hub.SetListEntryBitsMO()
 uint32 internal constant HUB_NEW_OPMAN_CONTRACT_MO_X    =  7; // Hub.NewOpManContractMO()
 uint32 internal constant HUB_NEW_HUB_CONTRACT_MO_X      =  8; // Hub.NewHubContractMO()
+uint32 internal constant HUB_NEW_SALE_CONTRACT_MO_X     =  9; // Hub.NewSaleContractMO()
+uint32 internal constant HUB_NEW_TOKEN_CONTRACT_MO_X    = 10; // Hub.NewTokenContractMO()
+uint32 internal constant HUB_NEW_LIST_CONTRACT_MO_X     = 11; // Hub.NewListContractMO()
+uint32 internal constant HUB_NEW_MFUND_CONTRACT_MO_X    = 12; // Hub.NewMfundContractMO()
+uint32 internal constant HUB_NEW_PFUND_CONTRACT_MO_X    = 13; // Hub.NewPfundContractMO()
+uint32 internal constant HUB_NEW_POLL_CONTRACT_MO_X     = 14; // Hub.NewPollContractMO()
 uint32 internal constant SALE_SET_CAPS_TRANCHES_MO_X    =  1; // Sale.SetCapsAndTranchesMO()
 uint32 internal constant TOKEN_TRAN_UNISSUED_TO_PB_MO_X =  1; // Token.TransferUnIssuedPIOsToPacioBcMO()
 uint32 internal constant MFUND_WITHDRAW_TAP_MO_X        =  1; // Mfund.WithdrawTapMO()
@@ -112,7 +116,7 @@ uint32 internal constant POLL_CLOSE_NO_MO_X             =  2; // Poll.ClosePollN
   uint8 internal constant POLL_CHANGE_VALID_MEMS_RT_PC_N  = 16; //    Change Poll.pValidMemsRrrTermPollsPc     Percentage of Members to vote for a Release reserve & restart or Termination poll to be valid
   uint8 internal constant POLL_CHANGE_PASS_RT_PC_N        = 17; //    Change Poll.pPassVoteRrrTermPollsPc      Percentage of yes votes of PIOs voted to approve a Release reserve & restart or Termination poll
   uint8 internal constant POLL_RELEASE_RESERVE_PIOS_N     = 18; //  c Release some of the PIOs held in reserve and restart the DAICO
-  uint8 internal constant POLL_TERMINATE_FUNDING_N        = 19; //  c Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
+  uint8 internal constant POLL_TERMINATE_FUNDING_N        = 19; //  c Terminate funding and refund all remaining funds in Mfund in proportion to PIOs held
                                                                 //  |- Require sale to have closed
   uint8 internal constant NUM_POLLS = POLL_TERMINATE_FUNDING_N; // Number of polls
 
@@ -146,7 +150,7 @@ uint32 internal constant POLL_CLOSE_NO_MO_X             =  2; // Poll.ClosePollN
   uint32 internal constant LE_P_REFUNDED_S_CAP_MISS_B     =   65536; // 16 Pfund funds Refunded due to soft cap not being reached
   uint32 internal constant LE_P_REFUNDED_SALE_CLOSE_B     =  131072; // 17 Pfund funds Refunded due to not being whitelisted by the time that the sale closes
   uint32 internal constant LE_P_REFUNDED_ONCE_OFF_B       =  262144; // 18 Pfund funds Refunded once off manually for whatever reason
-  uint32 internal constant LE_M_REFUNDED_S_CAP_MISS_NPT1B =  524288; // 19 Mfund funds Refunded due to soft cap not being reached. Such refunds do not apply to MFunds from a presale or tranche 1 purchase.
+  uint32 internal constant LE_M_REFUNDED_S_CAP_MISS_NPT1B =  524288; // 19 Mfund funds Refunded due to soft cap not being reached. Such refunds do not apply to Mfunds from a presale or tranche 1 purchase.
   uint32 internal constant LE_M_REFUNDED_TERMINATION_B    = 1048576; // 20 Mfund or Presale with picos Refund proportionately according to Picos held following a vote for project termination
   uint32 internal constant LE_M_REFUNDED_ONCE_OFF_B       = 2097152; // 21 Mfund funds Refunded once off manually for whatever reason including downgrade from whitelisted
   // Combos

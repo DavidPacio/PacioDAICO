@@ -10,20 +10,16 @@ All contracts, including OpMan, should use managed ops for:
 - ownership changes
 - any administrator type operations
 
-Owners Deployer OpMan (self) Hub Admin
+Owners: Deployer OpMan (self) Hub Admin
 ------
-0. Deployer
-1. OpMan (self)  - Set by OwnedOpMan.sol constructor
-2. Hub and Admin - Set by deploy script
+0 Deployer
+1 OpMan (self)  - Set by OwnedOpMan.sol constructor
+2 & 3 Hub and Admin - Set by deploy script
 
 OpMan Processes
 ---------------
-1. Add initial contracts, signers, and manOps via the Initialise() method to be called from the deploy script
-2. Add additional contracts, signers, and manOps as managed ops
-   2.1 Admin to add additional contract as a managed op
-   2.2 Admin to add additional signer as a managed op
-   2.3 Admin to add additional manOp as a managed op
-   2.4 Called from contract Initialise() function to add a manOp for the contract
+1. Add contracts, signers, and manOps via the Initialise() method to be called from the deploy script
+2. Admin to add additional signer as a managed op
 3. Admin to change one signer to another as a managed op
 4. Signer:
    4.1 Signer to confirm self as a signer
@@ -146,25 +142,29 @@ contract OpMan is OwnedOpMan {
       pAddSigner(vSignersYA[j]);
     // Add initial (OpMan) manOps
     // pAddManOp(uint256 contractX, uint32 vSigsRequired, uint32 vSecsValid) private
-    pAddManOp(OPMAN_CONTRACT_X, RESUME_CONTRACT_MO_X,           3, MIN); // 0 OpMan.ResumeContractMO()
-    pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_CONTRACT_MO_X,        3, MIN); // 1 OpMan.AddContractMO()
-    pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_SIGNER_MO_X,          3, MIN); // 2 OpMan.AddSignerMO()
-    pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_MAN_OP_MO_X,          3, MIN); // 3 OpMan.AddManOp()
-    pAddManOp(OPMAN_CONTRACT_X, OPMAN_CHANGE_SIGNER_MO_X,       3, MIN); // 4 OpMan.ChangeSignerMO()
-    pAddManOp(OPMAN_CONTRACT_X, OPMAN_UPDATE_MAN_OP_MO_X,       3, MIN); // 5 OpMan.UpdateManOpMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_SET_PCL_ACCOUNT_MO_X,       3, MIN); // 1 Hub.SetPclAccountMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_START_SALE_MO_X,            3, MIN); // 2 Hub.StartSaleMO();
-    pAddManOp(HUB_CONTRACT_X,   HUB_SOFT_CAP_REACHED_MO_X,      3, MIN); // 3 Hub.SoftCapReachedMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_CLOSE_SALE_MO_X,            3, MIN); // 4 Hub.CloseSaleMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_SET_LIST_ENTRY_BITS_MO_X,   3, MIN); // 5 Hub.SetListEntryBitsMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_SET_TRAN_TO_PB_STATE_MO_X,  3, MIN); // 6 Hub.SetTransferToPacioBcStateMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_OPMAN_CONTRACT_MO_X,    3, MIN); // 7 Hub.NewOpManContractMO()
-    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_HUB_CONTRACT_MO_X,      3, MIN); // 8 Hub.NewHubContractMO()
-    pAddManOp(SALE_CONTRACT_X,  SALE_SET_CAPS_TRANCHES_MO_X,    3, MIN); // 1 Sale.SetCapsAndTranchesMO()
-    pAddManOp(TOKEN_CONTRACT_X, TOKEN_TRAN_UNISSUED_TO_PB_MO_X, 3, MIN); // 1 Token.TransferUnIssuedPIOsToPacioBcMO()
-    pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_TAP_MO_X,        3, MIN); // 1 Mfund.WithdrawTapMO()
-    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_YES_MO_X,            3, MIN); // 1 Poll.ClosePollYesMO()
-    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_NO_MO_X,             3, MIN); // 2 Poll.ClosePollNoMO()
+    pAddManOp(OPMAN_CONTRACT_X, RESUME_CONTRACT_MO_X,           3, MIN); //  0 OpMan.ResumeContractMO()
+    pAddManOp(OPMAN_CONTRACT_X, OPMAN_ADD_SIGNER_MO_X,          3, MIN); //  2 OpMan.AddSignerMO()
+    pAddManOp(OPMAN_CONTRACT_X, OPMAN_CHANGE_SIGNER_MO_X,       3, MIN); //  4 OpMan.ChangeSignerMO()
+    pAddManOp(OPMAN_CONTRACT_X, OPMAN_UPDATE_MAN_OP_MO_X,       3, MIN); //  5 OpMan.UpdateManOpMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_PCL_ACCOUNT_MO_X,       3, MIN); //  1 Hub.SetPclAccountMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_START_SALE_MO_X,            3, MIN); //  2 Hub.StartSaleMO();
+    pAddManOp(HUB_CONTRACT_X,   HUB_SOFT_CAP_REACHED_MO_X,      3, MIN); //  3 Hub.SoftCapReachedMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_CLOSE_SALE_MO_X,            3, MIN); //  4 Hub.CloseSaleMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_LIST_ENTRY_BITS_MO_X,   3, MIN); //  5 Hub.SetListEntryBitsMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_SET_TRAN_TO_PB_STATE_MO_X,  3, MIN); //  6 Hub.SetTransferToPacioBcStateMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_OPMAN_CONTRACT_MO_X,    3, MIN); //  7 Hub.NewOpManContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_HUB_CONTRACT_MO_X,      3, MIN); //  8 Hub.NewHubContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_SALE_CONTRACT_MO_X,     3, MIN); //  9 Hub.NewSaleContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_TOKEN_CONTRACT_MO_X,    3, MIN); // 10 Hub.NewTokenContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_LIST_CONTRACT_MO_X,     3, MIN); // 11 Hub.NewListContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_MFUND_CONTRACT_MO_X,    3, MIN); // 12 Hub.NewMfundContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_PFUND_CONTRACT_MO_X,    3, MIN); // 13 Hub.NewPfundContractMO()
+    pAddManOp(HUB_CONTRACT_X,   HUB_NEW_POLL_CONTRACT_MO_X,     3, MIN); // 14 Hub.NewPollContractMO()
+    pAddManOp(SALE_CONTRACT_X,  SALE_SET_CAPS_TRANCHES_MO_X,    3, MIN); //  1 Sale.SetCapsAndTranchesMO()
+    pAddManOp(TOKEN_CONTRACT_X, TOKEN_TRAN_UNISSUED_TO_PB_MO_X, 3, MIN); //  1 Token.TransferUnIssuedPIOsToPacioBcMO()
+    pAddManOp(MFUND_CONTRACT_X, MFUND_WITHDRAW_TAP_MO_X,        3, MIN); //  1 Mfund.WithdrawTapMO()
+    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_YES_MO_X,            3, MIN); //  1 Poll.ClosePollYesMO()
+    pAddManOp(POLL_CONTRACT_X,  POLL_CLOSE_NO_MO_X,             3, MIN); //  2 Poll.ClosePollNoMO()
     iInitialisingB = false;
     emit InitialiseV(msg.sender);
   }
@@ -238,9 +238,8 @@ contract OpMan is OwnedOpMan {
   // =======================
   // OpMan.pAddContract()
   // --------------------
-  // Called from constructor and AddContractMO() as part of processes:
-  // 1.1 Add initial contracts
-  // 2.1 Admin to add additional contract as a managed op
+  // Called from Initialise() as part of processes:
+  // 1. Add contracts, signers, and manOps via the Initialise() method to be called from the deploy script
   function pAddContract(uint256 contractX, address contractA, bool vPausableB) private IsNotDuplicateContract(contractA) {
     require(pContractsYR.length == contractX, 'AddContract call out of order');
     pContractsYR.push(R_Contract(
@@ -259,9 +258,9 @@ contract OpMan is OwnedOpMan {
 
   // OpMan.pAddSigner()
   // ------------------
-  // Called for processes:                                     From:
-  // 1.2 Add initial signers                                   constructor
-  // 2.2 Admin to add additional signer as a managed op  AddSignertMO()
+  // Called for processes:
+  // 1. Add contracts, signers, and manOps via the Initialise() method to be called from the deploy script
+  // 2. Admin to add additional signer as a managed op  AddSignertMO()
   // The IsNotDuplicateSigner() modifier call ensures that signers are unique.
   function pAddSigner(address vSignerA) private IsNotDuplicateSigner(vSignerA) {
     pSignersAddrMR[vSignerA] = R_Signer(
@@ -275,9 +274,8 @@ contract OpMan is OwnedOpMan {
 
   // OpMan.pAddManOp()
   // -----------------
-  // Called from constructor and AddManOpMO() as part of processes:
-  // 1.3 Add initial (OpMan) manOps
-  // 2.3 Admin to add additional manOp as a managed op
+  // Called from Initialise() as part of processes:
+  // 1. Add contracts, signers, and manOps via the Initialise() method to be called from the deploy script
   function pAddManOp(uint256 contractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsValid) private {
     require(contractX < pContractsYR.length,           'Unknown contract');
     require(pContractsYR[contractX].manOpsOpxMB[vManOpX] == false, 'ManOp already defined for contract');
@@ -322,43 +320,13 @@ contract OpMan is OwnedOpMan {
   // State changing external methods
   // ===============================
 
-  // OpMan.AddContractMO()
-  // ---------------------
-  // 2.1 Admin to add additional contract as a managed op
-  // Called manually by Admin to add an additional contract not included in the initial deployment. Must be approved.
-  function AddContractMO(uint32 contractX, address contractA, bool vPausableB) external IsAdminCaller IsActive {
-    require(pIsManOpApproved(OPMAN_ADD_CONTRACT_MO_X)); // Same as OPMAN_CONTRACT_X * 100 + OPMAN_ADD_CONTRACT_MO_X since OPMAN_CONTRACT_X is 0
-    pAddContract(contractX, contractA, vPausableB);
-  }
-
   // OpMan.AddSignerMO()
   // -------------------
-  // 2.2 Admin to add additional signer as a managed op
+  // 2. Admin to add additional signer as a managed op
   // Called manually by Admin to add an additional signer not included in the initial deployment. Must be approved.
   function AddSignerMO(address vSignerA) external IsAdminCaller IsActive returns (bool) {
     require(pIsManOpApproved(OPMAN_ADD_SIGNER_MO_X)); // Same as OPMAN_CONTRACT_X * 100 + OPMAN_ADD_SIGNER_MO_X
     pAddSigner(vSignerA); // included IsNotDuplicateSigner() call
-    return true;
-  }
-
-  // OpMan.AddManOpMO()
-  // ------------------
-  // 2.3 Admin to add additional manOp as a managed op
-  // Called manually by Admin to add an additional manOp not included in the initial deployment. Must be approved.
-  function AddManOpMO(uint256 contractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsValid) external IsAdminCaller IsActive returns (bool) {
-    require(pIsManOpApproved(OPMAN_ADD_MAN_OP_MO_X)); // Same as OPMAN_CONTRACT_X * 100 + OPMAN_ADD_MAN_OP_MO_X
-    pAddManOp(contractX, vManOpX, vSigsRequired, vSecsValid);
-    return true;
-  }
-
-  // OpMan.InitAddManOp()
-  // ------------------
-  // 2.4 Called from a new contract Initialise() function to add a manOp for the contract
-  function InitAddManOp(uint256 contractX, uint256 vManOpX, uint32 vSigsRequired, uint32 vSecsValid) external IsContractCaller IsActive returns (bool) {
-    uint256 cX = pContractsAddrMX[msg.sender];
-    require(cX > 0, 'Not called from known contract'); // Not concerned about the cX == 0 (OPMAN_CONTRACT_X) case for OpMan itself as no OpMan functions call this function.
-    require(cX == contractX, 'cX missmatch');
-    pAddManOp(contractX, vManOpX, vSigsRequired, vSecsValid);
     return true;
   }
 

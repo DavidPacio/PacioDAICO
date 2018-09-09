@@ -290,7 +290,7 @@ contract Poll is OwnedPoll, Math {
     if (pState & STATE_S_CAP_REACHED_B > 0)
       require(requestedPollN != POLL_CHANGE_S_CAP_USD_N && requestedPollN != POLL_CHANGE_S_CAP_PIO_N && requestedPollN != POLL_CHANGE_S_CAP_DISP_PC_N, 'Inapplicable Poll');
     // POLL_RELEASE_RESERVE_PIOS_N  c Release some of the PIOs held in reserve and restart the DAICO
-    // POLL_TERMINATE_FUNDING_N     c Terminate funding and refund all remaining funds in MFund in proportion to PIOs held
+    // POLL_TERMINATE_FUNDING_N     c Terminate funding and refund all remaining funds in Mfund in proportion to PIOs held
     //                              |- Require sale to have closed
     require(requestedPollN < POLL_RELEASE_RESERVE_PIOS_N || pState & STATE_SALE_CLOSED_B > 0, 'Inapplicable Poll');
     // End of inapplicable poll requests checks
@@ -529,7 +529,7 @@ contract Poll is OwnedPoll, Math {
       // Release some of the PIOs held in reserve and restart the DAICO
       emit PollReleaseReserveAndRestartDaiso(pChangePollToValue);
     else if (pPollN == POLL_TERMINATE_FUNDING_N)
-      // Terminate funding and refund all remaining funds in MFund in proportion to PIOs held. Applicable only after the sale has closed.
+      // Terminate funding and refund all remaining funds in Mfund in proportion to PIOs held. Applicable only after the sale has closed.
       pHubC.PollTerminateFunding();
     else
       revert('Unknown poll close enum');
@@ -617,6 +617,13 @@ contract Poll is OwnedPoll, Math {
     iOwnersYA[ownerX] = newOwnerA;
   }
 
+  // Poll.NewHubContract()
+  // ---------------------
+  // Called from Hub.NewHubContract()
+  function NewHubContract(address newHubContractA) external IsHubContractCaller {
+    pHubC = I_HubPoll(newHubContractA);
+  }
+
   // Poll.NewSaleContract()
   // ----------------------
   // Called from Hub.NewSaleContract() if the Sale contract is changed.
@@ -630,6 +637,14 @@ contract Poll is OwnedPoll, Math {
   function NewListContract(address newListContractA) external IsHubContractCaller {
     pListC = I_ListPoll(newListContractA);
   }
+
+  // Poll.NewMfundContract()
+  // ----------------------
+  // Called from Hub.NewMfundContract()
+  function NewMfundContract(address newMfundContractA) external IsHubContractCaller {
+    pMfundC = I_MfundPoll(newMfundContractA);
+  }
+
 
   // Poll Fallback function
   // ======================

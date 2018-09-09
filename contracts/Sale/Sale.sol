@@ -473,7 +473,8 @@ contract Sale is OwnedSale, Math {
   // Sale.NewOpManContract()
   // ----------------------
   // Called from Hub.NewOpManContract()  with ownerX = OPMAN_OWNER_X if the OpMan contract is changed
-  //             Hub.NewPollContractMO() with ownerX = POLL_OWNER_X  if the Hub contract is changed
+  //             Hub.NewHubContract()    with ownerX = HUB_OWNER_X   if the Hub   contract is changed
+  //             Hub.NewPollContractMO() with ownerX = POLL_OWNER_X  if the Poll  contract is changed
   function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
     emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
     iOwnersYA[ownerX] = newOwnerA;
@@ -483,9 +484,7 @@ contract Sale is OwnedSale, Math {
   // ---------------------
   // Called from Hub.NewHubContract()
   function NewHubContract(address newHubContractA) external IsHubContractCaller {
-    emit ChangeOwnerV(pHubC, newHubContractA, HUB_OWNER_X);
     pHubC = I_Hub(newHubContractA);
-    iOwnersYA[HUB_OWNER_X] = newHubContractA;
   }
 
   // Sale.NewTokenContract()
@@ -500,6 +499,20 @@ contract Sale is OwnedSale, Math {
   // Called from Hub.NewListContract()
   function NewListContract(address newListContractA) external IsHubContractCaller {
     pListC = I_ListSale(newListContractA);
+  }
+
+  // Sale.NewMfundContract()
+  // ----------------------
+  // Called from Hub.NewMfundContract()
+  function NewMfundContract(address newMfundContractA) external IsHubContractCaller {
+    pMfundC = I_MfundSale(newMfundContractA);
+  }
+
+  // Sale.NewPfundContract()
+  // ----------------------
+  // Called from Hub.NewPfundContract()
+  function NewPfundContract(address newPfundContractA) external IsHubContractCaller {
+    pPfundC = I_PfundSale(newPfundContractA);
   }
 
   // Sale Fallback function

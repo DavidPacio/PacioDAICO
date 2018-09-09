@@ -161,6 +161,13 @@ contract Pfund is OwnedPfund, Math {
     iOwnersYA[ownerX] = newOwnerA;
   }
 
+  // Pfund.NewMfundContract()
+  // ------------------------
+  // Called from Hub.NewMfundContract()
+  function NewMfundContract(address newMfundContractA) external IsHubContractCaller {
+    pMfundC = I_MfundPfund(newMfundContractA);
+  }
+
   // Pfund Fallback function
   // =======================
   // Not payable so trying to send ether will throw
