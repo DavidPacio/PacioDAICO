@@ -7,6 +7,7 @@ Interface for the Poll contract external functions which are called from the Hub
 pragma solidity ^0.4.24;
 
 interface I_Poll {
+  function Paused() external view returns (bool);
   function StateChange(uint32) external;
   function NewOwner(uint256, address) external;
   function NewHubContract(address) external;

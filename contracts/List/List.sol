@@ -784,6 +784,7 @@ mapping (address => R_List) private pListMR; // Pacio List indexed by Ethereum a
   // Called from Hub.NewHubContractMO()   with ownerX = HUB_OWNER_X   if the Hub   contract is changed
   //             Hub.NewSaleContractMO()  with ownerX = SALE_OWNER_X  if the Sale  contract is changed
   //             Hub.NewTokenContractMO() with ownerX = TOKEN_OWNER_X if the Token contract is changed
+  //             Hub.NewPollContractMO()  with ownerX = LIST_POLL_OWNER_X if the List contract is changed
   function NewOwner(uint256 ownerX, address newOwnerA) external IsHubContractCaller {
     emit ChangeOwnerV(iOwnersYA[ownerX], newOwnerA, ownerX);
     iOwnersYA[ownerX] = newOwnerA;
